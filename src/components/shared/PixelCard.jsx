@@ -2,21 +2,24 @@ import React from 'react';
 
 export default function PixelCard({ 
   title, 
+  icon, 
   children, 
-  icon,
-  className = '' 
+  className = '',
+  headerClassName = '',
 }) {
   return (
-    <div className={`pixel-card ${className}`}>
+    <div className={`bg-pixel-dark border-4 border-pixel-accent shadow-pixel ${className}`}>
       {title && (
-        <div className="flex items-center gap-3 mb-4 pb-4 border-b-4 border-pixel-accent">
-          {icon && <span className="text-2xl">{icon}</span>}
-          <h2 className="text-sm font-pixel text-pixel-gold uppercase">
+        <div className={`bg-pixel-accent border-b-4 border-pixel-highlight px-6 py-4 ${headerClassName}`}>
+          <h2 className="text-lg font-pixel text-white flex items-center gap-3">
+            {icon && <span className="text-2xl">{icon}</span>}
             {title}
           </h2>
         </div>
       )}
-      {children}
+      <div className="p-6">
+        {children}
+      </div>
     </div>
   );
 }

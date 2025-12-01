@@ -1,15 +1,15 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_URL = 'http://localhost:5000/api';
 
 const api = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Add auth token to requests
+// Add token to requests if available
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token) {
@@ -18,50 +18,49 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Handle response errors
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('student');
-      window.location.href = '/login';
-    }
-    return Promise.reject(error);
-  }
-);
-
 export const authAPI = {
   login: (credentials) => api.post('/auth/login', credentials),
-  register: (data) => api.post('/auth/register', data),
+  register: (userData) => api.post('/auth/register', userData),
 };
 
 export const studentAPI = {
-  getProfile: () => api.get('/student/profile'),
-  getStats: () => api.get('/student/stats'),
+  getProfile: () => api.get('/students/profile'),
+  updateProfile: (data) => api.put('/students/profile', data),
+  getStats: () => api.get('/students/stats'),
+};
+
+export const courseAPI = {
+  getAllCourses: () => api.get('/courses'),
+  getCourse: (id) => api.get(`/courses/${id}`),
+  enrollCourse: (id) => api.post(`/courses/${id}/enroll`),
+  getMyCourses: () => api.get('/courses/my-courses'),
+  unenrollCourse: (id) => api.delete(`/courses/${id}/unenroll`),
+};
+
+export const quizAPI = {
+  getQuizzesByCourse: (courseId) => api.get(`/quizzes/course/${courseId}`),
+  getQuiz: (id) => api.get(`/quizzes/${id}`),
+  submitQuiz: (id, answers) => api.post(`/quizzes/${id}/submit`, { answers }),
+  getQuizResults: (id) => api.get(`/quizzes/${id}/results`),
 };
 
 export const sessionAPI = {
-  start: (data) => api.post('/sessions/start', data),
-  end: (id, data) => api.post(`/sessions/${id}/end`, data),
-  getActive: () => api.get('/sessions/active'),
-  getHistory: () => api.get('/sessions/history'),
+  startSession: (courseId) => api.post('/sessions/start', { courseId }),
+  endSession: (sessionId, duration) => api.post(`/sessions/${sessionId}/end`, { duration }),
+  getSessions: () => api.get('/sessions'),
 };
 
 export const achievementAPI = {
-  getAll: () => api.get('/achievements'),
-  getStudent: () => api.get('/achievements/student'),
-  check: () => api.post('/achievements/check'),
+  getAchievements: () => api.get('/achievements'),
+  getMyAchievements: () => api.get('/achievements/my'),
 };
 
 export const leaderboardAPI = {
-  getGlobal: () => api.get('/leaderboard/global'),
-  getMyRank: () => api.get('/leaderboard/my-rank'),
+  getLeaderboard: () => api.get('/leaderboard'),
 };
 
 export const dashboardAPI = {
-  get: () => api.get('/dashboard'),
-  getWeeklyStats: () => api.get('/dashboard/stats/weekly'),
+  getStats: () => api.get('/dashboard/stats'),
 };
 
 export default api;

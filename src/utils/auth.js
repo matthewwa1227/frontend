@@ -1,20 +1,33 @@
-export const setAuth = (token, student) => {
+export const setAuth = (token, user) => {
   localStorage.setItem('token', token);
-  localStorage.setItem('student', JSON.stringify(student));
+  localStorage.setItem('user', JSON.stringify(user));
 };
 
 export const getAuth = () => {
   const token = localStorage.getItem('token');
-  const student = localStorage.getItem('student');
+  const user = localStorage.getItem('user');
   return {
     token,
-    student: student ? JSON.parse(student) : null,
+    user: user ? JSON.parse(user) : null,
   };
+};
+
+export const getUser = () => {
+  const user = localStorage.getItem('user');
+  return user ? JSON.parse(user) : null;
+};
+
+export const getToken = () => {
+  return localStorage.getItem('token');
 };
 
 export const clearAuth = () => {
   localStorage.removeItem('token');
-  localStorage.removeItem('student');
+  localStorage.removeItem('user');
+};
+
+export const logout = () => {
+  clearAuth();
 };
 
 export const isAuthenticated = () => {

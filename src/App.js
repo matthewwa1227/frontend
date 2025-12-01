@@ -1,8 +1,6 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { isAuthenticated } from './utils/auth';
-
-// Import components (we'll create these next)
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { isAuthenticated, getUser } from './utils/auth';
 import Login from './components/auth/Login';
 import Register from './components/auth/Register';
 import Dashboard from './components/dashboard/Dashboard';
@@ -10,37 +8,48 @@ import Navbar from './components/shared/Navbar';
 
 // Protected Route Component
 function ProtectedRoute({ children }) {
-  return isAuthenticated() ? children : <Navigate to="/login" />;
+  const isAuth = isAuthenticated();
+  const user = getUser();
+  
+  if (!isAuth || !user) {
+    window.location.href = '/login';
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-pixel-dark">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-pixel-gold border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-white font-pixel text-sm">Redirecting to login...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  return (
+    <>
+      <Navbar />
+      {children}
+    </>
+  );
 }
 
-// Public Route Component (redirect if already logged in)
+// Public Route Component - NO REDIRECT HERE
 function PublicRoute({ children }) {
-  return !isAuthenticated() ? children : <Navigate to="/dashboard" />;
+  // Just render the children, don't redirect
+  return children;
 }
 
 function App() {
   return (
-    <Router>
-      <div className="min-h-screen bg-pixel-bg">
-        {isAuthenticated() && <Navbar />}
-        
+    <BrowserRouter>
+      <div className="min-h-screen bg-pixel-dark">
         <Routes>
           {/* Public Routes */}
           <Route 
             path="/login" 
-            element={
-              <PublicRoute>
-                <Login />
-              </PublicRoute>
-            } 
+            element={<Login />} 
           />
           <Route 
             path="/register" 
-            element={
-              <PublicRoute>
-                <Register />
-              </PublicRoute>
-            } 
+            element={<Register />} 
           />
 
           {/* Protected Routes */}
@@ -53,14 +62,20 @@ function App() {
             } 
           />
 
-          {/* Default redirect */}
+          {/* Default Route - redirect to login if not authenticated, dashboard if authenticated */}
           <Route 
             path="/" 
-            element={<Navigate to={isAuthenticated() ? "/dashboard" : "/login"} />} 
+            element={
+              isAuthenticated() ? (
+                <Navigate to="/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            } 
           />
         </Routes>
       </div>
-    </Router>
+    </BrowserRouter>
   );
 }
 

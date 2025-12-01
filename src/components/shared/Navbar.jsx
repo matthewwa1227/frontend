@@ -1,62 +1,76 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { LogOut, User, Trophy, BookOpen } from 'lucide-react';
-import { clearAuth, getAuth } from '../../utils/auth';
-import PixelButton from './PixelButton';
+import { logout, getUser } from '../../utils/auth';
+import { BookOpen, Trophy, Target, LogOut, User } from 'lucide-react';
 
 export default function Navbar() {
   const navigate = useNavigate();
-  const { student } = getAuth();
+  const user = getUser();
 
   const handleLogout = () => {
-    clearAuth();
+    logout();
     navigate('/login');
   };
 
+  // Don't render navbar if user is not logged in
+  if (!user) {
+    return null;
+  }
+
   return (
     <nav className="bg-pixel-dark border-b-4 border-pixel-accent shadow-pixel">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-4">
         <div className="flex justify-between items-center h-20">
           {/* Logo */}
-          <Link to="/dashboard" className="flex items-center gap-3 hover:opacity-80 transition">
-            <div className="w-12 h-12 bg-pixel-gold border-4 border-white flex items-center justify-center">
+          <Link to="/dashboard" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+            <div className="w-12 h-12 bg-pixel-gold border-4 border-white shadow-pixel-sm flex items-center justify-center">
               <BookOpen className="w-6 h-6 text-white" />
             </div>
-            <span className="text-xl font-pixel text-white hidden sm:block">
-              StudyQuest
-            </span>
+            <span className="text-xl font-pixel text-white hidden sm:block">StudyQuest</span>
           </Link>
 
-          {/* User Info */}
-          {student && (
-            <div className="flex items-center gap-6">
-              {/* Stats */}
-              <div className="hidden md:flex items-center gap-6 text-xs font-pixel">
-                <div className="flex items-center gap-2">
-                  <User className="w-4 h-4 text-pixel-success" />
-                  <span className="text-white">{student.username}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-pixel-warning">LVL</span>
-                  <span className="text-white">{student.level}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Trophy className="w-4 h-4 text-pixel-gold" />
-                  <span className="text-white">{student.total_points || 0}</span>
-                </div>
-              </div>
+          {/* Navigation Links */}
+          <div className="flex items-center gap-6">
+            <Link 
+              to="/dashboard" 
+              className="text-xs font-pixel text-white hover:text-pixel-gold transition-colors flex items-center gap-2"
+            >
+              <Target className="w-4 h-4" />
+              <span className="hidden sm:block">Quests</span>
+            </Link>
+            
+            <Link 
+              to="/leaderboard" 
+              className="text-xs font-pixel text-white hover:text-pixel-gold transition-colors flex items-center gap-2"
+            >
+              <Trophy className="w-4 h-4" />
+              <span className="hidden sm:block">Leaderboard</span>
+            </Link>
 
-              {/* Logout */}
-              <PixelButton
-                variant="danger"
+            <Link 
+              to="/profile" 
+              className="text-xs font-pixel text-white hover:text-pixel-gold transition-colors flex items-center gap-2"
+            >
+              <User className="w-4 h-4" />
+              <span className="hidden sm:block">Profile</span>
+            </Link>
+
+            {/* User Info & Logout */}
+            <div className="flex items-center gap-4 pl-4 border-l-4 border-pixel-accent">
+              <div className="text-right hidden md:block">
+                <p className="text-xs font-pixel text-pixel-gold">Level {user.level || 1}</p>
+                <p className="text-xs font-mono text-gray-400">{user.totalXP || 0} XP</p>
+              </div>
+              
+              <button
                 onClick={handleLogout}
-                className="flex items-center gap-2"
+                className="text-xs font-pixel text-white hover:text-red-500 transition-colors flex items-center gap-2"
               >
                 <LogOut className="w-4 h-4" />
-                <span className="hidden sm:inline">Logout</span>
-              </PixelButton>
+                <span className="hidden sm:block">Logout</span>
+              </button>
             </div>
-          )}
+          </div>
         </div>
       </div>
     </nav>
