@@ -24,9 +24,9 @@ export const authAPI = {
 };
 
 export const studentAPI = {
-  getProfile: () => api.get('/students/profile'),
-  updateProfile: (data) => api.put('/students/profile', data),
-  getStats: () => api.get('/students/stats'),
+  getProfile: () => api.get('/student/profile'), 
+  updateProfile: (data) => api.put('/student/profile', data),
+  getStats: () => api.get('/student/stats'), 
 };
 
 export const courseAPI = {
@@ -45,9 +45,10 @@ export const quizAPI = {
 };
 
 export const sessionAPI = {
-  startSession: (courseId) => api.post('/sessions/start', { courseId }),
-  endSession: (sessionId, duration) => api.post(`/sessions/${sessionId}/end`, { duration }),
-  getSessions: () => api.get('/sessions'),
+  startSession: (data) => api.post('/sessions/start', data),
+  endSession: (sessionId, data) => api.post(`/sessions/${sessionId}/end`, data),
+  getSessions: () => api.get('/sessions/history'), // ✅ Correct endpoint
+  getActiveSession: () => api.get('/sessions/active'),
 };
 
 export const achievementAPI = {
