@@ -4,6 +4,7 @@ import { isAuthenticated, getUser } from './utils/auth';
 import Login from './components/auth/Login';
 import Register from './components/auth/Register';
 import Dashboard from './components/dashboard/Dashboard';
+import StudyTimer from './components/StudyTimer/StudyTimer';
 import Navbar from './components/shared/Navbar';
 
 // Protected Route Component
@@ -58,6 +59,16 @@ function App() {
             element={
               <ProtectedRoute>
                 <Dashboard />
+              </ProtectedRoute>
+            } 
+          />
+
+          {/* Study Timer Route */}
+          <Route 
+            path="/timer" 
+            element={
+              <ProtectedRoute>
+                <StudyTimer />
               </ProtectedRoute>
             } 
           />

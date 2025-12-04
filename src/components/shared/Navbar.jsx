@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { logout, getUser } from '../../utils/auth';
-import { BookOpen, Trophy, Target, LogOut, User } from 'lucide-react';
+import { BookOpen, Trophy, Target, LogOut, User, Timer } from 'lucide-react';
 
 export default function Navbar() {
   const navigate = useNavigate();
@@ -37,6 +37,14 @@ export default function Navbar() {
             >
               <Target className="w-4 h-4" />
               <span className="hidden sm:block">Quests</span>
+            </Link>
+            
+            <Link 
+              to="/timer" 
+              className="text-xs font-pixel text-white hover:text-pixel-gold transition-colors flex items-center gap-2"
+            >
+              <Timer className="w-4 h-4" />
+              <span className="hidden sm:block">Timer</span>
             </Link>
             
             <Link 
