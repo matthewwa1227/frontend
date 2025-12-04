@@ -5,6 +5,7 @@ import Login from './components/auth/Login';
 import Register from './components/auth/Register';
 import Dashboard from './components/dashboard/Dashboard';
 import StudyTimer from './components/StudyTimer/StudyTimer';
+import Achievements from './components/Achievements/Achievements'; // ✅ ADD THIS
 import Navbar from './components/shared/Navbar';
 
 // Protected Route Component
@@ -69,6 +70,16 @@ function App() {
             element={
               <ProtectedRoute>
                 <StudyTimer />
+              </ProtectedRoute>
+            } 
+          />
+
+          {/* Achievements Route ✅ ADD THIS */}
+          <Route 
+            path="/achievements" 
+            element={
+              <ProtectedRoute>
+                <Achievements />
               </ProtectedRoute>
             } 
           />
