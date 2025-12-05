@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Play, Pause, Square, Clock, Award, BookOpen, Zap } from 'lucide-react';
 import api from '../../utils/api';
+import { achievementAPI } from '../../utils/api';
 
 const StudyTimer = () => {
   // Timer states
@@ -20,6 +21,9 @@ const StudyTimer = () => {
   const [sessionSummary, setSessionSummary] = useState(null);
   const [error, setError] = useState(null);
   
+  // Achievement states
+  const [unlockedAchievements, setUnlockedAchievements] = useState([]);
+  
   const intervalRef = useRef(null);
 
   // Common study durations (in minutes)
@@ -37,6 +41,66 @@ const StudyTimer = () => {
     'Biology',
     'Other'
   ];
+
+  // ✅ NEW: Auto-Recovery on Component Mount
+  useEffect(() => {
+    const checkAndRecoverActiveSession = async () => {
+      try {
+        const response = await api.get('/sessions/active');
+        
+        if (response.data.hasActiveSession && response.data.session) {
+          const activeSession = response.data.session;
+          
+          // Calculate elapsed time in seconds
+          const elapsedMinutes = activeSession.currentDuration || 0;
+          const elapsedSeconds = Math.floor(elapsedMinutes * 60);
+          
+          // Show recovery modal
+          const shouldContinue = window.confirm(
+            `📚 Active Session Found!\n\n` +
+            `Subject: ${activeSession.subject}\n` +
+            `Time Elapsed: ${Math.floor(elapsedMinutes)} minutes\n\n` +
+            `Do you want to continue this session?\n` +
+            `(Click Cancel to end it)`
+          );
+          
+          if (shouldContinue) {
+            // ✅ Recover the session
+            setSessionId(activeSession.id);
+            setSubject(activeSession.subject);
+            setIsActive(true);
+            setIsPaused(false);
+            
+            // Set timer with elapsed time already counted
+            const originalDuration = activeSession.topic ? parseInt(activeSession.topic) : 25; // If you stored duration in topic
+            const totalSeconds = originalDuration * 60;
+            const remainingSeconds = Math.max(0, totalSeconds - elapsedSeconds);
+            
+            setTotalTime(totalSeconds);
+            setTimeRemaining(remainingSeconds);
+            setSelectedDuration(originalDuration);
+            
+            console.log('✅ Session recovered:', {
+              sessionId: activeSession.id,
+              elapsed: elapsedMinutes,
+              remaining: remainingSeconds / 60
+            });
+          } else {
+            // ✅ End the abandoned session
+            await api.post(`/sessions/${activeSession.id}/end`, {
+              duration: Math.floor(elapsedMinutes)
+            });
+            
+            console.log('🗑️ Abandoned session ended');
+          }
+        }
+      } catch (error) {
+        console.error('❌ Failed to check active session:', error);
+      }
+    };
+
+    checkAndRecoverActiveSession();
+  }, []); // Run once on mount
 
   // Timer countdown effect
   useEffect(() => {
@@ -86,7 +150,20 @@ const StudyTimer = () => {
     return Math.floor(minutesStudied * 10);
   };
 
-  // Start session
+  // Check for achievements
+  const handleAchievementCheck = async () => {
+    try {
+      const response = await achievementAPI.checkAchievements();
+      if (response.data.unlocked_achievements?.length > 0) {
+        setUnlockedAchievements(response.data.unlocked_achievements);
+        console.log('🎉 New achievements unlocked:', response.data.unlocked_achievements);
+      }
+    } catch (error) {
+      console.error('Failed to check achievements:', error);
+    }
+  };
+
+  // ✅ UPDATED: Start session (now stores duration in topic field for recovery)
   const handleStartSession = async () => {
     if (!subject.trim()) {
       setError('Please select a subject');
@@ -95,7 +172,12 @@ const StudyTimer = () => {
 
     try {
       setError(null);
-      const response = await api.post('/sessions/start', { subject });
+      
+      // ✅ Store duration in topic field for recovery purposes
+      const response = await api.post('/sessions/start', { 
+        subject,
+        topic: selectedDuration.toString() // Store duration for recovery
+      });
       
       setSessionId(response.data.session.id);
       setIsActive(true);
@@ -116,20 +198,23 @@ const StudyTimer = () => {
     setIsPaused(!isPaused);
   };
 
-  // End session manually
+  // End session manually with achievement check
   const handleEndSession = async () => {
     if (!sessionId) return;
 
     try {
       const duration = Math.floor((totalTime - timeRemaining) / 60);
       
-      const response = await api.post(`/sessions/${sessionId}/end`, { duration });
+      const response = await api.post(`/sessions/end/${sessionId}`, { duration });
       
       setSessionSummary({
         duration,
         xp_earned: response.data.session.xp_earned,
         subject: response.data.session.subject
       });
+      
+      // Check achievements after ending session
+      await handleAchievementCheck();
       
       setShowEndModal(true);
       resetTimer();
@@ -141,14 +226,14 @@ const StudyTimer = () => {
     }
   };
 
-  // Timer completed automatically
+  // Timer completed automatically with achievement check
   const handleTimerComplete = async () => {
     if (!sessionId) return;
 
     try {
       const duration = Math.floor(totalTime / 60);
       
-      const response = await api.post(`/sessions/${sessionId}/end`, { duration });
+      const response = await api.post(`/sessions/end/${sessionId}`, { duration });
       
       setSessionSummary({
         duration,
@@ -156,6 +241,9 @@ const StudyTimer = () => {
         subject: response.data.session.subject,
         completed: true
       });
+      
+      // Check achievements after completing session
+      await handleAchievementCheck();
       
       setShowEndModal(true);
       resetTimer();
@@ -182,6 +270,7 @@ const StudyTimer = () => {
   const handleCloseEndModal = () => {
     setShowEndModal(false);
     setSessionSummary(null);
+    setUnlockedAchievements([]);
   };
 
   return (
@@ -376,7 +465,7 @@ const StudyTimer = () => {
         </div>
       )}
 
-      {/* End Session Modal */}
+      {/* End Session Modal with Achievements */}
       {showEndModal && sessionSummary && (
         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50">
           <div className="bg-pixel-dark border-4 border-pixel-accent shadow-pixel max-w-md w-full p-8 text-center">
@@ -408,6 +497,34 @@ const StudyTimer = () => {
                 </div>
               </div>
             </div>
+
+            {/* Achievement Notifications */}
+            {unlockedAchievements.length > 0 && (
+              <div className="mb-6 space-y-3">
+                <div className="text-2xl mb-2">🏆</div>
+                <h3 className="font-pixel text-pixel-gold text-sm mb-3">
+                  ACHIEVEMENTS UNLOCKED!
+                </h3>
+                {unlockedAchievements.map((ach, index) => (
+                  <div 
+                    key={index}
+                    className="bg-gradient-to-r from-yellow-900/50 to-orange-900/50 border-2 border-yellow-500 p-3 animate-pulse"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="text-2xl">{ach.icon}</div>
+                      <div className="flex-1 text-left">
+                        <div className="font-pixel text-white text-xs">
+                          {ach.name}
+                        </div>
+                        <div className="text-[10px] text-yellow-400 font-pixel">
+                          +{ach.points_reward} pts
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
             
             <button
               onClick={handleCloseEndModal}

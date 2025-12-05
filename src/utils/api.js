@@ -54,6 +54,7 @@ export const sessionAPI = {
 export const achievementAPI = {
   getAchievements: () => api.get('/achievements'),
   getMyAchievements: () => api.get('/achievements/my'),
+  checkAchievements: () => api.post('/achievements/check'),
 };
 
 export const leaderboardAPI = {
