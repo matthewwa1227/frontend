@@ -42,20 +42,28 @@ const StudyTimer = () => {
     'Other'
   ];
 
-  // ✅ NEW: Auto-Recovery on Component Mount
-  useEffect(() => {
-    const checkAndRecoverActiveSession = async () => {
-      try {
-        const response = await api.get('/sessions/active');
+// ✅ UPDATED: Auto-Recovery with auto-cleanup of old sessions
+useEffect(() => {
+  const checkAndRecoverActiveSession = async () => {
+    try {
+      const response = await api.get('/sessions/active');
+      
+      if (response.data.hasActiveSession && response.data.session) {
+        const activeSession = response.data.session;
+        const elapsedMinutes = activeSession.currentDuration || 0;
         
-        if (response.data.hasActiveSession && response.data.session) {
-          const activeSession = response.data.session;
-          
-          // Calculate elapsed time in seconds
-          const elapsedMinutes = activeSession.currentDuration || 0;
-          const elapsedSeconds = Math.floor(elapsedMinutes * 60);
-          
-          // Show recovery modal
+        // ✅ Auto-end sessions older than 3 hours (180 minutes)
+        if (elapsedMinutes > 180) {
+          console.log('🗑️ Auto-ending old session (too old):', elapsedMinutes, 'minutes');
+          await api.post(`/sessions/${activeSession.id}/end`, {
+            duration: Math.floor(elapsedMinutes)
+          });
+          return; // Don't show recovery dialog
+        }
+        
+        const elapsedSeconds = Math.floor(elapsedMinutes * 60);
+        
+        if (activeSession.id && elapsedMinutes > 0) {
           const shouldContinue = window.confirm(
             `📚 Active Session Found!\n\n` +
             `Subject: ${activeSession.subject}\n` +
@@ -65,14 +73,12 @@ const StudyTimer = () => {
           );
           
           if (shouldContinue) {
-            // ✅ Recover the session
             setSessionId(activeSession.id);
             setSubject(activeSession.subject);
             setIsActive(true);
             setIsPaused(false);
             
-            // Set timer with elapsed time already counted
-            const originalDuration = activeSession.topic ? parseInt(activeSession.topic) : 25; // If you stored duration in topic
+            const originalDuration = activeSession.topic ? parseInt(activeSession.topic) : 25;
             const totalSeconds = originalDuration * 60;
             const remainingSeconds = Math.max(0, totalSeconds - elapsedSeconds);
             
@@ -80,13 +86,8 @@ const StudyTimer = () => {
             setTimeRemaining(remainingSeconds);
             setSelectedDuration(originalDuration);
             
-            console.log('✅ Session recovered:', {
-              sessionId: activeSession.id,
-              elapsed: elapsedMinutes,
-              remaining: remainingSeconds / 60
-            });
+            console.log('✅ Session recovered');
           } else {
-            // ✅ End the abandoned session
             await api.post(`/sessions/${activeSession.id}/end`, {
               duration: Math.floor(elapsedMinutes)
             });
@@ -94,13 +95,14 @@ const StudyTimer = () => {
             console.log('🗑️ Abandoned session ended');
           }
         }
-      } catch (error) {
-        console.error('❌ Failed to check active session:', error);
       }
-    };
+    } catch (error) {
+      console.error('❌ Failed to check active session:', error);
+    }
+  };
 
-    checkAndRecoverActiveSession();
-  }, []); // Run once on mount
+  checkAndRecoverActiveSession();
+}, []);
 
   // Timer countdown effect
   useEffect(() => {
