@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Play, Pause, Square, Clock, Award, BookOpen, Zap } from 'lucide-react';
-import api from '../../utils/api';
-import { achievementAPI } from '../../utils/api';
+import { sessionAPI, achievementAPI } from '../../utils/api';
 
 const StudyTimer = () => {
   // Timer states
@@ -42,67 +41,67 @@ const StudyTimer = () => {
     'Other'
   ];
 
-// ✅ UPDATED: Auto-Recovery with auto-cleanup of old sessions
-useEffect(() => {
-  const checkAndRecoverActiveSession = async () => {
-    try {
-      const response = await api.get('/sessions/active');
-      
-      if (response.data.hasActiveSession && response.data.session) {
-        const activeSession = response.data.session;
-        const elapsedMinutes = activeSession.currentDuration || 0;
+  // ✅ UPDATED: Auto-Recovery with auto-cleanup of old sessions
+  useEffect(() => {
+    const checkAndRecoverActiveSession = async () => {
+      try {
+        const response = await sessionAPI.getActiveSession();
         
-        // ✅ Auto-end sessions older than 3 hours (180 minutes)
-        if (elapsedMinutes > 180) {
-          console.log('🗑️ Auto-ending old session (too old):', elapsedMinutes, 'minutes');
-          await api.post(`/sessions/${activeSession.id}/end`, {
-            duration: Math.floor(elapsedMinutes)
-          });
-          return; // Don't show recovery dialog
-        }
-        
-        const elapsedSeconds = Math.floor(elapsedMinutes * 60);
-        
-        if (activeSession.id && elapsedMinutes > 0) {
-          const shouldContinue = window.confirm(
-            `📚 Active Session Found!\n\n` +
-            `Subject: ${activeSession.subject}\n` +
-            `Time Elapsed: ${Math.floor(elapsedMinutes)} minutes\n\n` +
-            `Do you want to continue this session?\n` +
-            `(Click Cancel to end it)`
-          );
+        if (response.data.hasActiveSession && response.data.session) {
+          const activeSession = response.data.session;
+          const elapsedMinutes = activeSession.currentDuration || 0;
           
-          if (shouldContinue) {
-            setSessionId(activeSession.id);
-            setSubject(activeSession.subject);
-            setIsActive(true);
-            setIsPaused(false);
-            
-            const originalDuration = activeSession.topic ? parseInt(activeSession.topic) : 25;
-            const totalSeconds = originalDuration * 60;
-            const remainingSeconds = Math.max(0, totalSeconds - elapsedSeconds);
-            
-            setTotalTime(totalSeconds);
-            setTimeRemaining(remainingSeconds);
-            setSelectedDuration(originalDuration);
-            
-            console.log('✅ Session recovered');
-          } else {
-            await api.post(`/sessions/${activeSession.id}/end`, {
+          // ✅ Auto-end sessions older than 3 hours (180 minutes)
+          if (elapsedMinutes > 180) {
+            console.log('🗑️ Auto-ending old session (too old):', elapsedMinutes, 'minutes');
+            await sessionAPI.endSession(activeSession.id, {
               duration: Math.floor(elapsedMinutes)
             });
+            return; // Don't show recovery dialog
+          }
+          
+          const elapsedSeconds = Math.floor(elapsedMinutes * 60);
+          
+          if (activeSession.id && elapsedMinutes > 0) {
+            const shouldContinue = window.confirm(
+              `📚 Active Session Found!\n\n` +
+              `Subject: ${activeSession.subject}\n` +
+              `Time Elapsed: ${Math.floor(elapsedMinutes)} minutes\n\n` +
+              `Do you want to continue this session?\n` +
+              `(Click Cancel to end it)`
+            );
             
-            console.log('🗑️ Abandoned session ended');
+            if (shouldContinue) {
+              setSessionId(activeSession.id);
+              setSubject(activeSession.subject);
+              setIsActive(true);
+              setIsPaused(false);
+              
+              const originalDuration = activeSession.topic ? parseInt(activeSession.topic) : 25;
+              const totalSeconds = originalDuration * 60;
+              const remainingSeconds = Math.max(0, totalSeconds - elapsedSeconds);
+              
+              setTotalTime(totalSeconds);
+              setTimeRemaining(remainingSeconds);
+              setSelectedDuration(originalDuration);
+              
+              console.log('✅ Session recovered');
+            } else {
+              await sessionAPI.endSession(activeSession.id, {
+                duration: Math.floor(elapsedMinutes)
+              });
+              
+              console.log('🗑️ Abandoned session ended');
+            }
           }
         }
+      } catch (error) {
+        console.error('❌ Failed to check active session:', error);
       }
-    } catch (error) {
-      console.error('❌ Failed to check active session:', error);
-    }
-  };
+    };
 
-  checkAndRecoverActiveSession();
-}, []);
+    checkAndRecoverActiveSession();
+  }, []);
 
   // Timer countdown effect
   useEffect(() => {
@@ -176,7 +175,7 @@ useEffect(() => {
       setError(null);
       
       // ✅ Store duration in topic field for recovery purposes
-      const response = await api.post('/sessions/start', { 
+      const response = await sessionAPI.startSession({ 
         subject,
         topic: selectedDuration.toString() // Store duration for recovery
       });
@@ -207,7 +206,26 @@ useEffect(() => {
     try {
       const duration = Math.floor((totalTime - timeRemaining) / 60);
       
-      const response = await api.post(`/sessions/end/${sessionId}`, { duration });
+      // ✅ Check if session is too short (less than 1 minute)
+      if (duration < 1) {
+        const shouldForceEnd = window.confirm(
+          '⚠️ Session Too Short!\n\n' +
+          'You need to study for at least 1 minute to earn XP.\n\n' +
+          'Do you want to cancel this session?\n' +
+          '(No XP will be awarded)'
+        );
+        
+        if (!shouldForceEnd) {
+          return; // User chose to continue studying
+        }
+        
+        // Force end with 0 duration (no XP awarded)
+        await sessionAPI.endSession(sessionId, { duration: 0 });
+        resetTimer();
+        return;
+      }
+      
+      const response = await sessionAPI.endSession(sessionId, { duration });
       
       setSessionSummary({
         duration,
@@ -235,7 +253,7 @@ useEffect(() => {
     try {
       const duration = Math.floor(totalTime / 60);
       
-      const response = await api.post(`/sessions/end/${sessionId}`, { duration });
+      const response = await sessionAPI.endSession(sessionId, { duration });
       
       setSessionSummary({
         duration,
