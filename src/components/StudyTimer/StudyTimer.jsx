@@ -555,6 +555,38 @@ const StudyTimer = () => {
           </div>
         </div>
       )}
+            {/* Achievement Tester - Remove in production */}
+            <div className="fixed bottom-4 right-4 z-50">
+              <div className="bg-purple-900 border-4 border-purple-500 p-4 rounded-lg shadow-2xl max-w-sm">
+                <h3 className="font-bold text-white text-sm mb-3 flex items-center gap-2">
+                  <Award className="w-4 h-4" />
+                  Achievement Tester
+                </h3>
+                
+                <button
+                  onClick={async () => {
+                    try {
+                      const response = await achievementAPI.checkAchievements();
+                      if (response.data.unlocked_achievements?.length > 0) {
+                        setUnlockedAchievements(response.data.unlocked_achievements);
+                        alert(`🎉 ${response.data.unlocked_achievements.length} achievement(s) unlocked!`);
+                      } else {
+                        alert('No new achievements unlocked.');
+                      }
+                    } catch (error) {
+                      alert('Error checking achievements');
+                      console.error(error);
+                    }
+                  }}
+                  className="w-full bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-4 rounded flex items-center justify-center gap-2"
+                >
+                  <Zap className="w-4 h-4" />
+                  Check Achievements Now
+                </button>
+              </div>
+            </div>
+
+
     </div>
   );
 };
