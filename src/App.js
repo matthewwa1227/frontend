@@ -6,8 +6,10 @@ import Register from './components/auth/Register';
 import Dashboard from './components/dashboard/Dashboard';
 import StudyTimer from './components/StudyTimer/StudyTimer';
 import Achievements from './components/Achievements/Achievements';
+import Profile from './components/profile/Profile';
+import Leaderboard from './components/leaderboard/Leaderboard';
 import Navbar from './components/shared/Navbar';
-import TestAnimation from './TestAnimation'; // ✅ ADD THIS
+import TestAnimation from './TestAnimation';
 
 // Protected Route Component
 function ProtectedRoute({ children }) {
@@ -34,9 +36,8 @@ function ProtectedRoute({ children }) {
   );
 }
 
-// Public Route Component - NO REDIRECT HERE
+// Public Route Component
 function PublicRoute({ children }) {
-  // Just render the children, don't redirect
   return children;
 }
 
@@ -46,14 +47,8 @@ function App() {
       <div className="min-h-screen bg-pixel-dark">
         <Routes>
           {/* Public Routes */}
-          <Route 
-            path="/login" 
-            element={<Login />} 
-          />
-          <Route 
-            path="/register" 
-            element={<Register />} 
-          />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
 
           {/* Protected Routes */}
           <Route 
@@ -65,7 +60,6 @@ function App() {
             } 
           />
 
-          {/* Study Timer Route */}
           <Route 
             path="/timer" 
             element={
@@ -75,7 +69,6 @@ function App() {
             } 
           />
 
-          {/* Achievements Route */}
           <Route 
             path="/achievements" 
             element={
@@ -85,7 +78,26 @@ function App() {
             } 
           />
 
-          {/* Test Animation Route ✅ ADD THIS */}
+          {/* Profile Route */}
+          <Route 
+            path="/profile" 
+            element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            } 
+          />
+
+          {/* Leaderboard Route */}
+          <Route 
+            path="/leaderboard" 
+            element={
+              <ProtectedRoute>
+                <Leaderboard />
+              </ProtectedRoute>
+            } 
+          />
+
           <Route 
             path="/test-animation" 
             element={
@@ -95,7 +107,7 @@ function App() {
             } 
           />
 
-          {/* Default Route - redirect to login if not authenticated, dashboard if authenticated */}
+          {/* Default Route */}
           <Route 
             path="/" 
             element={
@@ -104,6 +116,26 @@ function App() {
               ) : (
                 <Navigate to="/login" replace />
               )
+            } 
+          />
+
+          {/* 404 - Catch all */}
+          <Route 
+            path="*" 
+            element={
+              <div className="min-h-screen flex items-center justify-center bg-pixel-dark">
+                <div className="text-center">
+                  <div className="text-6xl mb-4">🎮</div>
+                  <h1 className="text-2xl font-pixel text-white mb-2">404 - Page Not Found</h1>
+                  <p className="text-gray-400 font-pixel text-sm mb-4">This quest doesn't exist!</p>
+                  <a 
+                    href="/dashboard" 
+                    className="inline-block bg-pixel-gold border-4 border-white px-6 py-2 font-pixel text-sm hover:bg-yellow-500"
+                  >
+                    Return to Base
+                  </a>
+                </div>
+              </div>
             } 
           />
         </Routes>
