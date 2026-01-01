@@ -31,6 +31,7 @@ module.exports = {
         'blink': 'blink 1s infinite',
         'float': 'float 3s ease-in-out infinite',
         'pixel-spin': 'pixel-spin 2s linear infinite',
+        'slide-in-right': 'slide-in-right 0.5s ease-out', // ✅ Added
       },
       keyframes: {
         blink: {
@@ -44,6 +45,10 @@ module.exports = {
         'pixel-spin': {
           '0%': { transform: 'rotate(0deg)' },
           '100%': { transform: 'rotate(360deg)' },
+        },
+        'slide-in-right': { // ✅ Added
+          '0%': { transform: 'translateX(100%)', opacity: '0' },
+          '100%': { transform: 'translateX(0)', opacity: '1' }
         }
       }
     },

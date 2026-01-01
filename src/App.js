@@ -5,8 +5,9 @@ import Login from './components/auth/Login';
 import Register from './components/auth/Register';
 import Dashboard from './components/dashboard/Dashboard';
 import StudyTimer from './components/StudyTimer/StudyTimer';
-import Achievements from './components/Achievements/Achievements'; // ✅ ADD THIS
+import Achievements from './components/Achievements/Achievements';
 import Navbar from './components/shared/Navbar';
+import TestAnimation from './TestAnimation'; // ✅ ADD THIS
 
 // Protected Route Component
 function ProtectedRoute({ children }) {
@@ -74,12 +75,22 @@ function App() {
             } 
           />
 
-          {/* Achievements Route ✅ ADD THIS */}
+          {/* Achievements Route */}
           <Route 
             path="/achievements" 
             element={
               <ProtectedRoute>
                 <Achievements />
+              </ProtectedRoute>
+            } 
+          />
+
+          {/* Test Animation Route ✅ ADD THIS */}
+          <Route 
+            path="/test-animation" 
+            element={
+              <ProtectedRoute>
+                <TestAnimation />
               </ProtectedRoute>
             } 
           />

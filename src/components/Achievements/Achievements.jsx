@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { Trophy, Target, Clock, Flame, Zap, Star } from 'lucide-react';
 import api from '../../utils/api';
 import AchievementCard from './AchievementCard';
+import AchievementNotification from './AchievementNotification';
 
 const Achievements = () => {
   const [achievements, setAchievements] = useState(null);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [notifications, setNotifications] = useState([]); // ✅ NEW: Store multiple notifications
 
   const categories = [
     { id: 'all', name: 'All', icon: Star },
@@ -32,6 +34,45 @@ const Achievements = () => {
       console.error('Failed to fetch achievements:', error);
       setLoading(false);
     }
+  };
+
+  // ✅ NEW: Check achievements and show popup
+  const handleCheckAchievements = async () => {
+    try {
+      console.log('🔍 Manually checking achievements...');
+      const response = await api.post('/achievements/check');
+      
+      console.log('Check response:', response.data);
+      
+      // If achievements were unlocked, show notifications
+      if (response.data.unlocked && response.data.unlocked.length > 0) {
+        const newlyUnlocked = response.data.unlocked;
+        
+        console.log(`🎉 ${newlyUnlocked.length} achievement(s) unlocked!`);
+        
+        // Add each unlocked achievement to notifications with a slight delay
+        newlyUnlocked.forEach((achievement, index) => {
+          setTimeout(() => {
+            setNotifications(prev => [...prev, {
+              ...achievement,
+              id: `${achievement.id}-${Date.now()}-${index}` // Unique ID for each notification
+            }]);
+          }, index * 300); // Stagger notifications by 300ms
+        });
+        
+        // Refresh achievements after unlocking
+        await fetchAchievements();
+      } else {
+        console.log('ℹ️ No new achievements unlocked');
+      }
+    } catch (error) {
+      console.error('Failed to check achievements:', error);
+    }
+  };
+
+  // ✅ NEW: Remove notification
+  const removeNotification = (notificationId) => {
+    setNotifications(prev => prev.filter(n => n.id !== notificationId));
   };
 
   const getFilteredAchievements = () => {
@@ -59,6 +100,17 @@ const Achievements = () => {
 
   return (
     <div className="min-h-screen bg-gray-900 p-4 sm:p-6">
+      {/* ✅ Achievement Notifications - Steam Style Popups */}
+      <div className="fixed top-20 right-4 z-50 space-y-2">
+        {notifications.map((achievement) => (
+          <AchievementNotification
+            key={achievement.id}
+            achievement={achievement}
+            onClose={() => removeNotification(achievement.id)}
+          />
+        ))}
+      </div>
+
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
@@ -108,6 +160,19 @@ const Achievements = () => {
                   style={{ width: `${stats.completion_percentage}%` }}
                 />
               </div>
+            </div>
+
+            {/* ✅ NEW: Manual Check Button */}
+            <div className="mt-6 text-center">
+              <button
+                onClick={handleCheckAchievements}
+                className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white font-bold py-3 px-6 rounded-lg border-2 border-white shadow-lg transform hover:scale-105 transition-all duration-200"
+              >
+                🔍 Check Achievements Now
+              </button>
+              <p className="text-xs text-gray-400 mt-2">
+                Manually trigger achievement unlock check
+              </p>
             </div>
           </div>
         )}
