@@ -41,7 +41,7 @@ const StudyTimer = () => {
     'Other'
   ];
 
-  // ✅ UPDATED: Auto-Recovery with auto-cleanup of old sessions
+  // Auto-Recovery with auto-cleanup of old sessions
   useEffect(() => {
     const checkAndRecoverActiveSession = async () => {
       try {
@@ -51,13 +51,13 @@ const StudyTimer = () => {
           const activeSession = response.data.session;
           const elapsedMinutes = activeSession.currentDuration || 0;
           
-          // ✅ Auto-end sessions older than 3 hours (180 minutes)
+          // Auto-end sessions older than 3 hours (180 minutes)
           if (elapsedMinutes > 180) {
             console.log('🗑️ Auto-ending old session (too old):', elapsedMinutes, 'minutes');
             await sessionAPI.endSession(activeSession.id, {
               duration: Math.floor(elapsedMinutes)
             });
-            return; // Don't show recovery dialog
+            return; 
           }
           
           const elapsedSeconds = Math.floor(elapsedMinutes * 60);
@@ -103,16 +103,18 @@ const StudyTimer = () => {
     checkAndRecoverActiveSession();
   }, []);
 
-  // Timer countdown effect
+  // ---------------------------------------------------------
+  // ✅ FIX START: Separated Timer Logic
+  // ---------------------------------------------------------
+
+  // 1. The Ticker: Handles the countdown interval
+  // This only depends on active/paused state, NOT on timeRemaining
   useEffect(() => {
-    if (isActive && !isPaused && timeRemaining > 0) {
+    if (isActive && !isPaused) {
       intervalRef.current = setInterval(() => {
-        setTimeRemaining((time) => {
-          if (time <= 1) {
-            handleTimerComplete();
-            return 0;
-          }
-          return time - 1;
+        setTimeRemaining((prevTime) => {
+          // Just calculate math here, no side effects
+          return prevTime > 0 ? prevTime - 1 : 0;
         });
       }, 1000);
     } else {
@@ -126,7 +128,24 @@ const StudyTimer = () => {
         clearInterval(intervalRef.current);
       }
     };
-  }, [isActive, isPaused, timeRemaining]);
+  }, [isActive, isPaused]);
+
+  // 2. The Watcher: Handles completion when time hits 0
+  // This isolates the side effect (API call) from the state setter
+  useEffect(() => {
+    if (timeRemaining === 0 && isActive && !isPaused) {
+      // Clear interval immediately to be safe
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      
+      // Trigger completion
+      handleTimerComplete();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timeRemaining, isActive, isPaused]); 
+  
+  // ---------------------------------------------------------
+  // ✅ FIX END
+  // ---------------------------------------------------------
 
   // Format time display
   const formatTime = (seconds) => {
@@ -164,7 +183,7 @@ const StudyTimer = () => {
     }
   };
 
-  // ✅ UPDATED: Start session (now stores duration in topic field for recovery)
+  // Start session
   const handleStartSession = async () => {
     if (!subject.trim()) {
       setError('Please select a subject');
@@ -174,10 +193,9 @@ const StudyTimer = () => {
     try {
       setError(null);
       
-      // ✅ Store duration in topic field for recovery purposes
       const response = await sessionAPI.startSession({ 
         subject,
-        topic: selectedDuration.toString() // Store duration for recovery
+        topic: selectedDuration.toString() 
       });
       
       setSessionId(response.data.session.id);
@@ -199,14 +217,13 @@ const StudyTimer = () => {
     setIsPaused(!isPaused);
   };
 
-  // End session manually with achievement check
+  // End session manually
   const handleEndSession = async () => {
     if (!sessionId) return;
 
     try {
       const duration = Math.floor((totalTime - timeRemaining) / 60);
       
-      // ✅ Check if session is too short (less than 1 minute)
       if (duration < 1) {
         const shouldForceEnd = window.confirm(
           '⚠️ Session Too Short!\n\n' +
@@ -216,10 +233,9 @@ const StudyTimer = () => {
         );
         
         if (!shouldForceEnd) {
-          return; // User chose to continue studying
+          return; 
         }
         
-        // Force end with 0 duration (no XP awarded)
         await sessionAPI.endSession(sessionId, { duration: 0 });
         resetTimer();
         return;
@@ -233,7 +249,6 @@ const StudyTimer = () => {
         subject: response.data.session.subject
       });
       
-      // Check achievements after ending session
       await handleAchievementCheck();
       
       setShowEndModal(true);
@@ -246,11 +261,15 @@ const StudyTimer = () => {
     }
   };
 
-  // Timer completed automatically with achievement check
+  // Timer completed automatically
   const handleTimerComplete = async () => {
+    // Safety check to ensure we don't run this if already reset
     if (!sessionId) return;
 
     try {
+      // Immediately stop the timer locally to prevent double firing
+      setIsActive(false); 
+      
       const duration = Math.floor(totalTime / 60);
       
       const response = await sessionAPI.endSession(sessionId, { duration });
@@ -262,7 +281,6 @@ const StudyTimer = () => {
         completed: true
       });
       
-      // Check achievements after completing session
       await handleAchievementCheck();
       
       setShowEndModal(true);
