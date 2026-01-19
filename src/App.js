@@ -10,6 +10,7 @@ import Profile from './components/profile/Profile';
 import Leaderboard from './components/leaderboard/Leaderboard';
 import Navbar from './components/shared/Navbar';
 import TestAnimation from './TestAnimation';
+import ParentStudentPortal from './components/ParentStudentPortal';
 
 // Protected Route Component
 function ProtectedRoute({ children }) {
@@ -17,6 +18,8 @@ function ProtectedRoute({ children }) {
   const user = getUser();
   
   if (!isAuth || !user) {
+    // Note: In a real app, you might want to use Navigate component instead of window.location
+    // but keeping your existing logic for consistency.
     window.location.href = '/login';
     return (
       <div className="min-h-screen flex items-center justify-center bg-pixel-dark">
@@ -59,6 +62,17 @@ function App() {
               </ProtectedRoute>
             } 
           />
+
+          {/* --- NEW ROUTE ADDED HERE --- */}
+          <Route 
+            path="/portal" 
+            element={
+              <ProtectedRoute>
+                <ParentStudentPortal />
+              </ProtectedRoute>
+            } 
+          />
+          {/* ---------------------------- */}
 
           <Route 
             path="/timer" 

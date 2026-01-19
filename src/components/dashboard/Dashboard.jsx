@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getUser } from '../../utils/auth';
-import { studentAPI, sessionAPI } from '../../utils/api'; // ✅ Added sessionAPI
+import { studentAPI, sessionAPI } from '../../utils/api'; 
 import PixelCard from '../shared/PixelCard';
 import ProgressBar from '../shared/ProgressBar';
 import StatCard from '../shared/StatCard';
@@ -17,26 +17,26 @@ export default function Dashboard() {
     fetchDashboardData();
   }, []);
 
-const fetchDashboardData = async () => {
-  try {
-    setLoading(true);
-    setError(null);
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
 
-    // Only fetch stats - it includes recent_sessions
-    const statsRes = await studentAPI.getStats();
+      // Only fetch stats - it includes recent_sessions
+      const statsRes = await studentAPI.getStats();
 
-    const studentStats = statsRes.data.student;
-    
-    setStats(studentStats);
-    setSessions(studentStats.recent_sessions || []); // ✅ Get sessions from stats
+      const studentStats = statsRes.data.student;
+      
+      setStats(studentStats);
+      setSessions(studentStats.recent_sessions || []); 
 
-  } catch (error) {
-    console.error('Error fetching dashboard data:', error);
-    setError(error.response?.data?.message || 'Failed to load dashboard');
-  } finally {
-    setLoading(false);
-  }
-};
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+      setError(error.response?.data?.message || 'Failed to load dashboard');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Loading state
   if (loading) {
@@ -228,7 +228,7 @@ const fetchDashboardData = async () => {
 
       {/* Quick Actions */}
       <PixelCard title="Quick Actions" icon="⚡">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <button
             onClick={() => window.location.href = '/sessions/new'}
             className="bg-pixel-success border-4 border-white p-6 hover:bg-green-600 transition-colors"
@@ -246,6 +246,18 @@ const fetchDashboardData = async () => {
             <h3 className="font-pixel text-sm text-white mb-1">View Achievements</h3>
             <p className="text-xs font-mono text-gray-300">Check your progress</p>
           </button>
+
+          {/* --- NEW BUTTON ADDED HERE --- */}
+          <button
+            onClick={() => window.location.href = '/portal'}
+            className="bg-indigo-600 border-4 border-white p-6 hover:bg-indigo-700 transition-colors"
+          >
+            <div className="text-4xl mb-2">👨‍👩‍👧‍👦</div>
+            <h3 className="font-pixel text-sm text-white mb-1">Parent Portal</h3>
+            <p className="text-xs font-mono text-gray-300">Connect accounts</p>
+          </button>
+          {/* ----------------------------- */}
+
         </div>
       </PixelCard>
     </div>

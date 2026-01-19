@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { logout, getUser } from '../../utils/auth';
-import { BookOpen, Trophy, Target, LogOut, User, Timer } from 'lucide-react';
+import { BookOpen, Trophy, Target, LogOut, User, Timer, Users } from 'lucide-react';
 
 export default function Navbar() {
   const navigate = useNavigate();
@@ -54,6 +54,16 @@ export default function Navbar() {
               <Trophy className="w-4 h-4" />
               <span className="hidden sm:block">Leaderboard</span>
             </Link>
+
+            {/* --- NEW LINK ADDED HERE --- */}
+            <Link 
+              to="/portal" 
+              className="text-xs font-pixel text-white hover:text-pixel-gold transition-colors flex items-center gap-2"
+            >
+              <Users className="w-4 h-4" />
+              <span className="hidden sm:block">Parents</span>
+            </Link>
+            {/* --------------------------- */}
 
             <Link 
               to="/profile" 
