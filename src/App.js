@@ -15,6 +15,7 @@ import TestAnimation from './TestAnimation';
 
 // Import the new Portal component
 import ParentPortal from './components/portal/ParentPortal'; 
+import GuardianManagement from './components/GuardianManagement';
 
 // Protected Route Component
 function ProtectedRoute({ children }) {
@@ -55,7 +56,6 @@ function App() {
           />
 
           {/* --- FIXED PORTAL ROUTE --- */}
-          {/* We use ProtectedRoute (which you defined) and ParentPortal (the new component) */}
           <Route 
             path="/portal" 
             element={
@@ -64,7 +64,18 @@ function App() {
               </ProtectedRoute>
             } 
           />
-          {/* -------------------------- */}
+
+          {/* --- NEW GUARDIAN MANAGEMENT ROUTE --- */}
+          {/* This is where we add the route for the component you imported */}
+          <Route 
+            path="/guardians" 
+            element={
+              <ProtectedRoute>
+                <GuardianManagement />
+              </ProtectedRoute>
+            } 
+          />
+          {/* ------------------------------------- */}
 
           <Route 
             path="/timer" 
@@ -123,8 +134,6 @@ function App() {
             } 
           />
           
-          {/* REMOVED THE DUPLICATE /portal ROUTE THAT WAS HERE */}
-
           {/* 404 - Catch all */}
           <Route 
             path="*" 
