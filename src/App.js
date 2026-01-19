@@ -1,6 +1,8 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { isAuthenticated, getUser } from './utils/auth';
+
+// Components
 import Login from './components/auth/Login';
 import Register from './components/auth/Register';
 import Dashboard from './components/dashboard/Dashboard';
@@ -10,7 +12,9 @@ import Profile from './components/profile/Profile';
 import Leaderboard from './components/leaderboard/Leaderboard';
 import Navbar from './components/shared/Navbar';
 import TestAnimation from './TestAnimation';
-import ParentStudentPortal from './components/ParentStudentPortal';
+
+// Import the new Portal component
+import ParentPortal from './components/portal/ParentPortal'; 
 
 // Protected Route Component
 function ProtectedRoute({ children }) {
@@ -18,17 +22,9 @@ function ProtectedRoute({ children }) {
   const user = getUser();
   
   if (!isAuth || !user) {
-    // Note: In a real app, you might want to use Navigate component instead of window.location
-    // but keeping your existing logic for consistency.
+    // Ideally use <Navigate /> here, but keeping your logic for now
     window.location.href = '/login';
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-pixel-dark">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-pixel-gold border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-white font-pixel text-sm">Redirecting to login...</p>
-        </div>
-      </div>
-    );
+    return null;
   }
   
   return (
@@ -37,11 +33,6 @@ function ProtectedRoute({ children }) {
       {children}
     </>
   );
-}
-
-// Public Route Component
-function PublicRoute({ children }) {
-  return children;
 }
 
 function App() {
@@ -63,16 +54,17 @@ function App() {
             } 
           />
 
-          {/* --- NEW ROUTE ADDED HERE --- */}
+          {/* --- FIXED PORTAL ROUTE --- */}
+          {/* We use ProtectedRoute (which you defined) and ParentPortal (the new component) */}
           <Route 
             path="/portal" 
             element={
               <ProtectedRoute>
-                <ParentStudentPortal />
+                <ParentPortal />
               </ProtectedRoute>
             } 
           />
-          {/* ---------------------------- */}
+          {/* -------------------------- */}
 
           <Route 
             path="/timer" 
@@ -92,7 +84,6 @@ function App() {
             } 
           />
 
-          {/* Profile Route */}
           <Route 
             path="/profile" 
             element={
@@ -102,7 +93,6 @@ function App() {
             } 
           />
 
-          {/* Leaderboard Route */}
           <Route 
             path="/leaderboard" 
             element={
@@ -132,6 +122,8 @@ function App() {
               )
             } 
           />
+          
+          {/* REMOVED THE DUPLICATE /portal ROUTE THAT WAS HERE */}
 
           {/* 404 - Catch all */}
           <Route 

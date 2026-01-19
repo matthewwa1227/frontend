@@ -45,6 +45,8 @@ export const studentAPI = {
   updateProfile: (data) => api.put('/student/profile', data),
   getStats: () => api.get('/student/stats'),
   getAchievements: () => api.get('/student/achievements'),
+  getConnectedParents: () => api.get('/student/parents'),
+  generateParentCode: () => api.post('/student/generate-code'),
 };
 
 export const courseAPI = {
