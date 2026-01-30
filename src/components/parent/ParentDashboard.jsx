@@ -1,33 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { familyAPI } from '../../utils/api';
-import { getUser, clearAuth } from '../../utils/auth';
-import PixelButton from '../shared/PixelButton';
-import { 
-  Users, 
-  Plus, 
-  LogOut, 
-  Trophy, 
-  Flame, 
-  Clock, 
-  Star,
-  X,
-  Trash2,
-  RefreshCw
-} from 'lucide-react';
+import { familyAPI, authAPI } from '../../utils/api';
+import { getUser, logout } from '../../utils/auth';
+
+// Helper to format minutes into readable time
+const formatStudyTime = (minutes) => {
+  if (!minutes || minutes === 0) return '0m';
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  if (hours === 0) return `${mins}m`;
+  if (mins === 0) return `${hours}h`;
+  return `${hours}h ${mins}m`;
+};
+
+// XP needed for each level (simple formula)
+const getXpForLevel = (level) => level * 100;
 
 export default function ParentDashboard() {
   const navigate = useNavigate();
   const user = getUser();
   
+  // State
   const [children, setChildren] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  
-  // Link child modal state
   const [showLinkModal, setShowLinkModal] = useState(false);
   const [linkCode, setLinkCode] = useState('');
-  const [relationship, setRelationship] = useState('Guardian');
   const [linkLoading, setLinkLoading] = useState(false);
   const [linkError, setLinkError] = useState('');
   const [linkSuccess, setLinkSuccess] = useState('');
@@ -42,10 +40,15 @@ export default function ParentDashboard() {
       setLoading(true);
       setError('');
       const response = await familyAPI.getChildrenStats();
-      setChildren(response.data.children || []);
+      
+      if (response.data.success) {
+        setChildren(response.data.children);
+      } else {
+        setError('Failed to load children data');
+      }
     } catch (err) {
       console.error('Failed to fetch children:', err);
-      setError('Failed to load children data');
+      setError(err.response?.data?.message || 'Failed to load data');
     } finally {
       setLoading(false);
     }
@@ -53,26 +56,32 @@ export default function ParentDashboard() {
 
   const handleLinkChild = async (e) => {
     e.preventDefault();
-    setLinkLoading(true);
-    setLinkError('');
-    setLinkSuccess('');
+    if (!linkCode.trim()) {
+      setLinkError('Please enter a code');
+      return;
+    }
 
     try {
-      const response = await familyAPI.linkChild(linkCode, relationship);
-      setLinkSuccess(`Successfully linked to ${response.data.student.fullName}!`);
-      setLinkCode('');
-      setRelationship('Guardian');
+      setLinkLoading(true);
+      setLinkError('');
+      setLinkSuccess('');
       
-      // Refresh children list
-      await fetchChildren();
+      const response = await familyAPI.linkChild(linkCode.trim().toUpperCase());
       
-      // Close modal after 2 seconds
-      setTimeout(() => {
-        setShowLinkModal(false);
-        setLinkSuccess('');
-      }, 2000);
+      if (response.data.success) {
+        setLinkSuccess(`Successfully linked to ${response.data.student.fullName}!`);
+        setLinkCode('');
+        // Refresh children list
+        await fetchChildren();
+        // Close modal after delay
+        setTimeout(() => {
+          setShowLinkModal(false);
+          setLinkSuccess('');
+        }, 2000);
+      }
     } catch (err) {
-      setLinkError(err.response?.data?.message || 'Failed to link child');
+      console.error('Link error:', err);
+      setLinkError(err.response?.data?.message || 'Failed to link. Check the code and try again.');
     } finally {
       setLinkLoading(false);
     }
@@ -85,180 +94,128 @@ export default function ParentDashboard() {
 
     try {
       await familyAPI.removeChild(studentId);
-      await fetchChildren();
+      setChildren(children.filter(c => c.id !== studentId));
     } catch (err) {
-      alert('Failed to remove child: ' + (err.response?.data?.message || err.message));
+      console.error('Remove error:', err);
+      alert(err.response?.data?.message || 'Failed to remove child');
     }
   };
 
   const handleLogout = () => {
-    clearAuth();
+    logout();
     navigate('/login');
   };
 
-  const formatStudyTime = (minutes) => {
-    if (!minutes) return '0m';
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    if (hours > 0) {
-      return `${hours}h ${mins}m`;
-    }
-    return `${mins}m`;
-  };
+  // Calculate summary stats
+  const totalStudyTime = children.reduce((sum, c) => sum + (c.totalStudyTime || 0), 0);
+  const averageLevel = children.length > 0 
+    ? Math.round(children.reduce((sum, c) => sum + (c.level || 1), 0) / children.length) 
+    : 0;
+  const totalXp = children.reduce((sum, c) => sum + (c.xp || 0), 0);
 
   return (
-    <div className="min-h-screen bg-pixel-dark">
+    <div className="min-h-screen bg-gradient-to-b from-gray-900 via-purple-900/20 to-gray-900">
       {/* Header */}
-      <header className="bg-pixel-primary border-b-4 border-pixel-accent">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="bg-pixel-gold border-4 border-white shadow-pixel p-2">
-              <span className="text-2xl">👨‍👩‍👧‍👦</span>
-            </div>
+      <header className="bg-gray-800/50 border-b-4 border-purple-500 px-6 py-4">
+        <div className="max-w-6xl mx-auto flex justify-between items-center">
+          <div className="flex items-center gap-3">
+            <span className="text-3xl">👨‍👩‍👧‍👦</span>
             <div>
-              <h1 className="text-xl font-pixel text-white">Parent Dashboard</h1>
-              <p className="text-xs font-pixel text-gray-400">
-                Welcome, {user?.fullName || user?.username || 'Parent'}
-              </p>
+              <h1 className="text-xl font-bold text-white">Parent Dashboard</h1>
+              <p className="text-purple-300 text-sm">Welcome, {user?.full_name || user?.username || 'Parent'}</p>
             </div>
           </div>
-          
-          <PixelButton onClick={handleLogout} variant="secondary">
-            <LogOut className="w-4 h-4 mr-2" />
+          <button
+            onClick={handleLogout}
+            className="px-4 py-2 bg-red-600/20 border-2 border-red-500 text-red-400 rounded hover:bg-red-600/40 transition-colors"
+          >
             Logout
-          </PixelButton>
+          </button>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="max-w-6xl mx-auto px-4 py-8">
-        {/* Actions Bar */}
-        <div className="flex items-center justify-between mb-8">
-          <h2 className="text-lg font-pixel text-white flex items-center gap-2">
-            <Users className="w-5 h-5 text-pixel-gold" />
-            Linked Children ({children.length})
-          </h2>
-          
-          <div className="flex gap-4">
-            <PixelButton onClick={fetchChildren} variant="secondary">
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Refresh
-            </PixelButton>
-            <PixelButton onClick={() => setShowLinkModal(true)} variant="gold">
-              <Plus className="w-4 h-4 mr-2" />
-              Link Child
-            </PixelButton>
-          </div>
-        </div>
-
-        {/* Error State */}
+      <main className="max-w-6xl mx-auto p-6">
+        {/* Error Display */}
         {error && (
-          <div className="bg-red-900 border-4 border-red-600 text-white text-sm font-pixel p-4 mb-6">
-            ⚠️ {error}
+          <div className="mb-6 p-4 bg-red-500/20 border-2 border-red-500 rounded-lg text-red-300">
+            {error}
+            <button onClick={fetchChildren} className="ml-4 underline hover:text-red-200">
+              Retry
+            </button>
           </div>
         )}
 
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+          <div className="bg-gray-800/50 border-2 border-blue-500 rounded-lg p-4 text-center">
+            <div className="text-3xl mb-2">👶</div>
+            <div className="text-2xl font-bold text-white">{children.length}</div>
+            <div className="text-blue-300 text-sm">Connected Children</div>
+          </div>
+          <div className="bg-gray-800/50 border-2 border-green-500 rounded-lg p-4 text-center">
+            <div className="text-3xl mb-2">⏱️</div>
+            <div className="text-2xl font-bold text-white">{formatStudyTime(totalStudyTime)}</div>
+            <div className="text-green-300 text-sm">Total Study Time</div>
+          </div>
+          <div className="bg-gray-800/50 border-2 border-yellow-500 rounded-lg p-4 text-center">
+            <div className="text-3xl mb-2">⭐</div>
+            <div className="text-2xl font-bold text-white">{totalXp.toLocaleString()}</div>
+            <div className="text-yellow-300 text-sm">Total XP Earned</div>
+          </div>
+          <div className="bg-gray-800/50 border-2 border-purple-500 rounded-lg p-4 text-center">
+            <div className="text-3xl mb-2">📊</div>
+            <div className="text-2xl font-bold text-white">Lvl {averageLevel}</div>
+            <div className="text-purple-300 text-sm">Average Level</div>
+          </div>
+        </div>
+
+        {/* Children Section */}
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold text-white flex items-center gap-2">
+            <span>📚</span> Your Children's Progress
+          </h2>
+          <button
+            onClick={() => setShowLinkModal(true)}
+            className="px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+          >
+            <span>➕</span> Link Child
+          </button>
+        </div>
+
         {/* Loading State */}
-        {loading ? (
-          <div className="text-center py-16">
-            <div className="inline-block bg-pixel-primary border-4 border-pixel-accent p-8">
-              <div className="animate-pulse text-4xl mb-4">🔄</div>
-              <p className="text-sm font-pixel text-gray-400">Loading children data...</p>
-            </div>
+        {loading && (
+          <div className="text-center py-12">
+            <div className="text-4xl animate-bounce mb-4">⏳</div>
+            <p className="text-gray-400">Loading children data...</p>
           </div>
-        ) : children.length === 0 ? (
-          /* Empty State */
-          <div className="text-center py-16">
-            <div className="inline-block bg-pixel-primary border-4 border-pixel-accent p-8 max-w-md">
-              <div className="text-6xl mb-4">👶</div>
-              <h3 className="text-lg font-pixel text-white mb-2">No Children Linked</h3>
-              <p className="text-xs font-pixel text-gray-400 mb-6">
-                Ask your child to generate an invite code from their StudyQuest app, 
-                then click "Link Child" to connect.
-              </p>
-              <PixelButton onClick={() => setShowLinkModal(true)} variant="gold">
-                <Plus className="w-4 h-4 mr-2" />
-                Link Your First Child
-              </PixelButton>
-            </div>
+        )}
+
+        {/* Empty State */}
+        {!loading && children.length === 0 && (
+          <div className="bg-gray-800/30 border-2 border-dashed border-gray-600 rounded-lg p-12 text-center">
+            <div className="text-6xl mb-4">👶</div>
+            <h3 className="text-xl font-bold text-white mb-2">No Children Linked Yet</h3>
+            <p className="text-gray-400 mb-6">
+              Ask your child to generate an invite code from their StudyQuest app, then click "Link Child" to connect.
+            </p>
+            <button
+              onClick={() => setShowLinkModal(true)}
+              className="px-6 py-3 bg-purple-600 hover:bg-purple-500 text-white rounded-lg font-medium transition-colors"
+            >
+              Link Your First Child
+            </button>
           </div>
-        ) : (
-          /* Children Grid */
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        )}
+
+        {/* Children Cards */}
+        {!loading && children.length > 0 && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {children.map((child) => (
-              <div
-                key={child.id}
-                className="bg-pixel-primary border-4 border-pixel-accent shadow-pixel hover:border-pixel-gold transition-colors"
-              >
-                {/* Child Header */}
-                <div className="bg-pixel-dark p-4 border-b-4 border-pixel-accent flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-pixel-gold border-4 border-white flex items-center justify-center">
-                      <span className="text-xl">🧑‍🎓</span>
-                    </div>
-                    <div>
-                      <h3 className="font-pixel text-white text-sm">{child.fullName}</h3>
-                      <p className="text-xs font-pixel text-gray-400">@{child.username}</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => handleRemoveChild(child.id, child.fullName)}
-                    className="text-red-400 hover:text-red-300 p-2"
-                    title="Unlink child"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-
-                {/* Stats */}
-                <div className="p-4 space-y-4">
-                  {/* Level & XP */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Trophy className="w-4 h-4 text-pixel-gold" />
-                      <span className="text-xs font-pixel text-gray-400">Level</span>
-                    </div>
-                    <span className="font-pixel text-white text-lg">{child.level}</span>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Star className="w-4 h-4 text-yellow-400" />
-                      <span className="text-xs font-pixel text-gray-400">XP</span>
-                    </div>
-                    <span className="font-pixel text-pixel-gold">{child.xp.toLocaleString()}</span>
-                  </div>
-
-                  {/* Streak */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Flame className="w-4 h-4 text-orange-400" />
-                      <span className="text-xs font-pixel text-gray-400">Streak</span>
-                    </div>
-                    <span className="font-pixel text-orange-400">
-                      {child.currentStreak} day{child.currentStreak !== 1 ? 's' : ''} 🔥
-                    </span>
-                  </div>
-
-                  {/* Study Time */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Clock className="w-4 h-4 text-blue-400" />
-                      <span className="text-xs font-pixel text-gray-400">Total Study</span>
-                    </div>
-                    <span className="font-pixel text-blue-400">
-                      {formatStudyTime(child.totalStudyTime)}
-                    </span>
-                  </div>
-
-                  {/* Relationship Badge */}
-                  <div className="pt-4 border-t-2 border-pixel-accent">
-                    <span className="inline-block bg-pixel-dark border-2 border-pixel-accent px-3 py-1 text-xs font-pixel text-gray-400">
-                      {child.relationship}
-                    </span>
-                  </div>
-                </div>
-              </div>
+              <ChildCard 
+                key={child.id} 
+                child={child} 
+                onRemove={() => handleRemoveChild(child.id, child.fullName)}
+              />
             ))}
           </div>
         )}
@@ -266,92 +223,139 @@ export default function ParentDashboard() {
 
       {/* Link Child Modal */}
       {showLinkModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
-          <div className="bg-pixel-primary border-4 border-pixel-accent shadow-pixel max-w-md w-full">
-            {/* Modal Header */}
-            <div className="bg-pixel-dark p-4 border-b-4 border-pixel-accent flex items-center justify-between">
-              <h3 className="font-pixel text-white">Link Child Account</h3>
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 border-4 border-purple-500 rounded-lg p-6 max-w-md w-full">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold text-white">Link a Child</h3>
               <button
                 onClick={() => {
                   setShowLinkModal(false);
+                  setLinkCode('');
                   setLinkError('');
                   setLinkSuccess('');
-                  setLinkCode('');
                 }}
-                className="text-gray-400 hover:text-white"
+                className="text-gray-400 hover:text-white text-2xl"
               >
-                <X className="w-5 h-5" />
+                ×
               </button>
             </div>
+            
+            <p className="text-gray-300 mb-4">
+              Enter the 6-character code from your child's StudyQuest app.
+            </p>
 
-            {/* Modal Body */}
-            <div className="p-6">
-              <p className="text-xs font-pixel text-gray-400 mb-6">
-                Ask your child to generate an invite code from their StudyQuest settings, 
-                then enter it below.
-              </p>
+            <form onSubmit={handleLinkChild}>
+              <input
+                type="text"
+                value={linkCode}
+                onChange={(e) => setLinkCode(e.target.value.toUpperCase())}
+                placeholder="Enter code (e.g., ABC123)"
+                maxLength={6}
+                className="w-full px-4 py-3 bg-gray-700 border-2 border-gray-600 rounded-lg text-white text-center text-2xl tracking-widest font-mono placeholder:text-sm placeholder:tracking-normal focus:border-purple-500 focus:outline-none"
+              />
 
               {linkError && (
-                <div className="bg-red-900 border-4 border-red-600 text-white text-xs font-pixel p-3 mb-4">
-                  ⚠️ {linkError}
-                </div>
+                <p className="mt-2 text-red-400 text-sm">{linkError}</p>
               )}
-
+              
               {linkSuccess && (
-                <div className="bg-green-900 border-4 border-green-600 text-white text-xs font-pixel p-3 mb-4">
-                  ✅ {linkSuccess}
-                </div>
+                <p className="mt-2 text-green-400 text-sm">{linkSuccess}</p>
               )}
 
-              <form onSubmit={handleLinkChild} className="space-y-4">
-                {/* Code Input */}
-                <div>
-                  <label className="block text-xs font-pixel text-white mb-2">
-                    Invite Code
-                  </label>
-                  <input
-                    type="text"
-                    value={linkCode}
-                    onChange={(e) => setLinkCode(e.target.value.toUpperCase())}
-                    placeholder="XXXXXX"
-                    maxLength={6}
-                    required
-                    className="w-full bg-pixel-dark border-4 border-pixel-accent text-white font-mono text-xl text-center tracking-widest px-4 py-3 focus:outline-none focus:border-pixel-gold uppercase"
-                  />
-                </div>
+              <button
+                type="submit"
+                disabled={linkLoading || linkCode.length < 6}
+                className="w-full mt-4 px-4 py-3 bg-purple-600 hover:bg-purple-500 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors"
+              >
+                {linkLoading ? 'Linking...' : 'Link Child'}
+              </button>
+            </form>
 
-                {/* Relationship Select */}
-                <div>
-                  <label className="block text-xs font-pixel text-white mb-2">
-                    Relationship
-                  </label>
-                  <select
-                    value={relationship}
-                    onChange={(e) => setRelationship(e.target.value)}
-                    className="w-full bg-pixel-dark border-4 border-pixel-accent text-white font-pixel text-sm px-4 py-3 focus:outline-none focus:border-pixel-gold"
-                  >
-                    <option value="Guardian">Guardian</option>
-                    <option value="Mother">Mother</option>
-                    <option value="Father">Father</option>
-                    <option value="Grandparent">Grandparent</option>
-                    <option value="Other">Other</option>
-                  </select>
-                </div>
-
-                {/* Submit Button */}
-                <PixelButton
-                  type="submit"
-                  disabled={linkLoading || linkCode.length !== 6}
-                  variant="gold"
-                  className="w-full"
-                >
-                  {linkLoading ? 'Linking...' : 'Link Child'}
-                </PixelButton>
-              </form>
+            <div className="mt-4 p-3 bg-gray-700/50 rounded-lg">
+              <p className="text-gray-400 text-sm">
+                <strong className="text-yellow-400">💡 Tip:</strong> Your child can generate a code from their Profile → Parent Portal section.
+              </p>
             </div>
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// Child Card Component
+function ChildCard({ child, onRemove }) {
+  const xpForNextLevel = getXpForLevel(child.level || 1);
+  const xpProgress = ((child.xp || 0) % 100); // Assuming 100 XP per level
+  const progressPercent = Math.min((xpProgress / xpForNextLevel) * 100, 100);
+
+  return (
+    <div className="bg-gray-800/50 border-2 border-gray-600 hover:border-purple-500 rounded-lg p-6 transition-colors">
+      {/* Header */}
+      <div className="flex justify-between items-start mb-4">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-500 rounded-lg flex items-center justify-center text-2xl">
+            {child.fullName?.charAt(0)?.toUpperCase() || '?'}
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-white">{child.fullName}</h3>
+            <p className="text-gray-400 text-sm">@{child.username}</p>
+          </div>
+        </div>
+        <div className="text-right">
+          <div className="px-3 py-1 bg-yellow-500/20 border border-yellow-500 rounded-full text-yellow-400 text-sm font-bold">
+            Level {child.level || 1}
+          </div>
+        </div>
+      </div>
+
+      {/* XP Progress Bar */}
+      <div className="mb-4">
+        <div className="flex justify-between text-sm mb-1">
+          <span className="text-gray-400">XP Progress</span>
+          <span className="text-purple-400">{child.xp?.toLocaleString() || 0} XP</span>
+        </div>
+        <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+          <div 
+            className="h-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-500"
+            style={{ width: `${progressPercent}%` }}
+          />
+        </div>
+      </div>
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-3 gap-3 mb-4">
+        <div className="bg-gray-700/50 rounded-lg p-3 text-center">
+          <div className="text-xl">⏱️</div>
+          <div className="text-white font-bold">{formatStudyTime(child.totalStudyTime)}</div>
+          <div className="text-gray-400 text-xs">Study Time</div>
+        </div>
+        <div className="bg-gray-700/50 rounded-lg p-3 text-center">
+          <div className="text-xl">🔥</div>
+          <div className="text-white font-bold">{child.currentStreak || 0}</div>
+          <div className="text-gray-400 text-xs">Day Streak</div>
+        </div>
+        <div className="bg-gray-700/50 rounded-lg p-3 text-center">
+          <div className="text-xl">💎</div>
+          <div className="text-white font-bold">{child.relationship}</div>
+          <div className="text-gray-400 text-xs">Relation</div>
+        </div>
+      </div>
+
+      {/* Actions */}
+      <div className="flex gap-2">
+        <button
+          onClick={onRemove}
+          className="flex-1 px-3 py-2 bg-red-600/20 border border-red-500/50 text-red-400 rounded hover:bg-red-600/40 transition-colors text-sm"
+        >
+          Unlink
+        </button>
+      </div>
+
+      {/* Connected Date */}
+      <p className="text-gray-500 text-xs mt-3 text-center">
+        Connected {new Date(child.connectedAt).toLocaleDateString()}
+      </p>
     </div>
   );
 }

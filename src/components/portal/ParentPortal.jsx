@@ -16,6 +16,8 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { familyAPI } from '../../utils/api';
+import { getUser } from '../../utils/auth';
 
 // --- Reusable UI Components ---
 
@@ -88,7 +90,11 @@ const StatBadge = ({ icon: Icon, label, value, color = "slate" }) => {
 // --- Main Component ---
 
 export default function FamilyPortal() {
-  const [activeRole, setActiveRole] = useState("student");
+  const user = getUser();
+  
+  // Auto-detect role from logged in user
+  const isParent = user?.role === 'parent';
+  const [activeRole, setActiveRole] = useState(isParent ? 'parent' : 'student');
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-100 to-slate-200 p-4 md:p-8 font-sans text-slate-900">
@@ -106,7 +112,7 @@ export default function FamilyPortal() {
             </h1>
           </div>
 
-          {/* Role Toggle */}
+          {/* Role Toggle - Only show if user wants to switch views (for testing) */}
           <div className="bg-white p-1.5 rounded-xl border-2 border-slate-200 shadow-sm inline-flex">
             <button
               onClick={() => setActiveRole('student')}
@@ -166,9 +172,14 @@ function StudentView() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const [expirySeconds, setExpirySeconds] = useState(0);
-  const [guardians, setGuardians] = useState([
-    { id: 1, name: "Sarah Connor", relation: "Mother", email: "sarah@example.com" }
-  ]);
+  const [guardians, setGuardians] = useState([]);
+  const [loadingGuardians, setLoadingGuardians] = useState(true);
+  const [error, setError] = useState('');
+
+  // Fetch guardians on mount
+  useEffect(() => {
+    fetchGuardians();
+  }, []);
 
   // Countdown timer
   useEffect(() => {
@@ -180,22 +191,48 @@ function StudentView() {
     }
   }, [expirySeconds, inviteCode]);
 
+  const fetchGuardians = async () => {
+    try {
+      setLoadingGuardians(true);
+      const response = await familyAPI.getGuardians();
+      if (response.data.success) {
+        setGuardians(response.data.guardians);
+      }
+    } catch (err) {
+      console.error('Failed to fetch guardians:', err);
+      setError('Failed to load guardians');
+    } finally {
+      setLoadingGuardians(false);
+    }
+  };
+
   const formatTime = (seconds) => {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
     return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
-  const handleGenerate = () => {
-    setIsGenerating(true);
-    setTimeout(() => {
-      const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-      let code = "";
-      for (let i = 0; i < 6; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
-      setInviteCode(code);
-      setExpirySeconds(900); // 15 minutes
+  const handleGenerate = async () => {
+    try {
+      setIsGenerating(true);
+      setError('');
+      
+      const response = await familyAPI.generateCode();
+      
+      if (response.data.success) {
+        setInviteCode(response.data.code);
+        // Calculate seconds until expiry
+        const expiresAt = new Date(response.data.expiresAt);
+        const now = new Date();
+        const secondsLeft = Math.max(0, Math.floor((expiresAt - now) / 1000));
+        setExpirySeconds(secondsLeft);
+      }
+    } catch (err) {
+      console.error('Failed to generate code:', err);
+      setError(err.response?.data?.message || 'Failed to generate code');
+    } finally {
       setIsGenerating(false);
-    }, 800);
+    }
   };
 
   const handleCopy = () => {
@@ -206,8 +243,18 @@ function StudentView() {
     }
   };
 
-  const handleRemove = (id) => {
-    setGuardians(prev => prev.filter(g => g.id !== id));
+  const handleRemove = async (linkId, guardianName) => {
+    if (!window.confirm(`Remove ${guardianName} as your guardian?`)) {
+      return;
+    }
+
+    try {
+      await familyAPI.removeGuardian(linkId);
+      setGuardians(prev => prev.filter(g => g.linkId !== linkId));
+    } catch (err) {
+      console.error('Failed to remove guardian:', err);
+      alert(err.response?.data?.message || 'Failed to remove guardian');
+    }
   };
 
   return (
@@ -219,6 +266,14 @@ function StudentView() {
             <p className="text-slate-600 text-center text-sm">
               Generate a temporary code to share with your parent or guardian.
             </p>
+
+            {/* Error Display */}
+            {error && (
+              <div className="w-full p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm flex items-center gap-2">
+                <AlertCircle className="w-4 h-4" />
+                {error}
+              </div>
+            )}
 
             {/* Code Display */}
             <div className="w-full">
@@ -275,7 +330,12 @@ function StudentView() {
       {/* Right: Connected Guardians */}
       <div className="lg:col-span-3 space-y-4">
         <QuestCard title="Connected Guardians" icon={Shield} color="slate">
-          {guardians.length === 0 ? (
+          {loadingGuardians ? (
+            <div className="text-center py-10 text-slate-400">
+              <Loader2 className="w-10 h-10 mx-auto mb-3 animate-spin" />
+              <p className="font-medium">Loading guardians...</p>
+            </div>
+          ) : guardians.length === 0 ? (
             <div className="text-center py-10 text-slate-400">
               <Users className="w-10 h-10 mx-auto mb-3 opacity-50" />
               <p className="font-medium">No guardians connected</p>
@@ -284,20 +344,26 @@ function StudentView() {
           ) : (
             <div className="space-y-3">
               {guardians.map((g) => (
-                <div key={g.id} className="flex items-center justify-between p-4 bg-slate-50 border border-slate-200 rounded-lg group hover:border-indigo-300 transition-colors">
+                <div key={g.linkId} className="flex items-center justify-between p-4 bg-slate-50 border border-slate-200 rounded-lg group hover:border-indigo-300 transition-colors">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-indigo-100 text-indigo-700 rounded-full flex items-center justify-center font-bold">
-                      {g.name.charAt(0)}
+                      {g.name?.charAt(0) || '?'}
                     </div>
                     <div>
                       <h4 className="font-bold text-slate-800">{g.name}</h4>
                       <div className="flex items-center gap-2 text-xs text-slate-500">
                         <span>{g.email}</span>
-                        <span className="px-1.5 py-0.5 bg-indigo-100 text-indigo-600 rounded font-semibold">{g.relation}</span>
+                        <span className="px-1.5 py-0.5 bg-indigo-100 text-indigo-600 rounded font-semibold">
+                          {g.relationship}
+                        </span>
                       </div>
                     </div>
                   </div>
-                  <QuestButton onClick={() => handleRemove(g.id)} variant="danger" className="p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <QuestButton 
+                    onClick={() => handleRemove(g.linkId, g.name)} 
+                    variant="danger" 
+                    className="p-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
                     <UserMinus className="w-4 h-4" />
                   </QuestButton>
                 </div>
@@ -322,32 +388,72 @@ function StudentView() {
 function ParentView() {
   const [inputCode, setInputCode] = useState('');
   const [status, setStatus] = useState({ type: 'idle', message: '' });
-  const [students, setStudents] = useState([
-    { id: 1, name: "Alex Johnson", level: 12, points: 4500, streak: 14, studyMinutes: 1240 }
-  ]);
+  const [students, setStudents] = useState([]);
+  const [loadingStudents, setLoadingStudents] = useState(true);
 
-  const handleSubmit = (e) => {
+  // Fetch linked students on mount
+  useEffect(() => {
+    fetchStudents();
+  }, []);
+
+  const fetchStudents = async () => {
+    try {
+      setLoadingStudents(true);
+      const response = await familyAPI.getChildrenStats();
+      if (response.data.success) {
+        setStudents(response.data.children);
+      }
+    } catch (err) {
+      console.error('Failed to fetch students:', err);
+    } finally {
+      setLoadingStudents(false);
+    }
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (inputCode.length !== 6) return;
 
     setStatus({ type: 'loading', message: '' });
-    setTimeout(() => {
-      if (inputCode.toUpperCase() === "TEST00") {
-        setStatus({ type: 'error', message: 'Invalid or expired code.' });
-      } else {
-        setStatus({ type: 'success', message: 'Successfully connected!' });
-        setStudents(prev => [...prev, {
-          id: Date.now(),
-          name: "Sam Student",
-          level: 5,
-          points: 1200,
-          streak: 3,
-          studyMinutes: 340
-        }]);
+    
+    try {
+      const response = await familyAPI.linkChild(inputCode.trim().toUpperCase());
+      
+      if (response.data.success) {
+        setStatus({ type: 'success', message: `Successfully connected to ${response.data.student.fullName}!` });
         setInputCode('');
+        // Refresh the students list
+        await fetchStudents();
         setTimeout(() => setStatus({ type: 'idle', message: '' }), 3000);
       }
-    }, 1200);
+    } catch (err) {
+      console.error('Link error:', err);
+      setStatus({ 
+        type: 'error', 
+        message: err.response?.data?.message || 'Invalid or expired code.' 
+      });
+    }
+  };
+
+  const handleRemoveStudent = async (studentId, studentName) => {
+    if (!window.confirm(`Remove ${studentName} from your connected students?`)) {
+      return;
+    }
+
+    try {
+      await familyAPI.removeChild(studentId);
+      setStudents(prev => prev.filter(s => s.id !== studentId));
+    } catch (err) {
+      console.error('Remove error:', err);
+      alert(err.response?.data?.message || 'Failed to remove student');
+    }
+  };
+
+  // Helper to format study time
+  const formatStudyTime = (minutes) => {
+    if (!minutes) return '0h';
+    const hours = Math.floor(minutes / 60);
+    return `${hours}h`;
   };
 
   return (
@@ -412,7 +518,12 @@ function ParentView() {
       {/* Right: Students List */}
       <div className="lg:col-span-3">
         <QuestCard title="Your Students" icon={Users} color="slate">
-          {students.length === 0 ? (
+          {loadingStudents ? (
+            <div className="text-center py-10 text-slate-400">
+              <Loader2 className="w-10 h-10 mx-auto mb-3 animate-spin" />
+              <p className="font-medium">Loading students...</p>
+            </div>
+          ) : students.length === 0 ? (
             <div className="text-center py-10 text-slate-400">
               <BookOpen className="w-10 h-10 mx-auto mb-3 opacity-50" />
               <p className="font-medium">No students linked yet</p>
@@ -421,23 +532,46 @@ function ParentView() {
           ) : (
             <div className="space-y-4">
               {students.map((s) => (
-                <div key={s.id} className="bg-slate-50 border border-slate-200 rounded-xl p-4 hover:border-emerald-300 transition-colors group">
+                <div 
+                  key={s.id} 
+                  className="bg-slate-50 border border-slate-200 rounded-xl p-4 hover:border-emerald-300 transition-colors group"
+                >
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-3">
                       <div className="w-12 h-12 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center font-bold text-lg border-2 border-emerald-200">
-                        {s.name.charAt(0)}
+                        {s.fullName?.charAt(0) || '?'}
                       </div>
                       <div>
-                        <h4 className="font-bold text-slate-800">{s.name}</h4>
-                        <p className="text-xs text-slate-500">Level {s.level} Scholar</p>
+                        <h4 className="font-bold text-slate-800">{s.fullName}</h4>
+                        <p className="text-xs text-slate-500">Level {s.level || 1} Scholar</p>
                       </div>
                     </div>
-                    <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-emerald-500 transition-colors" />
+                    <button
+                      onClick={() => handleRemoveStudent(s.id, s.fullName)}
+                      className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
+                    >
+                      <UserMinus className="w-4 h-4" />
+                    </button>
                   </div>
                   <div className="grid grid-cols-3 gap-3">
-                    <StatBadge icon={Clock} label="Study" value={`${Math.floor(s.studyMinutes / 60)}h`} color="indigo" />
-                    <StatBadge icon={Award} label="Points" value={s.points.toLocaleString()} color="amber" />
-                    <StatBadge icon={TrendingUp} label="Streak" value={`${s.streak}d`} color="emerald" />
+                    <StatBadge 
+                      icon={Clock} 
+                      label="Study" 
+                      value={formatStudyTime(s.totalStudyTime)} 
+                      color="indigo" 
+                    />
+                    <StatBadge 
+                      icon={Award} 
+                      label="XP" 
+                      value={(s.xp || 0).toLocaleString()} 
+                      color="amber" 
+                    />
+                    <StatBadge 
+                      icon={TrendingUp} 
+                      label="Streak" 
+                      value={`${s.currentStreak || 0}d`} 
+                      color="emerald" 
+                    />
                   </div>
                 </div>
               ))}

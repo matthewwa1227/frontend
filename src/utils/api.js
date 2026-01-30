@@ -131,4 +131,22 @@ export const familyAPI = {
   removeChild: (studentId) => api.delete(`/family/children/${studentId}`),
 };
 
+// AI API
+export const aiAPI = {
+  chat: (message, conversationHistory = []) => 
+    api.post('/ai/chat', { message, conversationHistory }),
+  
+  generateSchedule: (preferences = {}, dateRange = 7) => 
+    api.post('/ai/generate-schedule', { preferences, dateRange }),
+  
+  getTips: (subject, difficulty) => 
+    api.get('/ai/tips', { params: { subject, difficulty } }),
+  
+  getHistory: (limit = 20) => 
+    api.get('/ai/history', { params: { limit } }),
+  
+  getSessions: (startDate, endDate) => 
+    api.get('/ai/sessions', { params: { startDate, endDate } })
+};
+
 export default api;
