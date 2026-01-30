@@ -14,6 +14,7 @@ import Profile from './components/profile/Profile';
 import Leaderboard from './components/leaderboard/Leaderboard';
 
 // --- Parent/Guardian Components ---
+import ParentDashboard from './components/parent/ParentDashboard'; // ADD THIS
 import ParentPortal from './components/portal/ParentPortal'; 
 import GuardianManagement from './components/GuardianManagement';
 
@@ -22,27 +23,62 @@ import Navbar from './components/shared/Navbar';
 import TestAnimation from './TestAnimation';
 
 /**
- * ProtectedRoute Wrapper
- * Checks if user is logged in. If not, redirects to Login.
- * If yes, renders the Navbar and the requested page.
+ * ProtectedRoute Wrapper - For Students
  */
 function ProtectedRoute({ children }) {
   const isAuth = isAuthenticated();
   const user = getUser();
   
   if (!isAuth || !user) {
-    // Use Navigate for smoother SPA transition instead of window.location
     return <Navigate to="/login" replace />;
   }
   
   return (
     <>
       <Navbar />
-      <div className="pt-4"> {/* Added padding-top so content doesn't hide behind Navbar if fixed */}
+      <div className="pt-4">
         {children}
       </div>
     </>
   );
+}
+
+/**
+ * ParentProtectedRoute Wrapper - For Parents (no student navbar)
+ */
+function ParentProtectedRoute({ children }) {
+  const isAuth = isAuthenticated();
+  const user = getUser();
+  
+  if (!isAuth || !user) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  // Redirect students away from parent routes
+  if (user.role !== 'parent') {
+    return <Navigate to="/dashboard" replace />;
+  }
+  
+  // No Navbar for parents - ParentDashboard has its own header
+  return <>{children}</>;
+}
+
+/**
+ * Smart Home Route - redirects based on role
+ */
+function SmartHomeRedirect() {
+  const isAuth = isAuthenticated();
+  const user = getUser();
+  
+  if (!isAuth || !user) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  if (user.role === 'parent') {
+    return <Navigate to="/parent/dashboard" replace />;
+  }
+  
+  return <Navigate to="/dashboard" replace />;
 }
 
 function App() {
@@ -53,6 +89,16 @@ function App() {
           {/* --- Public Routes --- */}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+
+          {/* --- Protected Parent Routes --- */}
+          <Route 
+            path="/parent/dashboard" 
+            element={
+              <ParentProtectedRoute>
+                <ParentDashboard />
+              </ParentProtectedRoute>
+            } 
+          />
 
           {/* --- Protected Student Routes --- */}
           <Route 
@@ -101,8 +147,6 @@ function App() {
           />
 
           {/* --- Protected Parent/Guardian Routes --- */}
-          
-          {/* The Portal: Where students generate codes or parents view status */}
           <Route 
             path="/portal" 
             element={
@@ -112,7 +156,6 @@ function App() {
             } 
           />
 
-          {/* Guardian Management: List of connected guardians */}
           <Route 
             path="/guardians" 
             element={
@@ -132,17 +175,8 @@ function App() {
             } 
           />
 
-          {/* --- Default Redirects --- */}
-          <Route 
-            path="/" 
-            element={
-              isAuthenticated() ? (
-                <Navigate to="/dashboard" replace />
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            } 
-          />
+          {/* --- Smart Home Redirect (role-based) --- */}
+          <Route path="/" element={<SmartHomeRedirect />} />
           
           {/* --- 404 Page --- */}
           <Route 
@@ -154,7 +188,7 @@ function App() {
                   <h1 className="text-2xl font-pixel text-white mb-2">404 - Level Not Found</h1>
                   <p className="text-gray-400 font-pixel text-sm mb-6">This quest map is incomplete!</p>
                   <a 
-                    href="/dashboard" 
+                    href="/" 
                     className="inline-block bg-pixel-gold border-4 border-white px-6 py-2 font-pixel text-black text-sm hover:bg-yellow-400 hover:scale-105 transition-transform"
                   >
                     Return to Base

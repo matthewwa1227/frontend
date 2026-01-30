@@ -34,12 +34,17 @@ export default function Login() {
       // Store token and user data
       setAuth(token, student);
       
+    // Route based on role
+    if (student.role === 'parent') {
+      navigate('/parent/dashboard');
+    } else {
       navigate('/dashboard');
-    } catch (err) {
-      setError(err.response?.data?.message || 'Login failed. Please try again.');
-    } finally {
-      setLoading(false);
     }
+  } catch (err) {
+    setError(err.response?.data?.message || 'Login failed. Please try again.');
+  } finally {
+    setLoading(false);
+  }
   };
 
   return (
