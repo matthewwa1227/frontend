@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { logout, getUser } from '../../utils/auth';
-import { BookOpen, Trophy, Target, LogOut, User, Timer, Users } from 'lucide-react';
+import { BookOpen, Trophy, Target, LogOut, User, Timer, Users, Bot, CalendarDays } from 'lucide-react';
 
 export default function Navbar() {
   const navigate = useNavigate();
@@ -46,6 +46,24 @@ export default function Navbar() {
               <Timer className="w-4 h-4" />
               <span className="hidden sm:block">Timer</span>
             </Link>
+
+            {/* Study Buddy AI Link */}
+            <Link 
+              to="/study-buddy" 
+              className="text-xs font-pixel text-white hover:text-pixel-gold transition-colors flex items-center gap-2"
+            >
+              <Bot className="w-4 h-4" />
+              <span className="hidden sm:block">AI Buddy</span>
+            </Link>
+            
+            {/* Schedule Generator Link */}
+            <Link 
+              to="/schedule" 
+              className="text-xs font-pixel text-white hover:text-pixel-gold transition-colors flex items-center gap-2"
+            >
+              <CalendarDays className="w-4 h-4" />
+              <span className="hidden sm:block">Schedule</span>
+            </Link>
             
             <Link 
               to="/leaderboard" 
@@ -55,7 +73,6 @@ export default function Navbar() {
               <span className="hidden sm:block">Leaderboard</span>
             </Link>
 
-            {/* --- NEW LINK ADDED HERE --- */}
             <Link 
               to="/portal" 
               className="text-xs font-pixel text-white hover:text-pixel-gold transition-colors flex items-center gap-2"
@@ -63,7 +80,6 @@ export default function Navbar() {
               <Users className="w-4 h-4" />
               <span className="hidden sm:block">Parents</span>
             </Link>
-            {/* --------------------------- */}
 
             <Link 
               to="/profile" 

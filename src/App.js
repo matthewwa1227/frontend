@@ -22,6 +22,9 @@ import GuardianManagement from './components/GuardianManagement';
 import Navbar from './components/shared/Navbar';
 import TestAnimation from './TestAnimation';
 
+
+import StudyBuddy from './components/StudyBuddy/StudyBuddy';
+import ScheduleGenerator from './components/ScheduleGenerator/ScheduleGenerator';
 /**
  * ProtectedRoute Wrapper - For Students
  */
@@ -175,6 +178,23 @@ function App() {
             } 
           />
 
+          <Route 
+            path="/study-buddy" 
+            element={
+              <ProtectedRoute>
+                <StudyBuddy />
+              </ProtectedRoute>
+            } 
+          />
+
+          <Route 
+            path="/schedule" 
+            element={
+              <ProtectedRoute>
+                <ScheduleGenerator />
+              </ProtectedRoute>
+            }            
+          />
           {/* --- Smart Home Redirect (role-based) --- */}
           <Route path="/" element={<SmartHomeRedirect />} />
           
