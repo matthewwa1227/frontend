@@ -34,6 +34,9 @@ api.interceptors.response.use(
 export const authAPI = {
   login: (credentials) => api.post('/auth/login', credentials),
   register: (userData) => api.post('/auth/register', userData),
+  registerParent: (userData) => api.post('/auth/register-parent', userData),
+  getMe: () => api.get('/auth/me'),
+  getProfile: () => api.get('/auth/profile'),
   logout: () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
@@ -103,6 +106,29 @@ export const leaderboardAPI = {
 
 export const dashboardAPI = {
   getStats: () => api.get('/dashboard/stats'),
+};
+
+// Add this to your api.js file
+
+export const familyAPI = {
+  // Student generates invite code
+  generateCode: () => api.post('/family/generate-code'),
+  
+  // Parent links using code
+  linkChild: (code, relationship = 'Guardian') => 
+    api.post('/family/link-child', { code, relationship }),
+  
+  // Parent gets list of linked children with stats
+  getChildrenStats: () => api.get('/family/children-stats'),
+  
+  // Student gets list of guardians
+  getGuardians: () => api.get('/family/guardians'),
+  
+  // Student removes a guardian
+  removeGuardian: (linkId) => api.delete(`/family/guardians/${linkId}`),
+  
+  // Parent removes a child
+  removeChild: (studentId) => api.delete(`/family/children/${studentId}`),
 };
 
 export default api;
