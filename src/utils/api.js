@@ -149,4 +149,14 @@ export const aiAPI = {
     api.get('/ai/sessions', { params: { startDate, endDate } })
 };
 
+
+export const taskAPI = {
+  getAll: () => api.get('/tasks'),
+  getOne: (id) => api.get(`/tasks/${id}`),
+  create: (taskData) => api.post('/tasks', taskData),
+  update: (id, taskData) => api.put(`/tasks/${id}`, taskData),
+  delete: (id) => api.delete(`/tasks/${id}`),
+  toggle: (id) => api.patch(`/tasks/${id}/toggle`)
+};
+
 export default api;

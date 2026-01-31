@@ -12,9 +12,10 @@ import StudyTimer from './components/StudyTimer/StudyTimer';
 import Achievements from './components/Achievements/Achievements';
 import Profile from './components/profile/Profile';
 import Leaderboard from './components/leaderboard/Leaderboard';
+import Tasks from './components/Tasks/Tasks'; // ADD THIS
 
 // --- Parent/Guardian Components ---
-import ParentDashboard from './components/parent/ParentDashboard'; // ADD THIS
+import ParentDashboard from './components/parent/ParentDashboard';
 import ParentPortal from './components/portal/ParentPortal'; 
 import GuardianManagement from './components/GuardianManagement';
 
@@ -22,9 +23,9 @@ import GuardianManagement from './components/GuardianManagement';
 import Navbar from './components/shared/Navbar';
 import TestAnimation from './TestAnimation';
 
-
 import StudyBuddy from './components/StudyBuddy/StudyBuddy';
 import ScheduleGenerator from './components/ScheduleGenerator/ScheduleGenerator';
+
 /**
  * ProtectedRoute Wrapper - For Students
  */
@@ -149,6 +150,16 @@ function App() {
             } 
           />
 
+          {/* ADD THIS TASKS ROUTE */}
+          <Route 
+            path="/tasks" 
+            element={
+              <ProtectedRoute>
+                <Tasks />
+              </ProtectedRoute>
+            } 
+          />
+
           {/* --- Protected Parent/Guardian Routes --- */}
           <Route 
             path="/portal" 
@@ -195,6 +206,7 @@ function App() {
               </ProtectedRoute>
             }            
           />
+
           {/* --- Smart Home Redirect (role-based) --- */}
           <Route path="/" element={<SmartHomeRedirect />} />
           
