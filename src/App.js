@@ -26,6 +26,8 @@ import TestAnimation from './TestAnimation';
 import StudyBuddy from './components/StudyBuddy/StudyBuddy';
 import ScheduleGenerator from './components/ScheduleGenerator/ScheduleGenerator';
 
+import AITutor from './components/AITutor/AITutor';
+
 /**
  * ProtectedRoute Wrapper - For Students
  */
@@ -206,6 +208,15 @@ function App() {
               </ProtectedRoute>
             }            
           />
+          <Route 
+            path="/tutor" 
+            element={
+              <ProtectedRoute>
+                <AITutor />
+              </ProtectedRoute>
+            } 
+          />
+          
 
           {/* --- Smart Home Redirect (role-based) --- */}
           <Route path="/" element={<SmartHomeRedirect />} />

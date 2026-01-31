@@ -159,4 +159,28 @@ export const taskAPI = {
   toggle: (id) => api.patch(`/tasks/${id}/toggle`)
 };
 
+// Tutor API
+export const tutorAPI = {
+  // Start a new tutoring session
+  startSession: (data) => api.post('/tutor/session/start', data),
+  
+  // Send a message in the session
+  sendMessage: (sessionId, message) => 
+    api.post('/tutor/session/message', { sessionId, message }),
+  
+  // End the tutoring session
+  endSession: (sessionId) => 
+    api.post('/tutor/session/end', { sessionId }),
+  
+  // Get session history
+  getSessions: (params = {}) => 
+    api.get('/tutor/sessions', { params }),
+  
+  // Get tutor stats
+  getStats: () => api.get('/tutor/stats'),
+  
+  // Health check
+  health: () => api.get('/tutor/health'),
+};
+
 export default api;
