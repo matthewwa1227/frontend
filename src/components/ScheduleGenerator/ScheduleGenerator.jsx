@@ -1,39 +1,107 @@
 import React, { useState, useEffect } from 'react';
-import { aiAPI } from '../../utils/api';
-import { Calendar, Clock, Zap, RefreshCw, ChevronLeft, ChevronRight, BookOpen, Coffee, Target } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  Calendar, Clock, Brain, Sparkles, RefreshCw, 
+  ChevronLeft, ChevronRight, Check, AlertCircle,
+  Coffee, Target, Zap, Settings
+} from 'lucide-react';
+import { aiAPI, taskAPI } from '../../utils/api';
 
 const ScheduleGenerator = () => {
+  const [tasks, setTasks] = useState([]);
   const [schedule, setSchedule] = useState(null);
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [loadingTasks, setLoadingTasks] = useState(true);
   const [error, setError] = useState(null);
-  const [dateRange, setDateRange] = useState(3);
+  const [currentWeekStart, setCurrentWeekStart] = useState(getWeekStart(new Date()));
+  const [showSettings, setShowSettings] = useState(false);
+  
   const [preferences, setPreferences] = useState({
     preferredStartTime: '09:00',
     preferredEndTime: '21:00',
     sessionLength: 45,
-    breakLength: 10
+    breakLength: 10,
+    maxSessionsPerDay: 4
   });
-  const [viewMode, setViewMode] = useState('list'); // 'list' or 'calendar'
-  const [selectedDay, setSelectedDay] = useState(0);
+
+  // Get start of week (Monday)
+  function getWeekStart(date) {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    d.setDate(diff);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }
+
+  // Fetch tasks on mount
+  useEffect(() => {
+    fetchTasks();
+  }, []);
+
+  const fetchTasks = async () => {
+    try {
+      setLoadingTasks(true);
+      const response = await taskAPI.getAll();
+      const pendingTasks = (response.data.tasks || response.data || [])
+        .filter(t => t.status !== 'completed');
+      setTasks(pendingTasks);
+    } catch (err) {
+      console.error('Failed to fetch tasks:', err);
+      setError('Failed to load tasks');
+    } finally {
+      setLoadingTasks(false);
+    }
+  };
 
   const generateSchedule = async () => {
+    if (tasks.length === 0) {
+      setError('No pending tasks to schedule. Add some tasks first!');
+      return;
+    }
+
     try {
-      setIsGenerating(true);
+      setLoading(true);
       setError(null);
       
-      const response = await aiAPI.generateSchedule(preferences, dateRange);
+      const response = await aiAPI.generateSchedule(preferences, 7, tasks);
       
       if (response.data.success) {
         setSchedule(response.data.schedule);
       } else {
-        throw new Error(response.data.message || 'Failed to generate schedule');
+        setError(response.data.message || 'Failed to generate schedule');
       }
     } catch (err) {
       console.error('Schedule generation error:', err);
-      setError(err.response?.data?.message || err.message || 'Failed to generate schedule');
+      setError('Failed to generate schedule. Please try again.');
     } finally {
-      setIsGenerating(false);
+      setLoading(false);
     }
+  };
+
+  const navigateWeek = (direction) => {
+    const newStart = new Date(currentWeekStart);
+    newStart.setDate(newStart.getDate() + (direction * 7));
+    setCurrentWeekStart(newStart);
+  };
+
+  const getWeekDays = () => {
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+      const day = new Date(currentWeekStart);
+      day.setDate(day.getDate() + i);
+      days.push(day);
+    }
+    return days;
+  };
+
+  const getSessionsForDay = (date) => {
+    if (!schedule?.sessions) return [];
+    
+    return schedule.sessions.filter(session => {
+      const sessionDate = new Date(session.startTime);
+      return sessionDate.toDateString() === date.toDateString();
+    });
   };
 
   const formatTime = (isoString) => {
@@ -41,396 +109,416 @@ const ScheduleGenerator = () => {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
-  const formatDate = (isoString) => {
-    const date = new Date(isoString);
-    return date.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+  const isToday = (date) => {
+    return date.toDateString() === new Date().toDateString();
   };
 
-  const formatDuration = (start, end) => {
-    const startDate = new Date(start);
-    const endDate = new Date(end);
-    const minutes = Math.round((endDate - startDate) / 60000);
-    return `${minutes} min`;
+  const getPriorityColor = (priority) => {
+    switch (priority) {
+      case 'high': return 'bg-red-500';
+      case 'medium': return 'bg-yellow-500';
+      case 'low': return 'bg-green-500';
+      default: return 'bg-blue-500';
+    }
   };
 
-  // Group sessions by day
-  const getSessionsByDay = () => {
-    if (!schedule?.sessions) return {};
-    
-    const grouped = {};
-    schedule.sessions.forEach(session => {
-      const dateKey = new Date(session.startTime).toDateString();
-      if (!grouped[dateKey]) {
-        grouped[dateKey] = [];
-      }
-      grouped[dateKey].push(session);
-    });
-    
-    // Sort sessions within each day
-    Object.keys(grouped).forEach(key => {
-      grouped[key].sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
-    });
-    
-    return grouped;
+  const getPriorityBorder = (priority) => {
+    switch (priority) {
+      case 'high': return 'border-l-red-500';
+      case 'medium': return 'border-l-yellow-500';
+      case 'low': return 'border-l-green-500';
+      default: return 'border-l-blue-500';
+    }
   };
 
-  const sessionsByDay = getSessionsByDay();
-  const dayKeys = Object.keys(sessionsByDay).sort((a, b) => new Date(a) - new Date(b));
+  const weekDays = getWeekDays();
 
-  const getSessionColor = (type, index) => {
-    const colors = [
-      'from-blue-600 to-blue-700 border-blue-400',
-      'from-purple-600 to-purple-700 border-purple-400',
-      'from-green-600 to-green-700 border-green-400',
-      'from-orange-600 to-orange-700 border-orange-400',
-      'from-pink-600 to-pink-700 border-pink-400',
-      'from-cyan-600 to-cyan-700 border-cyan-400'
-    ];
-    return colors[index % colors.length];
+  // Pixel Card Component
+  const PixelCard = ({ children, className = '', noPadding = false }) => (
+    <div className={`bg-white border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] ${noPadding ? '' : 'p-4'} ${className}`}>
+      {children}
+    </div>
+  );
+
+  // Pixel Button Component
+  const PixelButton = ({ children, onClick, disabled, variant = 'primary', className = '' }) => {
+    const baseClasses = "font-bold border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all active:translate-x-1 active:translate-y-1 active:shadow-none disabled:opacity-50 disabled:cursor-not-allowed disabled:active:translate-x-0 disabled:active:translate-y-0 disabled:active:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]";
+    
+    const variants = {
+      primary: "bg-purple-500 hover:bg-purple-600 text-white",
+      secondary: "bg-gray-200 hover:bg-gray-300 text-gray-800",
+      success: "bg-green-500 hover:bg-green-600 text-white",
+      danger: "bg-red-500 hover:bg-red-600 text-white",
+    };
+
+    return (
+      <button 
+        onClick={onClick} 
+        disabled={disabled}
+        className={`${baseClasses} ${variants[variant]} ${className}`}
+      >
+        {children}
+      </button>
+    );
   };
 
   return (
-    <div className="min-h-screen bg-pixel-dark p-4 md:p-6">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-green-600 to-teal-600 border-4 border-white p-4 md:p-6 mb-6 shadow-pixel">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="text-4xl">📅</div>
-              <div>
-                <h1 className="text-xl md:text-2xl font-pixel text-white">AI Schedule Generator</h1>
-                <p className="text-green-200 text-sm">Let AI optimize your study time</p>
-              </div>
+    <div className="p-4 md:p-6 max-w-7xl mx-auto">
+      {/* Header */}
+      <PixelCard className="bg-gradient-to-r from-purple-400 via-pink-400 to-purple-500 mb-6">
+        <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-4">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-yellow-400 border-4 border-black">
+              <Brain className="w-8 h-8 text-black" />
             </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setViewMode('list')}
-                className={`px-3 py-2 font-pixel text-xs border-2 transition-all ${
-                  viewMode === 'list' 
-                    ? 'bg-white text-green-700 border-white' 
-                    : 'bg-transparent text-white border-white/50 hover:border-white'
-                }`}
-              >
-                📋 List
-              </button>
-              <button
-                onClick={() => setViewMode('calendar')}
-                className={`px-3 py-2 font-pixel text-xs border-2 transition-all ${
-                  viewMode === 'calendar' 
-                    ? 'bg-white text-green-700 border-white' 
-                    : 'bg-transparent text-white border-white/50 hover:border-white'
-                }`}
-              >
-                📆 Calendar
-              </button>
+            <div>
+              <h1 className="text-2xl md:text-3xl font-black text-black uppercase tracking-wide">
+                ⚡ AI Schedule Generator
+              </h1>
+              <p className="text-black/80 font-medium mt-1">
+                Let AI optimize your study plan!
+              </p>
             </div>
+          </div>
+          
+          <div className="flex gap-3 flex-wrap">
+            <PixelButton 
+              onClick={() => setShowSettings(!showSettings)}
+              variant="secondary"
+              className="px-4 py-2 flex items-center gap-2"
+            >
+              <Settings size={18} />
+              <span className="hidden sm:inline">SETTINGS</span>
+            </PixelButton>
+            
+            <PixelButton 
+              onClick={generateSchedule}
+              disabled={loading || loadingTasks || tasks.length === 0}
+              variant="success"
+              className="px-4 py-2 flex items-center gap-2"
+            >
+              {loading ? (
+                <>
+                  <RefreshCw className="animate-spin" size={18} />
+                  GENERATING...
+                </>
+              ) : (
+                <>
+                  <Sparkles size={18} />
+                  GENERATE!
+                </>
+              )}
+            </PixelButton>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Settings Panel */}
-          <div className="lg:col-span-1">
-            <div className="bg-pixel-primary border-4 border-pixel-accent p-4 shadow-pixel sticky top-4">
-              <h2 className="font-pixel text-yellow-400 mb-4 flex items-center gap-2">
-                <Zap className="w-4 h-4" />
-                Settings
-              </h2>
-
-              {/* Date Range */}
-              <div className="mb-4">
-                <label className="block text-gray-400 text-sm mb-2">Schedule Duration</label>
-                <div className="flex gap-2">
-                  {[1, 3, 5, 7].map(days => (
-                    <button
-                      key={days}
-                      onClick={() => setDateRange(days)}
-                      className={`flex-1 py-2 text-sm font-pixel border-2 transition-all ${
-                        dateRange === days
-                          ? 'bg-green-600 border-green-400 text-white'
-                          : 'bg-gray-700 border-gray-600 text-gray-300 hover:border-gray-500'
-                      }`}
-                    >
-                      {days}d
-                    </button>
-                  ))}
+        {/* Settings Panel */}
+        <AnimatePresence>
+          {showSettings && (
+            <motion.div 
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="overflow-hidden"
+            >
+              <div className="mt-6 pt-6 border-t-4 border-black/30">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="flex flex-col gap-2">
+                    <label className="font-bold text-black text-sm uppercase">Start Time</label>
+                    <input 
+                      type="time" 
+                      value={preferences.preferredStartTime}
+                      onChange={(e) => setPreferences({...preferences, preferredStartTime: e.target.value})}
+                      className="px-3 py-2 border-4 border-black bg-white font-mono focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <label className="font-bold text-black text-sm uppercase">End Time</label>
+                    <input 
+                      type="time" 
+                      value={preferences.preferredEndTime}
+                      onChange={(e) => setPreferences({...preferences, preferredEndTime: e.target.value})}
+                      className="px-3 py-2 border-4 border-black bg-white font-mono focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <label className="font-bold text-black text-sm uppercase">Session (min)</label>
+                    <input 
+                      type="number" 
+                      value={preferences.sessionLength}
+                      onChange={(e) => setPreferences({...preferences, sessionLength: parseInt(e.target.value)})}
+                      min={15}
+                      max={90}
+                      className="px-3 py-2 border-4 border-black bg-white font-mono focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <label className="font-bold text-black text-sm uppercase">Break (min)</label>
+                    <input 
+                      type="number" 
+                      value={preferences.breakLength}
+                      onChange={(e) => setPreferences({...preferences, breakLength: parseInt(e.target.value)})}
+                      min={5}
+                      max={30}
+                      className="px-3 py-2 border-4 border-black bg-white font-mono focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                    />
+                  </div>
                 </div>
               </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </PixelCard>
 
-              {/* Preferred Times */}
-              <div className="mb-4">
-                <label className="block text-gray-400 text-sm mb-2">Study Hours</label>
-                <div className="flex gap-2 items-center">
-                  <input
-                    type="time"
-                    value={preferences.preferredStartTime}
-                    onChange={(e) => setPreferences(p => ({ ...p, preferredStartTime: e.target.value }))}
-                    className="flex-1 bg-gray-800 border-2 border-gray-600 rounded px-2 py-1 text-white text-sm"
-                  />
-                  <span className="text-gray-500">to</span>
-                  <input
-                    type="time"
-                    value={preferences.preferredEndTime}
-                    onChange={(e) => setPreferences(p => ({ ...p, preferredEndTime: e.target.value }))}
-                    className="flex-1 bg-gray-800 border-2 border-gray-600 rounded px-2 py-1 text-white text-sm"
-                  />
-                </div>
-              </div>
+      {/* Error Message */}
+      {error && (
+        <PixelCard className="bg-red-100 border-red-500 mb-6">
+          <div className="flex items-center gap-3 text-red-700">
+            <AlertCircle size={24} />
+            <span className="font-bold">{error}</span>
+          </div>
+        </PixelCard>
+      )}
 
-              {/* Session Length */}
-              <div className="mb-4">
-                <label className="block text-gray-400 text-sm mb-2">
-                  Session Length: {preferences.sessionLength} min
-                </label>
-                <input
-                  type="range"
-                  min="15"
-                  max="90"
-                  step="5"
-                  value={preferences.sessionLength}
-                  onChange={(e) => setPreferences(p => ({ ...p, sessionLength: parseInt(e.target.value) }))}
-                  className="w-full accent-green-500"
-                />
-                <div className="flex justify-between text-xs text-gray-500 mt-1">
-                  <span>15m</span>
-                  <span>90m</span>
-                </div>
-              </div>
-
-              {/* Break Length */}
-              <div className="mb-6">
-                <label className="block text-gray-400 text-sm mb-2">
-                  Break Length: {preferences.breakLength} min
-                </label>
-                <input
-                  type="range"
-                  min="5"
-                  max="30"
-                  step="5"
-                  value={preferences.breakLength}
-                  onChange={(e) => setPreferences(p => ({ ...p, breakLength: parseInt(e.target.value) }))}
-                  className="w-full accent-yellow-500"
-                />
-                <div className="flex justify-between text-xs text-gray-500 mt-1">
-                  <span>5m</span>
-                  <span>30m</span>
-                </div>
-              </div>
-
-              {/* Generate Button */}
-              <button
-                onClick={generateSchedule}
-                disabled={isGenerating}
-                className={`w-full py-3 font-pixel text-sm border-4 transition-all flex items-center justify-center gap-2 ${
-                  isGenerating
-                    ? 'bg-gray-600 border-gray-500 text-gray-400 cursor-not-allowed'
-                    : 'bg-green-600 border-green-400 text-white hover:bg-green-500 hover:scale-105'
-                }`}
-              >
-                {isGenerating ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 animate-spin" />
-                    Generating...
-                  </>
-                ) : (
-                  <>
-                    <Zap className="w-4 h-4" />
-                    Generate Schedule
-                  </>
-                )}
-              </button>
-
-              {/* Error Message */}
-              {error && (
-                <div className="mt-4 bg-red-900/50 border-2 border-red-600 p-3 rounded">
-                  <p className="text-red-300 text-sm">{error}</p>
-                </div>
-              )}
+      {/* Task Summary Stats */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <PixelCard className="bg-blue-100">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-blue-500 border-2 border-black">
+              <Target className="text-white" size={20} />
+            </div>
+            <div>
+              <div className="text-2xl font-black text-black">{tasks.length}</div>
+              <div className="text-xs font-bold text-gray-600 uppercase">Pending</div>
             </div>
           </div>
+        </PixelCard>
 
-          {/* Schedule Display */}
-          <div className="lg:col-span-2">
-            {!schedule ? (
-              <div className="bg-pixel-primary border-4 border-pixel-accent p-8 shadow-pixel text-center">
-                <div className="text-6xl mb-4">📅</div>
-                <h3 className="font-pixel text-white text-lg mb-2">No Schedule Yet</h3>
-                <p className="text-gray-400 mb-4">
-                  Configure your preferences and click "Generate Schedule" to create an AI-optimized study plan.
-                </p>
-                <div className="flex flex-wrap justify-center gap-4 text-sm text-gray-500">
-                  <span className="flex items-center gap-1">
-                    <Clock className="w-4 h-4" /> Smart timing
+        <PixelCard className="bg-red-100">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-red-500 border-2 border-black">
+              <Zap className="text-white" size={20} />
+            </div>
+            <div>
+              <div className="text-2xl font-black text-black">
+                {tasks.filter(t => t.priority === 'high').length}
+              </div>
+              <div className="text-xs font-bold text-gray-600 uppercase">High Priority</div>
+            </div>
+          </div>
+        </PixelCard>
+
+        <PixelCard className="bg-purple-100">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-purple-500 border-2 border-black">
+              <Clock className="text-white" size={20} />
+            </div>
+            <div>
+              <div className="text-2xl font-black text-black">
+                {Math.round(tasks.reduce((sum, t) => sum + (t.estimated_duration || t.estimatedMinutes || 30), 0) / 60)}h
+              </div>
+              <div className="text-xs font-bold text-gray-600 uppercase">Est. Time</div>
+            </div>
+          </div>
+        </PixelCard>
+
+        <PixelCard className="bg-green-100">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-green-500 border-2 border-black">
+              <Calendar className="text-white" size={20} />
+            </div>
+            <div>
+              <div className="text-2xl font-black text-black">
+                {schedule?.sessions?.filter(s => s.type !== 'break').length || 0}
+              </div>
+              <div className="text-xs font-bold text-gray-600 uppercase">Sessions</div>
+            </div>
+          </div>
+        </PixelCard>
+      </div>
+
+      {/* Calendar View */}
+      <PixelCard noPadding className="mb-6 overflow-hidden">
+        {/* Calendar Navigation */}
+        <div className="flex justify-between items-center px-4 py-3 bg-gray-100 border-b-4 border-black">
+          <button 
+            onClick={() => navigateWeek(-1)}
+            className="p-2 bg-white border-2 border-black hover:bg-yellow-200 transition-colors active:translate-x-0.5 active:translate-y-0.5"
+          >
+            <ChevronLeft size={20} className="text-black" />
+          </button>
+          <span className="font-black text-black uppercase">
+            {weekDays[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {weekDays[6].toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+          </span>
+          <button 
+            onClick={() => navigateWeek(1)}
+            className="p-2 bg-white border-2 border-black hover:bg-yellow-200 transition-colors active:translate-x-0.5 active:translate-y-0.5"
+          >
+            <ChevronRight size={20} className="text-black" />
+          </button>
+        </div>
+
+        {/* Calendar Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7">
+          {weekDays.map((day, index) => {
+            const sessions = getSessionsForDay(day);
+            const dayName = day.toLocaleDateString('en-US', { weekday: 'short' });
+            const dayNum = day.getDate();
+            const today = isToday(day);
+            
+            return (
+              <div 
+                key={index} 
+                className={`border-r-4 border-b-4 border-black last:border-r-0 min-h-80 flex flex-col ${
+                  today ? 'bg-yellow-50' : 'bg-white'
+                } ${index >= 4 ? 'hidden lg:flex' : ''} ${index >= 2 ? 'hidden md:flex' : ''} ${index >= 1 ? 'hidden sm:flex' : 'flex'}`}
+              >
+                {/* Day Header */}
+                <div className={`flex flex-col items-center py-3 border-b-4 border-black ${
+                  today ? 'bg-yellow-400' : 'bg-gray-200'
+                }`}>
+                  <span className="text-xs font-black uppercase tracking-wide text-black">
+                    {dayName}
                   </span>
-                  <span className="flex items-center gap-1">
-                    <Target className="w-4 h-4" /> Priority-based
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Coffee className="w-4 h-4" /> Built-in breaks
-                  </span>
+                  <span className="text-2xl font-black text-black mt-0.5">{dayNum}</span>
+                  {today && <span className="text-xs font-bold text-black">TODAY!</span>}
+                </div>
+                
+                {/* Sessions */}
+                <div className="flex-1 p-2 overflow-y-auto space-y-2">
+                  {sessions.length === 0 ? (
+                    <div className="text-center text-gray-400 font-bold text-sm py-8 uppercase">
+                      No sessions
+                    </div>
+                  ) : (
+                    sessions.map((session, sIndex) => (
+                      <motion.div
+                        key={sIndex}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: sIndex * 0.05 }}
+                        className={`p-2 border-2 border-black cursor-pointer transition-all hover:translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] ${
+                          session.type === 'break' 
+                            ? 'bg-green-200 border-l-4 border-l-green-600' 
+                            : `bg-purple-100 border-l-4 ${getPriorityBorder(session.priority)}`
+                        }`}
+                      >
+                        {session.type === 'break' ? (
+                          <div className="flex items-center gap-2">
+                            <Coffee size={14} className="text-green-700" />
+                            <span className="text-xs text-gray-600 font-bold">
+                              {formatTime(session.startTime)}
+                            </span>
+                            <span className="text-sm font-black text-green-800">BREAK</span>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="flex items-center gap-1.5 mb-1">
+                              <span className={`w-2 h-2 border border-black ${getPriorityColor(session.priority)}`} />
+                              <span className="text-xs text-gray-600 font-bold">
+                                {formatTime(session.startTime)} - {formatTime(session.endTime)}
+                              </span>
+                            </div>
+                            <div className="text-sm font-black text-gray-900 leading-tight">
+                              {session.title}
+                            </div>
+                            {session.subject && (
+                              <div className="text-xs font-bold text-purple-600 mt-1 uppercase">
+                                📚 {session.subject}
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </motion.div>
+                    ))
+                  )}
                 </div>
               </div>
-            ) : (
-              <div className="space-y-4">
-                {/* Summary Card */}
-                <div className="bg-gradient-to-r from-purple-600/20 to-blue-600/20 border-4 border-purple-500/50 p-4 shadow-pixel">
-                  <h3 className="font-pixel text-purple-300 mb-2">📊 Schedule Summary</h3>
-                  <p className="text-gray-300 mb-3">{schedule.summary}</p>
-                  <div className="flex flex-wrap gap-4 text-sm">
-                    <span className="bg-purple-600/30 px-3 py-1 rounded-full text-purple-200">
-                      📚 {schedule.sessions?.length || 0} sessions
-                    </span>
-                    <span className="bg-blue-600/30 px-3 py-1 rounded-full text-blue-200">
-                      📅 {dayKeys.length} days
-                    </span>
-                  </div>
-                </div>
+            );
+          })}
+        </div>
+      </PixelCard>
 
-                {/* Tips */}
-                {schedule.tips && schedule.tips.length > 0 && (
-                  <div className="bg-yellow-600/10 border-4 border-yellow-500/50 p-4 shadow-pixel">
-                    <h3 className="font-pixel text-yellow-400 mb-2">💡 AI Tips</h3>
-                    <ul className="space-y-1">
-                      {schedule.tips.map((tip, index) => (
-                        <li key={index} className="text-gray-300 text-sm flex items-start gap-2">
-                          <span className="text-yellow-400">▸</span>
-                          {tip}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {/* Sessions */}
-                {viewMode === 'list' ? (
-                  /* List View */
-                  <div className="space-y-4">
-                    {dayKeys.length === 0 ? (
-                      <div className="bg-pixel-primary border-4 border-pixel-accent p-6 shadow-pixel text-center">
-                        <p className="text-gray-400">No sessions scheduled. Add some tasks first!</p>
-                      </div>
-                    ) : (
-                      dayKeys.map((dayKey, dayIndex) => (
-                        <div key={dayKey} className="bg-pixel-primary border-4 border-pixel-accent shadow-pixel overflow-hidden">
-                          <div className="bg-gray-700/50 px-4 py-2 border-b-2 border-gray-600">
-                            <h3 className="font-pixel text-white flex items-center gap-2">
-                              <Calendar className="w-4 h-4 text-green-400" />
-                              {formatDate(sessionsByDay[dayKey][0].startTime)}
-                              <span className="text-gray-500 text-xs ml-2">
-                                ({sessionsByDay[dayKey].length} sessions)
-                              </span>
-                            </h3>
-                          </div>
-                          <div className="p-4 space-y-3">
-                            {sessionsByDay[dayKey].map((session, sessionIndex) => (
-                              <div
-                                key={sessionIndex}
-                                className={`bg-gradient-to-r ${getSessionColor(session.type, sessionIndex)} border-2 p-3 rounded-lg`}
-                              >
-                                <div className="flex items-start justify-between">
-                                  <div className="flex-1">
-                                    <h4 className="font-pixel text-white text-sm mb-1">
-                                      {session.title}
-                                    </h4>
-                                    {session.description && (
-                                      <p className="text-gray-200 text-xs mb-2">{session.description}</p>
-                                    )}
-                                  </div>
-                                  <div className="text-right">
-                                    <div className="bg-black/20 px-2 py-1 rounded text-xs text-white">
-                                      {formatDuration(session.startTime, session.endTime)}
-                                    </div>
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-2 mt-2 text-xs text-gray-200">
-                                  <Clock className="w-3 h-3" />
-                                  {formatTime(session.startTime)} - {formatTime(session.endTime)}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                ) : (
-                  /* Calendar View */
-                  <div className="bg-pixel-primary border-4 border-pixel-accent shadow-pixel">
-                    {/* Day Navigation */}
-                    <div className="flex items-center justify-between px-4 py-3 border-b-2 border-gray-600">
-                      <button
-                        onClick={() => setSelectedDay(Math.max(0, selectedDay - 1))}
-                        disabled={selectedDay === 0}
-                        className="p-2 text-gray-400 hover:text-white disabled:opacity-30"
-                      >
-                        <ChevronLeft className="w-5 h-5" />
-                      </button>
-                      <h3 className="font-pixel text-white">
-                        {dayKeys[selectedDay] ? formatDate(sessionsByDay[dayKeys[selectedDay]][0].startTime) : 'No sessions'}
-                      </h3>
-                      <button
-                        onClick={() => setSelectedDay(Math.min(dayKeys.length - 1, selectedDay + 1))}
-                        disabled={selectedDay >= dayKeys.length - 1}
-                        className="p-2 text-gray-400 hover:text-white disabled:opacity-30"
-                      >
-                        <ChevronRight className="w-5 h-5" />
-                      </button>
-                    </div>
-
-                    {/* Timeline */}
-                    <div className="p-4">
-                      {dayKeys[selectedDay] && sessionsByDay[dayKeys[selectedDay]] ? (
-                        <div className="relative">
-                          {/* Time line */}
-                          <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-gray-600"></div>
-                          
-                          <div className="space-y-4 pl-10">
-                            {sessionsByDay[dayKeys[selectedDay]].map((session, index) => (
-                              <div key={index} className="relative">
-                                {/* Time dot */}
-                                <div className="absolute -left-10 top-3 w-4 h-4 bg-green-500 rounded-full border-2 border-green-300"></div>
-                                
-                                <div className={`bg-gradient-to-r ${getSessionColor(session.type, index)} border-2 p-3 rounded-lg`}>
-                                  <div className="flex items-center gap-2 text-xs text-gray-200 mb-2">
-                                    <Clock className="w-3 h-3" />
-                                    {formatTime(session.startTime)} - {formatTime(session.endTime)}
-                                    <span className="bg-black/20 px-2 py-0.5 rounded">
-                                      {formatDuration(session.startTime, session.endTime)}
-                                    </span>
-                                  </div>
-                                  <h4 className="font-pixel text-white text-sm">{session.title}</h4>
-                                  {session.description && (
-                                    <p className="text-gray-200 text-xs mt-1">{session.description}</p>
-                                  )}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="text-center py-8 text-gray-400">
-                          No sessions for this day
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Regenerate Button */}
-                <div className="text-center">
-                  <button
-                    onClick={generateSchedule}
-                    disabled={isGenerating}
-                    className="bg-gray-700 hover:bg-gray-600 text-gray-300 px-4 py-2 rounded border-2 border-gray-600 text-sm flex items-center gap-2 mx-auto"
-                  >
-                    <RefreshCw className={`w-4 h-4 ${isGenerating ? 'animate-spin' : ''}`} />
-                    Regenerate Schedule
-                  </button>
-                </div>
+      {/* Schedule Summary */}
+      {schedule && (
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <PixelCard className="bg-blue-50">
+            <h3 className="text-xl font-black text-black mb-3 uppercase">
+              📋 Schedule Summary
+            </h3>
+            <p className="text-gray-700 font-medium mb-5 leading-relaxed">
+              {schedule.summary}
+            </p>
+            
+            {schedule.tips && schedule.tips.length > 0 && (
+              <div className="bg-yellow-100 border-4 border-black p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                <h4 className="font-black text-black mb-3 uppercase">💡 Study Tips</h4>
+                <ul className="space-y-2">
+                  {schedule.tips.map((tip, index) => (
+                    <li key={index} className="flex items-start gap-2 text-gray-800">
+                      <Check size={18} className="text-green-600 mt-0.5 flex-shrink-0" />
+                      <span className="font-medium">{tip}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
             )}
+          </PixelCard>
+        </motion.div>
+      )}
+
+      {/* Empty State */}
+      {!schedule && !loading && (
+        <PixelCard className="text-center py-12 bg-gradient-to-b from-purple-100 to-pink-100">
+          <div className="inline-block p-4 bg-yellow-400 border-4 border-black mb-4">
+            <Brain size={48} className="text-black" />
           </div>
-        </div>
-      </div>
+          <h3 className="text-2xl font-black text-black mb-2 uppercase">
+            Ready to Optimize?
+          </h3>
+          <p className="text-gray-700 font-medium max-w-md mx-auto">
+            {tasks.length === 0 
+              ? "🎮 Add some tasks first, then let AI create the perfect study schedule!"
+              : "🚀 Click 'GENERATE!' to let AI create an optimized study plan based on your tasks!"
+            }
+          </p>
+          
+          {tasks.length === 0 && (
+            <div className="mt-6">
+              <PixelButton 
+                variant="primary"
+                className="px-6 py-3"
+                onClick={() => window.location.href = '/tasks'}
+              >
+                ➕ ADD TASKS
+              </PixelButton>
+            </div>
+          )}
+        </PixelCard>
+      )}
+
+      {/* Loading State */}
+      {loading && (
+        <PixelCard className="text-center py-12 bg-gradient-to-b from-blue-100 to-purple-100">
+          <div className="inline-block p-4 bg-purple-400 border-4 border-black mb-4 animate-bounce">
+            <Sparkles size={48} className="text-white" />
+          </div>
+          <h3 className="text-2xl font-black text-black mb-2 uppercase">
+            🤖 AI is Working...
+          </h3>
+          <p className="text-gray-700 font-medium">
+            Generating your optimized study schedule!
+          </p>
+          <div className="mt-4 flex justify-center gap-2">
+            <div className="w-4 h-4 bg-purple-500 border-2 border-black animate-pulse" style={{ animationDelay: '0ms' }} />
+            <div className="w-4 h-4 bg-pink-500 border-2 border-black animate-pulse" style={{ animationDelay: '150ms' }} />
+            <div className="w-4 h-4 bg-yellow-500 border-2 border-black animate-pulse" style={{ animationDelay: '300ms' }} />
+          </div>
+        </PixelCard>
+      )}
     </div>
   );
 };

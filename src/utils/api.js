@@ -136,8 +136,8 @@ export const aiAPI = {
   chat: (message, conversationHistory = []) => 
     api.post('/ai/chat', { message, conversationHistory }),
   
-  generateSchedule: (preferences = {}, dateRange = 7) => 
-    api.post('/ai/generate-schedule', { preferences, dateRange }),
+  generateSchedule: (preferences = {}, dateRange = 7, tasks = []) => 
+    api.post('/ai/generate-schedule', { preferences, dateRange, tasks }),
   
   getTips: (subject, difficulty) => 
     api.get('/ai/tips', { params: { subject, difficulty } }),
