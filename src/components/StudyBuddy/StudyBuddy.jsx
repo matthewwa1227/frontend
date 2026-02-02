@@ -2,6 +2,134 @@ import React, { useState, useEffect, useRef } from 'react';
 import { aiAPI } from '../../utils/api';
 import { getUser } from '../../utils/auth';
 
+// Markdown Renderer Component
+const MarkdownRenderer = ({ content }) => {
+  const [copiedIndex, setCopiedIndex] = useState(null);
+
+  const copyToClipboard = (text, index) => {
+    navigator.clipboard.writeText(text);
+    setCopiedIndex(index);
+    setTimeout(() => setCopiedIndex(null), 2000);
+  };
+
+  const renderMarkdown = (text) => {
+    const elements = [];
+    let codeBlockIndex = 0;
+    
+    const codeBlockRegex = /```(\w*)\n?([\s\S]*?)```/g;
+    let lastIndex = 0;
+    let match;
+    
+    const processInlineMarkdown = (str) => {
+      return str
+        .replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold text-white">$1</strong>')
+        .replace(/`([^`]+)`/g, '<code class="bg-gray-800 px-1.5 py-0.5 rounded text-pink-400 text-sm font-mono">$1</code>')
+        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-blue-400 hover:underline" target="_blank" rel="noopener noreferrer">$1</a>');
+    };
+
+    const processTextBlock = (textBlock) => {
+      const lines = textBlock.split('\n');
+      const result = [];
+      let listItems = [];
+      let listType = 'ul';
+
+      const flushList = () => {
+        if (listItems.length > 0) {
+          result.push(
+            <ul key={`list-${result.length}`} className={`${listType === 'ol' ? 'list-decimal' : 'list-disc'} list-inside space-y-1 my-2 text-gray-300`}>
+              {listItems.map((item, i) => (
+                <li key={i} dangerouslySetInnerHTML={{ __html: processInlineMarkdown(item) }} />
+              ))}
+            </ul>
+          );
+          listItems = [];
+        }
+      };
+
+      lines.forEach((line, idx) => {
+        if (line.startsWith('### ')) {
+          flushList();
+          result.push(
+            <h3 key={`h3-${idx}`} className="text-lg font-bold text-purple-300 mt-3 mb-1" 
+                dangerouslySetInnerHTML={{ __html: processInlineMarkdown(line.slice(4)) }} />
+          );
+        } else if (line.startsWith('## ')) {
+          flushList();
+          result.push(
+            <h2 key={`h2-${idx}`} className="text-xl font-bold text-purple-200 mt-4 mb-2" 
+                dangerouslySetInnerHTML={{ __html: processInlineMarkdown(line.slice(3)) }} />
+          );
+        } else if (line.startsWith('# ')) {
+          flushList();
+          result.push(
+            <h1 key={`h1-${idx}`} className="text-2xl font-bold text-white mt-4 mb-2" 
+                dangerouslySetInnerHTML={{ __html: processInlineMarkdown(line.slice(2)) }} />
+          );
+        } else if (/^\d+\.\s/.test(line)) {
+          listType = 'ol';
+          listItems.push(line.replace(/^\d+\.\s/, ''));
+        } else if (line.startsWith('- ') || line.startsWith('* ')) {
+          listType = 'ul';
+          listItems.push(line.slice(2));
+        } else if (line.trim()) {
+          flushList();
+          result.push(
+            <p key={`p-${idx}`} className="text-gray-300 my-1" 
+               dangerouslySetInnerHTML={{ __html: processInlineMarkdown(line) }} />
+          );
+        } else if (line === '') {
+          flushList();
+        }
+      });
+      
+      flushList();
+      return result;
+    };
+
+    while ((match = codeBlockRegex.exec(text)) !== null) {
+      if (match.index > lastIndex) {
+        const textBefore = text.slice(lastIndex, match.index);
+        elements.push(...processTextBlock(textBefore));
+      }
+
+      const language = match[1] || 'code';
+      const code = match[2].trim();
+      const currentIndex = codeBlockIndex++;
+      
+      elements.push(
+        <div key={`code-${currentIndex}`} className="my-3 rounded-lg overflow-hidden border border-gray-600">
+          <div className="bg-gray-800 px-4 py-2 flex justify-between items-center">
+            <span className="text-xs text-gray-400 font-mono">{language}</span>
+            <button
+              onClick={() => copyToClipboard(code, currentIndex)}
+              className="text-gray-400 hover:text-white transition-colors flex items-center gap-1 text-xs"
+            >
+              {copiedIndex === currentIndex ? (
+                <span>✓ Copied!</span>
+              ) : (
+                <span>📋 Copy</span>
+              )}
+            </button>
+          </div>
+          <pre className="bg-gray-900 p-4 overflow-x-auto">
+            <code className="text-sm font-mono text-green-300 whitespace-pre">{code}</code>
+          </pre>
+        </div>
+      );
+
+      lastIndex = match.index + match[0].length;
+    }
+
+    if (lastIndex < text.length) {
+      elements.push(...processTextBlock(text.slice(lastIndex)));
+    }
+
+    return elements;
+  };
+
+  return <div className="markdown-content">{renderMarkdown(content)}</div>;
+};
+
 const StudyBuddy = () => {
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState('');
@@ -13,7 +141,6 @@ const StudyBuddy = () => {
   const messagesEndRef = useRef(null);
   const user = getUser();
 
-  // Scroll to bottom when messages change
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -22,7 +149,6 @@ const StudyBuddy = () => {
     scrollToBottom();
   }, [messages]);
 
-  // Load conversation history on mount
   useEffect(() => {
     loadHistory();
   }, []);
@@ -40,7 +166,6 @@ const StudyBuddy = () => {
       }
     } catch (error) {
       console.error('Failed to load history:', error);
-      // Add welcome message if no history
       setMessages([{
         role: 'assistant',
         content: `Hey there! 👋 I'm your Study Buddy. I'm here to help you learn, stay motivated, and crush your goals. What would you like to work on today?`,
@@ -58,7 +183,6 @@ const StudyBuddy = () => {
     const userMessage = inputMessage.trim();
     setInputMessage('');
     
-    // Add user message to chat
     const newUserMessage = {
       role: 'user',
       content: userMessage,
@@ -68,7 +192,6 @@ const StudyBuddy = () => {
     setIsLoading(true);
 
     try {
-      // Prepare conversation history for context
       const conversationHistory = messages.slice(-10).map(msg => ({
         role: msg.role,
         content: msg.content
@@ -116,6 +239,20 @@ const StudyBuddy = () => {
     }
   };
 
+  const clearChat = async () => {
+    try {
+      // If you have an API endpoint to clear history, call it here
+      // await aiAPI.clearHistory();
+      setMessages([{
+        role: 'assistant',
+        content: `Chat cleared! 🧹 Ready to start fresh. What would you like to learn about?`,
+        timestamp: new Date().toISOString()
+      }]);
+    } catch (error) {
+      console.error('Failed to clear chat:', error);
+    }
+  };
+
   const quickPrompts = [
     { text: "Help me focus", emoji: "🎯" },
     { text: "Explain a concept", emoji: "💡" },
@@ -141,12 +278,21 @@ const StudyBuddy = () => {
                 <p className="text-purple-200 text-sm">Your AI Learning Companion</p>
               </div>
             </div>
-            <button
-              onClick={() => loadTips()}
-              className="bg-yellow-400 hover:bg-yellow-300 text-black px-4 py-2 font-pixel text-sm border-2 border-white transition-all hover:scale-105"
-            >
-              💡 Tips
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={clearChat}
+                className="bg-red-500 hover:bg-red-400 text-white px-3 py-2 font-pixel text-sm border-2 border-white transition-all hover:scale-105"
+                title="Clear chat"
+              >
+                🗑️
+              </button>
+              <button
+                onClick={() => loadTips()}
+                className="bg-yellow-400 hover:bg-yellow-300 text-black px-4 py-2 font-pixel text-sm border-2 border-white transition-all hover:scale-105"
+              >
+                💡 Tips
+              </button>
+            </div>
           </div>
         </div>
 
@@ -157,7 +303,7 @@ const StudyBuddy = () => {
               <h3 className="font-pixel text-yellow-400">📚 Study Tips</h3>
               <button 
                 onClick={() => setShowTips(false)}
-                className="text-gray-400 hover:text-white"
+                className="text-gray-400 hover:text-white text-xl"
               >
                 ✕
               </button>
@@ -176,7 +322,7 @@ const StudyBuddy = () => {
                 ))}
               </ul>
             )}
-            <div className="flex gap-2 mt-4">
+            <div className="flex gap-2 mt-4 flex-wrap">
               <button 
                 onClick={() => loadTips('Math', 'hard')}
                 className="bg-blue-600 hover:bg-blue-500 px-3 py-1 text-sm rounded border border-blue-400"
@@ -225,7 +371,7 @@ const StudyBuddy = () => {
                   className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
                   <div
-                    className={`max-w-[80%] md:max-w-[70%] p-3 rounded-lg ${
+                    className={`max-w-[85%] md:max-w-[75%] p-4 rounded-lg ${
                       message.role === 'user'
                         ? 'bg-blue-600 text-white border-2 border-blue-400'
                         : message.isError
@@ -234,13 +380,20 @@ const StudyBuddy = () => {
                     }`}
                   >
                     {message.role === 'assistant' && (
-                      <div className="flex items-center gap-2 mb-1">
+                      <div className="flex items-center gap-2 mb-2 pb-2 border-b border-gray-600">
                         <span className="text-sm">🤖</span>
-                        <span className="text-xs text-gray-400">Study Buddy</span>
+                        <span className="text-xs text-purple-400 font-medium">Study Buddy</span>
                       </div>
                     )}
-                    <p className="whitespace-pre-wrap">{message.content}</p>
-                    <p className={`text-xs mt-1 ${message.role === 'user' ? 'text-blue-200' : 'text-gray-500'}`}>
+                    
+                    {/* Conditional rendering: Markdown for assistant, plain text for user */}
+                    {message.role === 'assistant' ? (
+                      <MarkdownRenderer content={message.content} />
+                    ) : (
+                      <p className="whitespace-pre-wrap">{message.content}</p>
+                    )}
+                    
+                    <p className={`text-xs mt-2 ${message.role === 'user' ? 'text-blue-200' : 'text-gray-500'}`}>
                       {formatTime(message.timestamp)}
                     </p>
                   </div>
@@ -251,13 +404,14 @@ const StudyBuddy = () => {
             {/* Loading indicator */}
             {isLoading && (
               <div className="flex justify-start">
-                <div className="bg-gray-700 text-gray-100 p-3 rounded-lg border-2 border-gray-500">
+                <div className="bg-gray-700 text-gray-100 p-4 rounded-lg border-2 border-gray-500">
                   <div className="flex items-center gap-2">
                     <span className="text-sm">🤖</span>
+                    <span className="text-purple-400 text-sm">Thinking</span>
                     <div className="flex gap-1">
-                      <span className="animate-bounce">.</span>
-                      <span className="animate-bounce" style={{ animationDelay: '0.1s' }}>.</span>
-                      <span className="animate-bounce" style={{ animationDelay: '0.2s' }}>.</span>
+                      <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce"></span>
+                      <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></span>
+                      <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></span>
                     </div>
                   </div>
                 </div>
@@ -272,7 +426,8 @@ const StudyBuddy = () => {
               <button
                 key={index}
                 onClick={() => setInputMessage(prompt.text)}
-                className="bg-gray-700 hover:bg-gray-600 px-3 py-1 text-sm rounded-full border border-gray-500 transition-colors flex items-center gap-1"
+                disabled={isLoading}
+                className="bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed px-3 py-1 text-sm rounded-full border border-gray-500 transition-colors flex items-center gap-1"
               >
                 <span>{prompt.emoji}</span>
                 <span>{prompt.text}</span>
@@ -288,7 +443,7 @@ const StudyBuddy = () => {
                 value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
                 placeholder="Ask me anything..."
-                className="flex-1 bg-gray-800 border-2 border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 transition-colors"
+                className="flex-1 bg-gray-800 border-2 border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-colors"
                 disabled={isLoading}
               />
               <button
@@ -312,6 +467,7 @@ const StudyBuddy = () => {
             <div className="flex items-center gap-4">
               <span className="text-gray-400">👤 {user?.username || 'Student'}</span>
               <span className="text-yellow-400">⭐ Level {user?.level || 1}</span>
+              <span className="text-green-400">💬 {messages.filter(m => m.role === 'user').length} messages</span>
             </div>
             <div className="text-gray-500">
               Powered by Kimi K2.5 AI
