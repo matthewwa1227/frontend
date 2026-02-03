@@ -26,7 +26,7 @@ import TestAnimation from './TestAnimation';
 import StudyBuddy from './components/StudyBuddy/StudyBuddy';
 import ScheduleGenerator from './components/ScheduleGenerator/ScheduleGenerator';
 
-import AITutor from './components/AITutor/AITutor';
+import AITutor from './components/AITutor/StoryQuestAI';
 
 /**
  * ProtectedRoute Wrapper - For Students
