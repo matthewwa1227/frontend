@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Home,
@@ -15,19 +16,16 @@ import {
   Trophy,
   ArrowRight,
   RotateCcw,
-  Loader2
+  Loader2,
+  Moon,
+  Clock,
+  LogIn
 } from 'lucide-react';
 
 const pixelText = { fontFamily: 'monospace' };
 
-// ============================================
-// API BASE URL - Adjust if needed
-// ============================================
 const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
-// ============================================
-// AUTH TOKEN HELPER
-// ============================================
 const getAuthToken = () => {
   const token = localStorage.getItem('token') || localStorage.getItem('authToken');
   if (!token) {
@@ -37,7 +35,43 @@ const getAuthToken = () => {
 };
 
 // ============================================
-// LOCAL FALLBACK GENERATORS (only used if API fails)
+// SCHEDULE ERROR DETECTION
+// ============================================
+const SCHEDULE_ERROR_CODES = ['REST_DAY', 'TIME_LIMIT_REACHED', 'ONBOARDING_REQUIRED'];
+
+// Process API response and detect schedule guard errors
+const processApiResponse = async (response) => {
+  if (response.ok) {
+    return await response.json();
+  }
+
+  // Try to parse error body
+  let errorData = {};
+  try {
+    errorData = await response.json();
+  } catch (e) {
+    try {
+      const text = await response.text();
+      errorData = { message: text };
+    } catch (e2) {
+      errorData = { message: `HTTP ${response.status}` };
+    }
+  }
+
+  // Check for schedule guard errors
+  if (SCHEDULE_ERROR_CODES.includes(errorData.code)) {
+    const error = new Error(errorData.message || errorData.code);
+    error.scheduleCode = errorData.code;
+    error.scheduleMessage = errorData.message;
+    error.remainingMinutes = errorData.remaining;
+    throw error;
+  }
+
+  throw new Error(errorData.message || `API error: ${response.status}`);
+};
+
+// ============================================
+// LOCAL FALLBACK GENERATORS
 // ============================================
 function generateLocalFallbackScene(topic, chapter, sceneType) {
   const scenes = {
@@ -82,11 +116,8 @@ function generateLocalFallbackLesson(topic, chapter) {
   };
 }
 
-// Improved fallback with more variety
 function generateLocalFallbackQuestion(topic, difficulty, questionIndex = 0) {
-  console.warn('⚠️ Using LOCAL FALLBACK question - API may have failed');
-  
-  // Create varied fallback questions based on index
+  console.warn('⚠️ Using LOCAL FALLBACK question');
   const fallbackQuestions = [
     {
       text: `What is the most effective approach to learning ${topic}?`,
@@ -129,73 +160,44 @@ function generateLocalFallbackQuestion(topic, difficulty, questionIndex = 0) {
       explanation: 'Teaching or explaining concepts to others reveals gaps in understanding.'
     }
   ];
-
   const selected = fallbackQuestions[questionIndex % fallbackQuestions.length];
-
   return {
     type: 'question',
     text: selected.text,
     choices: selected.choices.sort(() => Math.random() - 0.5),
     explanation: selected.explanation,
     xp: 25 + (difficulty * 10),
-    isFallback: true // Flag to identify fallback questions
+    isFallback: true
   };
 }
 
 // ============================================
-// AI SERVICE - Connect to backend
+// AI SERVICE - Uses processApiResponse for schedule error detection
 // ============================================
 const AIService = {
-  // Generate the initial story setup
   generateStoryIntro: async (topic) => {
     console.log('📖 AIService.generateStoryIntro called:', topic);
-    
-    try {
-      const token = getAuthToken();
-      if (!token) {
-        throw new Error('No authentication token');
-      }
+    const token = getAuthToken();
+    if (!token) throw new Error('No authentication token');
 
-      const response = await fetch(`${API_BASE}/api/ai/story/intro`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ topic })
-      });
+    const response = await fetch(`${API_BASE}/api/ai/story/intro`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ topic })
+    });
 
-      console.log('📡 Intro response status:', response.status);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ Intro API error:', response.status, errorText);
-        throw new Error(`API error: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      console.log('✅ Intro received:', data.title);
-      return data;
-      
-    } catch (error) {
-      console.error('❌ Story intro error:', error.message);
-      return {
-        title: `The ${topic} Chronicles`,
-        setting: `In the mystical Library of Infinite Knowledge, ancient tomes containing the secrets of ${topic} await those brave enough to seek them.`,
-        mentor_intro: `"Welcome, young scholar. I am Archimedes, keeper of ${topic} wisdom. Let us begin your journey..."`
-      };
-    }
+    // This will throw a schedule error if guard blocks
+    return await processApiResponse(response);
   },
 
-  // Generate a story scene
   generateScene: async (topic, chapter, sceneType, context) => {
     console.log('🎭 AIService.generateScene called:', { topic, chapter, sceneType });
-    
     try {
       const token = getAuthToken();
-      if (!token) {
-        throw new Error('No authentication token');
-      }
+      if (!token) throw new Error('No authentication token');
 
       const response = await fetch(`${API_BASE}/api/ai/story/scene`, {
         method: 'POST',
@@ -206,33 +208,20 @@ const AIService = {
         body: JSON.stringify({ topic, chapter, sceneType, context })
       });
 
-      console.log('📡 Scene response status:', response.status);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ Scene API error:', response.status, errorText);
-        throw new Error(`API error: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      console.log('✅ Scene received:', data.type);
-      return data;
-      
+      return await processApiResponse(response);
     } catch (error) {
-      console.error('❌ Scene generation error:', error.message);
+      // Re-throw schedule errors so the component can catch them
+      if (error.scheduleCode) throw error;
+      console.error('❌ Scene error:', error.message);
       return generateLocalFallbackScene(topic, chapter, sceneType);
     }
   },
 
-  // Generate a teaching lesson
   generateLesson: async (topic, chapter, conceptNumber) => {
     console.log('📚 AIService.generateLesson called:', { topic, chapter, conceptNumber });
-    
     try {
       const token = getAuthToken();
-      if (!token) {
-        throw new Error('No authentication token');
-      }
+      if (!token) throw new Error('No authentication token');
 
       const response = await fetch(`${API_BASE}/api/ai/story/lesson`, {
         method: 'POST',
@@ -243,41 +232,23 @@ const AIService = {
         body: JSON.stringify({ topic, chapter, conceptNumber })
       });
 
-      console.log('📡 Lesson response status:', response.status);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ Lesson API error:', response.status, errorText);
-        throw new Error(`API error: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      console.log('✅ Lesson received:', data.title);
-      return data;
-      
+      return await processApiResponse(response);
     } catch (error) {
-      console.error('❌ Lesson generation error:', error.message);
+      if (error.scheduleCode) throw error;
+      console.error('❌ Lesson error:', error.message);
       return generateLocalFallbackLesson(topic, chapter);
     }
   },
 
-  // Generate a knowledge question
   generateQuestion: async (topic, difficulty, previousQuestions = [], conceptTitle = null) => {
-    console.log('❓ AIService.generateQuestion called:', { 
-      topic, 
-      difficulty, 
+    console.log('❓ AIService.generateQuestion called:', {
+      topic, difficulty,
       previousQuestionsCount: previousQuestions.length,
-      conceptTitle 
+      conceptTitle
     });
-    
     try {
       const token = getAuthToken();
-      if (!token) {
-        console.error('❌ No auth token available');
-        throw new Error('No authentication token');
-      }
-      
-      console.log('🔑 Token found, making API call...');
+      if (!token) throw new Error('No authentication token');
 
       const response = await fetch(`${API_BASE}/api/ai/story/question`, {
         method: 'POST',
@@ -286,36 +257,22 @@ const AIService = {
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          topic,
-          difficulty,
+          topic, difficulty,
           questionType: 'multiple_choice',
           previousQuestions,
           conceptTitle
         })
       });
 
-      console.log('📡 Question response status:', response.status);
+      const data = await processApiResponse(response);
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ Question API error:', response.status, errorText);
-        throw new Error(`API error: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      console.log('✅ AI Question received:', data.text?.substring(0, 60) + '...');
-      
-      // Validate the response has required fields
       if (!data.text || !data.choices || data.choices.length < 2) {
-        console.error('❌ Invalid question format from API');
         throw new Error('Invalid question format');
       }
-      
       return data;
-      
     } catch (error) {
-      console.error('❌ Question generation error:', error.message);
-      console.warn('⚠️ Falling back to local question');
+      if (error.scheduleCode) throw error;
+      console.error('❌ Question error:', error.message);
       return generateLocalFallbackQuestion(topic, difficulty, previousQuestions.length);
     }
   }
@@ -385,7 +342,7 @@ const PixelButton = ({ children, onClick, variant = 'primary', disabled = false,
       whileTap={disabled ? {} : { scale: 0.95, y: 2 }}
       className={`
         ${variants[variant]}
-        px-5 py-3 text-sm border-b-4 border-r-4 
+        px-5 py-3 text-sm border-b-4 border-r-4
         disabled:opacity-50 disabled:cursor-not-allowed
         transition-colors font-bold uppercase tracking-wider
         flex items-center justify-center gap-2
@@ -423,9 +380,124 @@ const LoadingSpinner = ({ text = 'Loading...' }) => (
 );
 
 // ============================================
+// BLOCKED SCREENS
+// ============================================
+const RestDayScreen = ({ onGoHome }) => (
+  <div className="min-h-screen bg-gradient-to-b from-indigo-950 via-slate-900 to-slate-950 flex flex-col items-center justify-center p-6">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="text-center max-w-sm"
+    >
+      <motion.div
+        animate={{ y: [0, -8, 0] }}
+        transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+      >
+        <Moon className="w-20 h-20 text-indigo-400 mx-auto mb-6" />
+      </motion.div>
+
+      <h1 className="text-indigo-300 mb-3" style={{ ...pixelText, fontSize: '18px', textShadow: '2px 2px 0 #000' }}>
+        REST DAY
+      </h1>
+
+      <PixelCard className="p-6 mb-6">
+        <PixelOwl size={48} mood="happy" className="mx-auto mb-4" />
+        <p className="text-slate-300 mb-3" style={{ ...pixelText, fontSize: '10px', lineHeight: '1.9' }}>
+          "Your guardian has set today as a rest day. Even the greatest scholars need to recharge!"
+        </p>
+        <p className="text-indigo-400" style={{ ...pixelText, fontSize: '9px' }}>— Archimedes</p>
+      </PixelCard>
+
+      <p className="text-slate-500 mb-6" style={{ ...pixelText, fontSize: '9px' }}>
+        Take a break, have fun, and come back tomorrow refreshed! 🌙
+      </p>
+
+      <PixelButton onClick={onGoHome} variant="ghost" className="w-full">
+        <Home className="w-4 h-4" />
+        Back to Home
+      </PixelButton>
+    </motion.div>
+  </div>
+);
+
+const TimeLimitScreen = ({ onGoHome }) => (
+  <div className="min-h-screen bg-gradient-to-b from-amber-950 via-slate-900 to-slate-950 flex flex-col items-center justify-center p-6">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="text-center max-w-sm"
+    >
+      <motion.div
+        animate={{ scale: [1, 1.1, 1] }}
+        transition={{ duration: 2, repeat: Infinity }}
+      >
+        <Clock className="w-20 h-20 text-amber-400 mx-auto mb-6" />
+      </motion.div>
+
+      <h1 className="text-amber-300 mb-3" style={{ ...pixelText, fontSize: '18px', textShadow: '2px 2px 0 #000' }}>
+        TIME'S UP!
+      </h1>
+
+      <PixelCard className="p-6 mb-6">
+        <PixelOwl size={48} mood="thinking" className="mx-auto mb-4" />
+        <p className="text-slate-300 mb-3" style={{ ...pixelText, fontSize: '10px', lineHeight: '1.9' }}>
+          "You've reached your daily study limit. Great work today! Your brain needs time to absorb what you've learned."
+        </p>
+        <p className="text-amber-400" style={{ ...pixelText, fontSize: '9px' }}>— Archimedes</p>
+      </PixelCard>
+
+      <p className="text-slate-500 mb-6" style={{ ...pixelText, fontSize: '9px' }}>
+        Your progress has been saved. Come back tomorrow to continue! ⏰
+      </p>
+
+      <PixelButton onClick={onGoHome} variant="ghost" className="w-full">
+        <Home className="w-4 h-4" />
+        Back to Home
+      </PixelButton>
+    </motion.div>
+  </div>
+);
+
+const OnboardingScreen = ({ onGoToOnboarding }) => (
+  <div className="min-h-screen bg-gradient-to-b from-purple-950 via-slate-900 to-slate-950 flex flex-col items-center justify-center p-6">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="text-center max-w-sm"
+    >
+      <motion.div
+        animate={{ rotate: [0, 5, -5, 0] }}
+        transition={{ duration: 2, repeat: Infinity }}
+      >
+        <LogIn className="w-20 h-20 text-purple-400 mx-auto mb-6" />
+      </motion.div>
+
+      <h1 className="text-purple-300 mb-3" style={{ ...pixelText, fontSize: '18px', textShadow: '2px 2px 0 #000' }}>
+        SETUP REQUIRED
+      </h1>
+
+      <PixelCard className="p-6 mb-6">
+        <PixelOwl size={48} mood="excited" className="mx-auto mb-4" />
+        <p className="text-slate-300 mb-3" style={{ ...pixelText, fontSize: '10px', lineHeight: '1.9' }}>
+          "Before we begin your adventure, I need to know a bit about you! Please complete the quick setup so I can tailor the journey to your level."
+        </p>
+        <p className="text-purple-400" style={{ ...pixelText, fontSize: '9px' }}>— Archimedes</p>
+      </PixelCard>
+
+      <PixelButton onClick={onGoToOnboarding} variant="secondary" className="w-full">
+        <Sparkles className="w-4 h-4" />
+        Complete Setup
+      </PixelButton>
+    </motion.div>
+  </div>
+);
+
+// ============================================
 // MAIN APP
 // ============================================
 export default function StoryQuestAI() {
+  const navigate = useNavigate();
+
   const [screen, setScreen] = useState('title');
   const [topic, setTopic] = useState('');
   const [storyData, setStoryData] = useState(null);
@@ -441,14 +513,14 @@ export default function StoryQuestAI() {
   const [askedQuestions, setAskedQuestions] = useState([]);
   const [chapterScenes, setChapterScenes] = useState([]);
   const [questionCount, setQuestionCount] = useState(0);
-
-  // Lesson tracking state
   const [currentConcept, setCurrentConcept] = useState(null);
   const [lessonCount, setLessonCount] = useState(0);
 
+  // Schedule blocking state
+  const [blockedReason, setBlockedReason] = useState(null); // 'REST_DAY' | 'TIME_LIMIT_REACHED' | 'ONBOARDING_REQUIRED' | null
+
   const topicRef = useRef(null);
 
-  // Scene types per chapter - includes lessons before questions!
   const chapterStructure = {
     1: ['narrative', 'dialogue', 'lesson', 'question', 'lesson', 'question', 'reward'],
     2: ['narrative', 'lesson', 'question', 'dialogue', 'lesson', 'battle', 'reward'],
@@ -456,19 +528,37 @@ export default function StoryQuestAI() {
     4: ['narrative', 'lesson', 'question', 'lesson', 'battle', 'narrative', 'finale']
   };
 
-  // Log when component mounts
   useEffect(() => {
     console.log('🎮 StoryQuestAI mounted');
     console.log('🔑 Auth token exists:', !!getAuthToken());
     console.log('🌐 API Base URL:', API_BASE);
   }, []);
 
-  // Keep a simple log of scenes for context
   useEffect(() => {
     if (screen !== 'game') return;
     if (!currentScene) return;
     setChapterScenes(prev => [...prev, currentScene]);
   }, [currentScene, screen]);
+
+  // Handle schedule errors from any API call
+  const handleScheduleError = (error) => {
+    if (error.scheduleCode) {
+      console.log('🚫 Schedule blocked:', error.scheduleCode, error.scheduleMessage);
+      setBlockedReason(error.scheduleCode);
+      setLoading(false);
+      return true; // Error was handled
+    }
+    return false; // Not a schedule error
+  };
+
+  const goHome = () => {
+    // Navigate to main dashboard
+    navigate('/dashboard');
+  };
+
+  const goToOnboarding = () => {
+    navigate('/onboarding');
+  };
 
   // Start the game
   const startGame = async () => {
@@ -478,19 +568,20 @@ export default function StoryQuestAI() {
     console.log('🎮 Starting game with topic:', value);
     setTopic(value);
     setLoading(true);
+    setBlockedReason(null);
 
     try {
       const intro = await AIService.generateStoryIntro(value);
       setStoryData(intro);
       setScreen('intro');
     } catch (error) {
+      if (handleScheduleError(error)) return;
       console.error('Failed to generate story:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  // Begin adventure
   const beginAdventure = async () => {
     console.log('🎮 Beginning adventure');
     setChapter(1);
@@ -504,7 +595,6 @@ export default function StoryQuestAI() {
     await loadScene(1, 0);
   };
 
-  // Load a scene
   const loadScene = async (chapterNum, sceneIdx) => {
     console.log(`🎬 Loading scene: Chapter ${chapterNum}, Scene ${sceneIdx}`);
     setLoading(true);
@@ -516,45 +606,19 @@ export default function StoryQuestAI() {
       let scene;
 
       if (sceneType === 'lesson') {
-        // Generate a teaching lesson
         const newLessonCount = lessonCount + 1;
         setLessonCount(newLessonCount);
-
         scene = await AIService.generateLesson(topic, chapterNum, newLessonCount);
         setCurrentConcept(scene.title);
-        console.log('📚 Lesson loaded:', scene.title);
-        
       } else if (sceneType === 'question') {
-        // Generate a question about what was just taught
-        console.log('❓ Generating question...');
-        console.log('📋 Previous questions:', askedQuestions.length, askedQuestions);
-        
         scene = await AIService.generateQuestion(
-          topic,
-          chapterNum,
-          askedQuestions,
-          currentConcept
+          topic, chapterNum, askedQuestions, currentConcept
         );
-        
         setQuestionCount(prev => prev + 1);
-        console.log('❓ Question loaded:', scene.text?.substring(0, 50) + '...');
-        
-        // Check if it's a fallback question
-        if (scene.isFallback) {
-          console.warn('⚠️ This is a FALLBACK question, not from AI');
-        }
-        
       } else if (sceneType === 'battle') {
-        // Generate battle with question
-        console.log('⚔️ Generating battle question...');
-        
         const question = await AIService.generateQuestion(
-          topic,
-          chapterNum,
-          askedQuestions,
-          currentConcept
+          topic, chapterNum, askedQuestions, currentConcept
         );
-
         const enemies = [
           { name: 'Doubt Specter', desc: 'A shadow creature born from uncertainty' },
           { name: 'Confusion Wraith', desc: 'It feeds on unclear thinking' },
@@ -562,7 +626,6 @@ export default function StoryQuestAI() {
           { name: 'Fear of Failure', desc: 'The most dangerous enemy of all' }
         ];
         const enemy = enemies[Math.min(chapterNum - 1, enemies.length - 1)];
-
         scene = {
           type: 'battle',
           enemy: enemy,
@@ -571,80 +634,61 @@ export default function StoryQuestAI() {
           explanation: question.explanation,
           xp: 35 + (chapterNum * 10)
         };
-        
         setQuestionCount(prev => prev + 1);
-        console.log('⚔️ Battle loaded against:', enemy.name);
-        
       } else {
-        // Other scene types (narrative, dialogue, choice, reward, finale)
         scene = await AIService.generateScene(topic, chapterNum, sceneType, {
           previousScenes: chapterScenes,
           askedQuestions
         });
-        console.log('🎭 Scene loaded:', sceneType);
       }
 
       setCurrentScene(scene);
-
       if (scene.type === 'battle') {
         setEnemyHp(100);
       }
     } catch (error) {
+      if (handleScheduleError(error)) return;
       console.error('❌ Failed to load scene:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  // Advance to next scene
   const advanceScene = async () => {
     const structure = chapterStructure[chapter] || chapterStructure[1];
     const nextIndex = sceneIndex + 1;
-
-    console.log(`⏭️ Advancing scene: ${sceneIndex} -> ${nextIndex} (max: ${structure.length})`);
 
     if (nextIndex < structure.length) {
       setSceneIndex(nextIndex);
       await loadScene(chapter, nextIndex);
     } else if (chapter < 4) {
-      console.log('🏆 Chapter complete!');
       setScreen('chapter_complete');
     } else {
-      console.log('🎉 Victory!');
       setScreen('victory');
     }
   };
 
-  // Start next chapter
   const startNextChapter = async () => {
     const nextChapter = chapter + 1;
-    console.log(`📖 Starting chapter ${nextChapter}`);
     setChapter(nextChapter);
     setSceneIndex(0);
     setChapterScenes([]);
     setLessonCount(0);
     setCurrentConcept(null);
-    // Don't reset askedQuestions - keep tracking across chapters!
     setScreen('game');
     await loadScene(nextChapter, 0);
   };
 
-  // Handle choice selection
   const handleChoice = (choice) => {
-    console.log('🎯 Choice selected:', choice.text);
     setXp(x => x + (choice.xp || 15));
     setShowResult({ type: 'choice', text: choice.text, reward: choice.reward });
-
     setTimeout(() => {
       setShowResult(null);
       advanceScene();
     }, 1500);
   };
 
-  // Handle question answer
   const handleQuestion = async (choice, isCorrect) => {
-    console.log('📝 Question answered:', isCorrect ? 'CORRECT' : 'WRONG');
-    
     if (isCorrect) {
       setXp(x => x + (currentScene.xp || 25));
       setShowResult({ type: 'correct', text: currentScene.explanation });
@@ -652,28 +696,17 @@ export default function StoryQuestAI() {
       setHp(h => Math.max(0, h - 15));
       setShowResult({ type: 'wrong', text: currentScene.explanation });
     }
-
-    // Track asked questions to prevent repeats
     const questionText = currentScene.text || currentScene.question;
     if (questionText) {
-      console.log('📋 Adding to asked questions:', questionText.substring(0, 50) + '...');
-      setAskedQuestions(prev => {
-        const newList = [...prev, questionText];
-        console.log('📋 Total asked questions:', newList.length);
-        return newList;
-      });
+      setAskedQuestions(prev => [...prev, questionText]);
     }
-
     setTimeout(() => {
       setShowResult(null);
       advanceScene();
     }, 2500);
   };
 
-  // Handle battle answer
   const handleBattle = (choice) => {
-    console.log('⚔️ Battle answer:', choice.correct ? 'HIT!' : 'MISS!');
-    
     if (choice.correct) {
       setEnemyHp(0);
       setXp(x => x + (currentScene.xp || 35));
@@ -682,23 +715,17 @@ export default function StoryQuestAI() {
       setHp(h => Math.max(0, h - 20));
       setShowResult({ type: 'miss' });
     }
-
-    // Track asked questions
     const questionText = currentScene.question;
     if (questionText) {
-      console.log('📋 Adding battle question to asked:', questionText.substring(0, 50) + '...');
       setAskedQuestions(prev => [...prev, questionText]);
     }
-
     setTimeout(() => {
       setShowResult(null);
       advanceScene();
     }, 2000);
   };
 
-  // Collect reward
   const collectReward = () => {
-    console.log('🎁 Collecting reward');
     if (currentScene?.item) {
       setInventory(prev => [...prev, currentScene.item]);
     }
@@ -706,9 +733,7 @@ export default function StoryQuestAI() {
     advanceScene();
   };
 
-  // Reset game
   const resetGame = () => {
-    console.log('🔄 Resetting game');
     setScreen('title');
     setTopic('');
     setStoryData(null);
@@ -723,7 +748,23 @@ export default function StoryQuestAI() {
     setLessonCount(0);
     setCurrentConcept(null);
     setQuestionCount(0);
+    setBlockedReason(null);
   };
+
+  // ============================================
+  // BLOCKED SCREENS
+  // ============================================
+  if (blockedReason === 'REST_DAY') {
+    return <RestDayScreen onGoHome={goHome} />;
+  }
+
+  if (blockedReason === 'TIME_LIMIT_REACHED') {
+    return <TimeLimitScreen onGoHome={goHome} />;
+  }
+
+  if (blockedReason === 'ONBOARDING_REQUIRED') {
+    return <OnboardingScreen onGoToOnboarding={goToOnboarding} />;
+  }
 
   // ============================================
   // TITLE SCREEN
@@ -731,7 +772,6 @@ export default function StoryQuestAI() {
   if (screen === 'title') {
     return (
       <div className="min-h-screen bg-gradient-to-b from-indigo-950 via-purple-950 to-slate-950 flex flex-col items-center justify-center p-6">
-        {/* Stars */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           {[...Array(40)].map((_, i) => (
             <motion.div
@@ -899,7 +939,7 @@ export default function StoryQuestAI() {
           </PixelCard>
 
           <p className="text-slate-400 mb-4" style={{ ...pixelText, fontSize: '9px' }}>
-            Questions answered: {questionCount} | Unique questions asked: {askedQuestions.length}
+            Questions answered: {questionCount} | Unique: {askedQuestions.length}
           </p>
 
           <PixelButton onClick={startNextChapter} variant="gold" className="w-full max-w-xs">
@@ -998,8 +1038,7 @@ export default function StoryQuestAI() {
           </div>
           <span className="text-rose-400 w-8 text-right" style={{ ...pixelText, fontSize: '9px' }}>{hp}%</span>
         </div>
-        
-        {/* Debug info */}
+
         <div className="text-slate-500 mt-1" style={{ ...pixelText, fontSize: '8px' }}>
           Scene {sceneIndex + 1}/{structure.length} | Questions: {askedQuestions.length}
         </div>
@@ -1021,7 +1060,6 @@ export default function StoryQuestAI() {
         ) : (
           <AnimatePresence mode="wait">
             {showResult ? (
-              // Result Display
               <motion.div
                 key="result"
                 initial={{ opacity: 0, scale: 0.9 }}
@@ -1079,7 +1117,6 @@ export default function StoryQuestAI() {
                 </PixelCard>
               </motion.div>
             ) : currentScene ? (
-              // Scene Display
               <motion.div
                 key={`${chapter}-${sceneIndex}`}
                 initial={{ opacity: 0, x: 20 }}
@@ -1088,11 +1125,7 @@ export default function StoryQuestAI() {
               >
                 {/* Lesson Scene */}
                 {currentScene.type === 'lesson' && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="space-y-4"
-                  >
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
                     <PixelCard className="p-5 bg-gradient-to-br from-blue-950 to-slate-900 border-blue-700">
                       <div className="flex items-center gap-2 mb-3 pb-2 border-b-2 border-blue-800">
                         <BookOpen className="w-5 h-5 text-blue-400" />
@@ -1100,18 +1133,15 @@ export default function StoryQuestAI() {
                           📚 LESSON: {currentScene.title}
                         </span>
                       </div>
-
                       <p className="text-slate-200 mb-4 whitespace-pre-line" style={{ ...pixelText, fontSize: '10px', lineHeight: '2' }}>
                         {currentScene.text}
                       </p>
-
                       <div className="bg-amber-950/50 border-2 border-amber-700 p-3 mt-4">
                         <p className="text-amber-400" style={{ ...pixelText, fontSize: '9px' }}>
                           💡 KEY POINT: {currentScene.keyPoint}
                         </p>
                       </div>
                     </PixelCard>
-
                     <PixelButton onClick={advanceScene} variant="secondary" className="w-full">
                       I understand! Continue
                       <ChevronRight className="w-4 h-4" />
@@ -1122,7 +1152,6 @@ export default function StoryQuestAI() {
                 {/* Non-Lesson Scenes */}
                 {currentScene.type !== 'lesson' && (
                   <>
-                    {/* Scene Text */}
                     <PixelCard className="p-5 mb-4">
                       {currentScene.speaker && (
                         <div className="flex items-center gap-3 mb-3 pb-3 border-b-2 border-slate-700">
@@ -1135,8 +1164,6 @@ export default function StoryQuestAI() {
                       <p className="text-slate-200" style={{ ...pixelText, fontSize: '10px', lineHeight: '1.9' }}>
                         {currentScene.text || currentScene.question}
                       </p>
-                      
-                      {/* Show if this is a fallback question */}
                       {currentScene.isFallback && (
                         <p className="text-orange-400 mt-2" style={{ ...pixelText, fontSize: '8px' }}>
                           ⚠️ (Fallback question - API may have failed)
@@ -1164,7 +1191,6 @@ export default function StoryQuestAI() {
 
                     {/* Actions */}
                     <div className="space-y-3">
-                      {/* Narrative/Dialogue - Continue */}
                       {(currentScene.type === 'narrative' || currentScene.type === 'dialogue') && (
                         <PixelButton onClick={advanceScene} variant="ghost" className="w-full">
                           Continue
@@ -1172,7 +1198,6 @@ export default function StoryQuestAI() {
                         </PixelButton>
                       )}
 
-                      {/* Choice */}
                       {currentScene.type === 'choice' && currentScene.choices?.map((choice, i) => (
                         <motion.button
                           key={i}
@@ -1188,7 +1213,6 @@ export default function StoryQuestAI() {
                         </motion.button>
                       ))}
 
-                      {/* Question */}
                       {currentScene.type === 'question' && currentScene.choices?.map((choice, i) => (
                         <motion.button
                           key={i}
@@ -1204,7 +1228,6 @@ export default function StoryQuestAI() {
                         </motion.button>
                       ))}
 
-                      {/* Battle */}
                       {currentScene.type === 'battle' && currentScene.choices?.map((choice, i) => (
                         <motion.button
                           key={i}
@@ -1220,7 +1243,6 @@ export default function StoryQuestAI() {
                         </motion.button>
                       ))}
 
-                      {/* Reward */}
                       {currentScene.type === 'reward' && (
                         <PixelCard className="p-4 bg-amber-950/30 border-amber-700">
                           <div className="flex items-center gap-3 mb-4">
@@ -1236,7 +1258,6 @@ export default function StoryQuestAI() {
                         </PixelCard>
                       )}
 
-                      {/* Finale */}
                       {currentScene.type === 'finale' && (
                         <PixelButton onClick={advanceScene} variant="gold" className="w-full">
                           Complete Chapter

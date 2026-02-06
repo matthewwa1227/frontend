@@ -108,8 +108,7 @@ export const dashboardAPI = {
   getStats: () => api.get('/dashboard/stats'),
 };
 
-// Add this to your api.js file
-
+// Family API (updated with schedule management methods)
 export const familyAPI = {
   // Student generates invite code
   generateCode: () => api.post('/family/generate-code'),
@@ -129,6 +128,28 @@ export const familyAPI = {
   
   // Parent removes a child
   removeChild: (studentId) => api.delete(`/family/children/${studentId}`),
+  
+  // === NEW: Schedule Management Methods ===
+  
+  // Get child's learning schedules
+  getChildSchedules: (studentId) => 
+    api.get(`/family/children/${studentId}/schedules`),
+  
+  // Get child's mastery overview
+  getChildMastery: (studentId) => 
+    api.get(`/family/children/${studentId}/mastery`),
+  
+  // Update child's daily time limit
+  updateChildTimeLimit: (studentId, dailyMinutes) => 
+    api.patch(`/family/children/${studentId}/time-limit`, { dailyMinutes }),
+  
+  // Set rest day for child (null = today)
+  setChildRestDay: (studentId, date = null) => 
+    api.post(`/family/children/${studentId}/rest-day`, { date }),
+  
+  // Acknowledge burnout warning
+  acknowledgeBurnout: (studentId) => 
+    api.patch(`/family/children/${studentId}/burnout-ack`),
 };
 
 // AI API
@@ -148,7 +169,6 @@ export const aiAPI = {
   getSessions: (startDate, endDate) => 
     api.get('/ai/sessions', { params: { startDate, endDate } })
 };
-
 
 export const taskAPI = {
   getAll: () => api.get('/tasks'),
