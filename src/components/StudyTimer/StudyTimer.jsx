@@ -23,7 +23,15 @@ const StudyTimer = () => {
   // Achievement states
   const [unlockedAchievements, setUnlockedAchievements] = useState([]);
   
+  // Refs for preventing race conditions
   const intervalRef = useRef(null);
+  const isEndingSession = useRef(false);
+  const sessionIdRef = useRef(null);
+
+  // Keep sessionIdRef in sync with sessionId state
+  useEffect(() => {
+    sessionIdRef.current = sessionId;
+  }, [sessionId]);
 
   // Common study durations (in minutes)
   const durations = [15, 25, 30, 45, 60, 90, 120];
@@ -55,7 +63,7 @@ const StudyTimer = () => {
           if (elapsedMinutes > 180) {
             console.log('🗑️ Auto-ending old session (too old):', elapsedMinutes, 'minutes');
             await sessionAPI.endSession(activeSession.id, {
-              duration: Math.floor(elapsedMinutes)
+              duration: Math.floor(elapsedMinutes * 60) // Convert to seconds
             });
             return; 
           }
@@ -66,7 +74,7 @@ const StudyTimer = () => {
             const shouldContinue = window.confirm(
               `📚 Active Session Found!\n\n` +
               `Subject: ${activeSession.subject}\n` +
-              `Time Elapsed: ${Math.floor(elapsedMinutes)} minutes\n\n` +
+              `Time Elapsed: ${Math.floor(elapsedMinutes)} minutes ${Math.floor(elapsedSeconds % 60)} seconds\n\n` +
               `Do you want to continue this session?\n` +
               `(Click Cancel to end it)`
             );
@@ -88,7 +96,7 @@ const StudyTimer = () => {
               console.log('✅ Session recovered');
             } else {
               await sessionAPI.endSession(activeSession.id, {
-                duration: Math.floor(elapsedMinutes)
+                duration: Math.floor(elapsedSeconds) // Send seconds
               });
               
               console.log('🗑️ Abandoned session ended');
@@ -103,17 +111,11 @@ const StudyTimer = () => {
     checkAndRecoverActiveSession();
   }, []);
 
-  // ---------------------------------------------------------
-  // ✅ FIX START: Separated Timer Logic
-  // ---------------------------------------------------------
-
-  // 1. The Ticker: Handles the countdown interval
-  // This only depends on active/paused state, NOT on timeRemaining
+  // Timer Ticker: Handles the countdown interval
   useEffect(() => {
     if (isActive && !isPaused) {
       intervalRef.current = setInterval(() => {
         setTimeRemaining((prevTime) => {
-          // Just calculate math here, no side effects
           return prevTime > 0 ? prevTime - 1 : 0;
         });
       }, 1000);
@@ -130,22 +132,16 @@ const StudyTimer = () => {
     };
   }, [isActive, isPaused]);
 
-  // 2. The Watcher: Handles completion when time hits 0
-  // This isolates the side effect (API call) from the state setter
+  // Timer Watcher: Handles completion when time hits 0
   useEffect(() => {
-    if (timeRemaining === 0 && isActive && !isPaused) {
-      // Clear interval immediately to be safe
-      if (intervalRef.current) clearInterval(intervalRef.current);
-      
-      // Trigger completion
+    if (timeRemaining === 0 && isActive && !isPaused && sessionIdRef.current && !isEndingSession.current) {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
       handleTimerComplete();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [timeRemaining, isActive, isPaused]); 
-  
-  // ---------------------------------------------------------
-  // ✅ FIX END
-  // ---------------------------------------------------------
+  }, [timeRemaining, isActive, isPaused]);
 
   // Format time display
   const formatTime = (seconds) => {
@@ -164,10 +160,10 @@ const StudyTimer = () => {
     return ((totalTime - timeRemaining) / totalTime) * 100;
   };
 
-  // Calculate estimated XP
+  // ✅ UPDATED: Calculate estimated XP (1 XP per 10 seconds)
   const getEstimatedXP = () => {
-    const minutesStudied = Math.floor((totalTime - timeRemaining) / 60);
-    return Math.floor(minutesStudied * 10);
+    const secondsStudied = totalTime - timeRemaining;
+    return Math.floor(secondsStudied / 10);
   };
 
   // Check for achievements
@@ -198,12 +194,15 @@ const StudyTimer = () => {
         topic: selectedDuration.toString() 
       });
       
-      setSessionId(response.data.session.id);
+      const newSessionId = response.data.session.id;
+      setSessionId(newSessionId);
+      sessionIdRef.current = newSessionId;
       setIsActive(true);
       setIsPaused(false);
       setTimeRemaining(selectedDuration * 60);
       setTotalTime(selectedDuration * 60);
       setShowStartModal(false);
+      isEndingSession.current = false;
 
       console.log('✅ Session started:', response.data);
     } catch (error) {
@@ -219,32 +218,52 @@ const StudyTimer = () => {
 
   // End session manually
   const handleEndSession = async () => {
-    if (!sessionId) return;
+    // Capture sessionId synchronously
+    const currentSessionId = sessionIdRef.current;
+    
+    if (!currentSessionId) {
+      console.log('⚠️ No session to end');
+      return;
+    }
+    
+    // Guard against double-firing
+    if (isEndingSession.current) {
+      console.log('⚠️ Already ending session, skipping');
+      return;
+    }
+    
+    isEndingSession.current = true;
 
     try {
-      const duration = Math.floor((totalTime - timeRemaining) / 60);
+      // ✅ UPDATED: Calculate duration in SECONDS
+      const durationSeconds = totalTime - timeRemaining;
       
-      if (duration < 1) {
+      // ✅ UPDATED: Minimum 10 seconds instead of 1 minute
+      if (durationSeconds < 10) {
         const shouldForceEnd = window.confirm(
           '⚠️ Session Too Short!\n\n' +
-          'You need to study for at least 1 minute to earn XP.\n\n' +
+          'You need to study for at least 10 seconds to earn XP.\n\n' +
           'Do you want to cancel this session?\n' +
           '(No XP will be awarded)'
         );
         
         if (!shouldForceEnd) {
+          isEndingSession.current = false;
           return; 
         }
         
-        await sessionAPI.endSession(sessionId, { duration: 0 });
+        console.log('🗑️ Cancelling short session:', currentSessionId);
+        await sessionAPI.endSession(currentSessionId, { duration: 0 });
         resetTimer();
         return;
       }
       
-      const response = await sessionAPI.endSession(sessionId, { duration });
+      console.log('🏁 Ending session manually:', currentSessionId, 'duration:', durationSeconds, 'seconds');
+      const response = await sessionAPI.endSession(currentSessionId, { duration: durationSeconds });
       
       setSessionSummary({
-        duration,
+        duration: durationSeconds,
+        durationFormatted: formatDurationDisplay(durationSeconds),
         xp_earned: response.data.session.xp_earned,
         subject: response.data.session.subject
       });
@@ -257,25 +276,52 @@ const StudyTimer = () => {
       console.log('✅ Session ended:', response.data);
     } catch (error) {
       console.error('❌ Failed to end session:', error);
-      setError(error.response?.data?.message || 'Failed to end session');
+      
+      // If session not found, still reset the UI
+      if (error.response?.status === 404) {
+        console.log('⚠️ Session already ended on server, resetting UI');
+        resetTimer();
+        setError('Session was already ended. UI has been reset.');
+      } else {
+        setError(error.response?.data?.message || 'Failed to end session');
+      }
+    } finally {
+      isEndingSession.current = false;
     }
   };
 
   // Timer completed automatically
   const handleTimerComplete = async () => {
-    // Safety check to ensure we don't run this if already reset
-    if (!sessionId) return;
+    // Capture sessionId synchronously before any state changes
+    const currentSessionId = sessionIdRef.current;
+    
+    // Guard against double-firing or missing session
+    if (!currentSessionId) {
+      console.log('⚠️ handleTimerComplete - no session ID');
+      return;
+    }
+    
+    if (isEndingSession.current) {
+      console.log('⚠️ handleTimerComplete - already ending session');
+      return;
+    }
+    
+    isEndingSession.current = true;
+    console.log('🎯 Timer complete, ending session:', currentSessionId);
 
     try {
-      // Immediately stop the timer locally to prevent double firing
-      setIsActive(false); 
+      // Stop the timer immediately
+      setIsActive(false);
       
-      const duration = Math.floor(totalTime / 60);
+      // ✅ UPDATED: Duration in SECONDS
+      const durationSeconds = totalTime;
       
-      const response = await sessionAPI.endSession(sessionId, { duration });
+      console.log('🏁 Auto-ending session:', currentSessionId, 'duration:', durationSeconds, 'seconds');
+      const response = await sessionAPI.endSession(currentSessionId, { duration: durationSeconds });
       
       setSessionSummary({
-        duration,
+        duration: durationSeconds,
+        durationFormatted: formatDurationDisplay(durationSeconds),
         xp_earned: response.data.session.xp_earned,
         subject: response.data.session.subject,
         completed: true
@@ -286,21 +332,49 @@ const StudyTimer = () => {
       setShowEndModal(true);
       resetTimer();
 
-      console.log('🎉 Session completed!');
+      console.log('🎉 Session completed successfully!');
     } catch (error) {
       console.error('❌ Failed to complete session:', error);
+      
+      // If it failed because session not found, still reset the UI
+      if (error.response?.status === 404) {
+        console.log('⚠️ Session already ended on server, resetting UI');
+        resetTimer();
+      } else {
+        setError(error.response?.data?.message || 'Failed to complete session');
+      }
+    } finally {
+      isEndingSession.current = false;
+    }
+  };
+
+  // ✅ NEW: Format duration for display (seconds to readable format)
+  const formatDurationDisplay = (seconds) => {
+    if (seconds < 60) {
+      return `${seconds} sec`;
+    } else if (seconds < 3600) {
+      const mins = Math.floor(seconds / 60);
+      const secs = seconds % 60;
+      return secs > 0 ? `${mins} min ${secs} sec` : `${mins} min`;
+    } else {
+      const hours = Math.floor(seconds / 3600);
+      const mins = Math.floor((seconds % 3600) / 60);
+      return mins > 0 ? `${hours} hr ${mins} min` : `${hours} hr`;
     }
   };
 
   // Reset timer
   const resetTimer = () => {
+    console.log('🔄 Resetting timer');
     setIsActive(false);
     setIsPaused(false);
     setSessionId(null);
+    sessionIdRef.current = null;
     setTimeRemaining(selectedDuration * 60);
     setTotalTime(selectedDuration * 60);
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
+      intervalRef.current = null;
     }
   };
 
@@ -309,6 +383,7 @@ const StudyTimer = () => {
     setShowEndModal(false);
     setSessionSummary(null);
     setUnlockedAchievements([]);
+    setError(null);
   };
 
   return (
@@ -400,7 +475,8 @@ const StudyTimer = () => {
                 </button>
                 <button
                   onClick={handleEndSession}
-                  className="flex items-center justify-center gap-2 bg-red-500 hover:bg-red-600 text-white px-6 py-4 border-4 border-white shadow-pixel font-pixel transition-all hover:-translate-y-1"
+                  disabled={isEndingSession.current}
+                  className="flex items-center justify-center gap-2 bg-red-500 hover:bg-red-600 text-white px-6 py-4 border-4 border-white shadow-pixel font-pixel transition-all hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Square className="w-5 h-5" />
                   <span>END SESSION</span>
@@ -428,6 +504,7 @@ const StudyTimer = () => {
             <li>• Find a quiet environment</li>
             <li>• Stay hydrated</li>
             <li>• Complete sessions for max XP!</li>
+            <li>• Earn 1 XP for every 10 seconds! ⚡</li>
           </ul>
         </div>
       </div>
@@ -527,7 +604,7 @@ const StudyTimer = () => {
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="font-pixel text-gray-400 text-sm">Duration:</span>
-                  <span className="font-pixel text-white text-sm">{sessionSummary.duration} min</span>
+                  <span className="font-pixel text-white text-sm">{sessionSummary.durationFormatted}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="font-pixel text-gray-400 text-sm">XP Earned:</span>
@@ -573,38 +650,37 @@ const StudyTimer = () => {
           </div>
         </div>
       )}
-            {/* Achievement Tester - Remove in production */}
-            <div className="fixed bottom-4 right-4 z-50">
-              <div className="bg-purple-900 border-4 border-purple-500 p-4 rounded-lg shadow-2xl max-w-sm">
-                <h3 className="font-bold text-white text-sm mb-3 flex items-center gap-2">
-                  <Award className="w-4 h-4" />
-                  Achievement Tester
-                </h3>
-                
-                <button
-                  onClick={async () => {
-                    try {
-                      const response = await achievementAPI.checkAchievements();
-                      if (response.data.unlocked_achievements?.length > 0) {
-                        setUnlockedAchievements(response.data.unlocked_achievements);
-                        alert(`🎉 ${response.data.unlocked_achievements.length} achievement(s) unlocked!`);
-                      } else {
-                        alert('No new achievements unlocked.');
-                      }
-                    } catch (error) {
-                      alert('Error checking achievements');
-                      console.error(error);
-                    }
-                  }}
-                  className="w-full bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-4 rounded flex items-center justify-center gap-2"
-                >
-                  <Zap className="w-4 h-4" />
-                  Check Achievements Now
-                </button>
-              </div>
-            </div>
 
-
+      {/* Achievement Tester - Remove in production */}
+      <div className="fixed bottom-4 right-4 z-50">
+        <div className="bg-purple-900 border-4 border-purple-500 p-4 rounded-lg shadow-2xl max-w-sm">
+          <h3 className="font-bold text-white text-sm mb-3 flex items-center gap-2">
+            <Award className="w-4 h-4" />
+            Achievement Tester
+          </h3>
+          
+          <button
+            onClick={async () => {
+              try {
+                const response = await achievementAPI.checkAchievements();
+                if (response.data.unlocked_achievements?.length > 0) {
+                  setUnlockedAchievements(response.data.unlocked_achievements);
+                  alert(`🎉 ${response.data.unlocked_achievements.length} achievement(s) unlocked!`);
+                } else {
+                  alert('No new achievements unlocked.');
+                }
+              } catch (error) {
+                alert('Error checking achievements');
+                console.error(error);
+              }
+            }}
+            className="w-full bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-4 rounded flex items-center justify-center gap-2"
+          >
+            <Zap className="w-4 h-4" />
+            Check Achievements Now
+          </button>
+        </div>
+      </div>
     </div>
   );
 };

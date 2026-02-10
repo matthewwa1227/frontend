@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -41,33 +41,52 @@ const SCHEDULE_ERROR_CODES = ['REST_DAY', 'TIME_LIMIT_REACHED', 'ONBOARDING_REQU
 
 // Process API response and detect schedule guard errors
 const processApiResponse = async (response) => {
+  console.log('🔍 Response status:', response.status, response.statusText);
+  
+  // Check if response is ok BEFORE trying to parse
   if (response.ok) {
-    return await response.json();
+    const data = await response.json();
+    console.log('✅ Response OK, data:', data);
+    return data;
   }
 
-  // Try to parse error body
+  // Response not OK - could be schedule error or other error
+  console.log('❌ Response not OK, checking for schedule error...');
+  
   let errorData = {};
+  const responseText = await response.text();
+  console.log('🔍 Error response raw text:', responseText);
+  
   try {
-    errorData = await response.json();
+    errorData = JSON.parse(responseText);
+    console.log('🔍 Parsed error JSON:', errorData);
   } catch (e) {
-    try {
-      const text = await response.text();
-      errorData = { message: text };
-    } catch (e2) {
-      errorData = { message: `HTTP ${response.status}` };
-    }
+    console.log('🔍 Could not parse as JSON, using text:', responseText);
+    errorData = { message: responseText };
   }
+  
+  // Check multiple possible field names for error code
+  // Backend might return: { error: 'REST_DAY' }, { code: 'REST_DAY' }, { type: 'REST_DAY' }
+  const errorCode = errorData.code || errorData.error || errorData.type;
+  console.log('🔍 Extracted error code:', errorCode);
+  console.log('🔍 Is schedule error?', SCHEDULE_ERROR_CODES.includes(errorCode));
 
   // Check for schedule guard errors
-  if (SCHEDULE_ERROR_CODES.includes(errorData.code)) {
-    const error = new Error(errorData.message || errorData.code);
-    error.scheduleCode = errorData.code;
-    error.scheduleMessage = errorData.message;
-    error.remainingMinutes = errorData.remaining;
+  if (SCHEDULE_ERROR_CODES.includes(errorCode)) {
+    const error = new Error(errorData.message || errorCode);
+    error.scheduleCode = errorCode;
+    error.scheduleMessage = errorData.message || errorData.details;
+    error.remainingMinutes = errorData.remaining || errorData.remainingMinutes;
+    error.fullErrorData = errorData; // Store full data for debugging
+    console.log('🚫 Schedule error DETECTED:', errorCode, error);
     throw error;
   }
 
-  throw new Error(errorData.message || `API error: ${response.status}`);
+  // Regular API error
+  const error = new Error(errorData.message || errorData.error || `API error: ${response.status}`);
+  error.status = response.status;
+  error.data = errorData;
+  throw error;
 };
 
 // ============================================
@@ -180,17 +199,34 @@ const AIService = {
     const token = getAuthToken();
     if (!token) throw new Error('No authentication token');
 
-    const response = await fetch(`${API_BASE}/api/ai/story/intro`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({ topic })
-    });
+    try {
+      const response = await fetch(`${API_BASE}/api/ai/story/intro`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ topic })
+      });
 
-    // This will throw a schedule error if guard blocks
-    return await processApiResponse(response);
+      console.log('📖 Story intro response status:', response.status);
+      // This will throw a schedule error if guard blocks
+      return await processApiResponse(response);
+    } catch (error) {
+      console.log('📖 Story intro error caught:', error.message, 'scheduleCode:', error.scheduleCode);
+      // Re-throw schedule errors so the component can catch them
+      if (error.scheduleCode) {
+        console.log('🚫 Re-throwing schedule error from generateStoryIntro');
+        throw error;
+      }
+      console.error('❌ Story intro error:', error.message);
+      // Return fallback for other errors
+      return {
+        title: `${topic} Adventure`,
+        setting: `Welcome to the world of ${topic}!`,
+        mentor_intro: "I am Archimedes, your guide through this learning journey."
+      };
+    }
   },
 
   generateScene: async (topic, chapter, sceneType, context) => {
@@ -208,10 +244,14 @@ const AIService = {
         body: JSON.stringify({ topic, chapter, sceneType, context })
       });
 
+      console.log('🎭 Scene response status:', response.status);
       return await processApiResponse(response);
     } catch (error) {
-      // Re-throw schedule errors so the component can catch them
-      if (error.scheduleCode) throw error;
+      console.log('🎭 Scene error caught:', error.message, 'scheduleCode:', error.scheduleCode);
+      if (error.scheduleCode) {
+        console.log('🚫 Re-throwing schedule error from generateScene');
+        throw error;
+      }
       console.error('❌ Scene error:', error.message);
       return generateLocalFallbackScene(topic, chapter, sceneType);
     }
@@ -232,9 +272,14 @@ const AIService = {
         body: JSON.stringify({ topic, chapter, conceptNumber })
       });
 
+      console.log('📚 Lesson response status:', response.status);
       return await processApiResponse(response);
     } catch (error) {
-      if (error.scheduleCode) throw error;
+      console.log('📚 Lesson error caught:', error.message, 'scheduleCode:', error.scheduleCode);
+      if (error.scheduleCode) {
+        console.log('🚫 Re-throwing schedule error from generateLesson');
+        throw error;
+      }
       console.error('❌ Lesson error:', error.message);
       return generateLocalFallbackLesson(topic, chapter);
     }
@@ -264,6 +309,7 @@ const AIService = {
         })
       });
 
+      console.log('❓ Question response status:', response.status);
       const data = await processApiResponse(response);
 
       if (!data.text || !data.choices || data.choices.length < 2) {
@@ -271,7 +317,11 @@ const AIService = {
       }
       return data;
     } catch (error) {
-      if (error.scheduleCode) throw error;
+      console.log('❓ Question error caught:', error.message, 'scheduleCode:', error.scheduleCode);
+      if (error.scheduleCode) {
+        console.log('🚫 Re-throwing schedule error from generateQuestion');
+        throw error;
+      }
       console.error('❌ Question error:', error.message);
       return generateLocalFallbackQuestion(topic, difficulty, previousQuestions.length);
     }
@@ -541,27 +591,28 @@ export default function StoryQuestAI() {
   }, [currentScene, screen]);
 
   // Handle schedule errors from any API call
-  const handleScheduleError = (error) => {
+  const handleScheduleError = useCallback((error) => {
+    console.log('🔍 handleScheduleError called with:', error.message, 'scheduleCode:', error.scheduleCode);
     if (error.scheduleCode) {
-      console.log('🚫 Schedule blocked:', error.scheduleCode, error.scheduleMessage);
+      console.log('🚫 Schedule blocked DETECTED:', error.scheduleCode, error.scheduleMessage);
       setBlockedReason(error.scheduleCode);
       setLoading(false);
       return true; // Error was handled
     }
+    console.log('✅ Not a schedule error');
     return false; // Not a schedule error
-  };
+  }, []);
 
-  const goHome = () => {
-    // Navigate to main dashboard
+  const goHome = useCallback(() => {
     navigate('/dashboard');
-  };
+  }, [navigate]);
 
-  const goToOnboarding = () => {
+  const goToOnboarding = useCallback(() => {
     navigate('/onboarding');
-  };
+  }, [navigate]);
 
   // Start the game
-  const startGame = async () => {
+  const startGame = useCallback(async () => {
     const value = topicRef.current?.value?.trim();
     if (!value) return;
 
@@ -571,18 +622,28 @@ export default function StoryQuestAI() {
     setBlockedReason(null);
 
     try {
+      console.log('📖 Calling AIService.generateStoryIntro...');
       const intro = await AIService.generateStoryIntro(value);
+      console.log('✅ Got intro:', intro);
       setStoryData(intro);
       setScreen('intro');
     } catch (error) {
-      if (handleScheduleError(error)) return;
+      console.log('❌ Caught error in startGame:', error);
+      console.log('   error.scheduleCode:', error.scheduleCode);
+      console.log('   error.message:', error.message);
+      
+      if (handleScheduleError(error)) {
+        console.log('🚫 Schedule error handled, returning early');
+        return;
+      }
       console.error('Failed to generate story:', error);
+      alert('Failed to start game: ' + error.message);
     } finally {
       setLoading(false);
     }
-  };
+  }, [handleScheduleError]);
 
-  const beginAdventure = async () => {
+  const beginAdventure = useCallback(async () => {
     console.log('🎮 Beginning adventure');
     setChapter(1);
     setSceneIndex(0);
@@ -593,9 +654,9 @@ export default function StoryQuestAI() {
     setQuestionCount(0);
     setScreen('game');
     await loadScene(1, 0);
-  };
+  }, []);
 
-  const loadScene = async (chapterNum, sceneIdx) => {
+  const loadScene = useCallback(async (chapterNum, sceneIdx) => {
     console.log(`🎬 Loading scene: Chapter ${chapterNum}, Scene ${sceneIdx}`);
     setLoading(true);
     const structure = chapterStructure[chapterNum] || chapterStructure[1];
@@ -647,14 +708,19 @@ export default function StoryQuestAI() {
         setEnemyHp(100);
       }
     } catch (error) {
-      if (handleScheduleError(error)) return;
+      console.log('❌ Caught error in loadScene:', error);
+      if (handleScheduleError(error)) {
+        console.log('🚫 Schedule error handled in loadScene, returning early');
+        return;
+      }
       console.error('❌ Failed to load scene:', error);
+      alert('Failed to load scene: ' + error.message);
     } finally {
       setLoading(false);
     }
-  };
+  }, [topic, lessonCount, askedQuestions, currentConcept, chapterScenes, handleScheduleError]);
 
-  const advanceScene = async () => {
+  const advanceScene = useCallback(async () => {
     const structure = chapterStructure[chapter] || chapterStructure[1];
     const nextIndex = sceneIndex + 1;
 
@@ -666,9 +732,9 @@ export default function StoryQuestAI() {
     } else {
       setScreen('victory');
     }
-  };
+  }, [chapter, sceneIndex, loadScene]);
 
-  const startNextChapter = async () => {
+  const startNextChapter = useCallback(async () => {
     const nextChapter = chapter + 1;
     setChapter(nextChapter);
     setSceneIndex(0);
@@ -677,63 +743,51 @@ export default function StoryQuestAI() {
     setCurrentConcept(null);
     setScreen('game');
     await loadScene(nextChapter, 0);
-  };
+  }, [chapter, loadScene]);
 
-  const handleChoice = (choice) => {
+  const handleChoice = useCallback((choice) => {
     setXp(x => x + (choice.xp || 15));
     setShowResult({ type: 'choice', text: choice.text, reward: choice.reward });
-    setTimeout(() => {
-      setShowResult(null);
-      advanceScene();
-    }, 1500);
-  };
+  }, []);
 
-  const handleQuestion = async (choice, isCorrect) => {
+  const handleQuestion = useCallback((choice, isCorrect) => {
     if (isCorrect) {
-      setXp(x => x + (currentScene.xp || 25));
-      setShowResult({ type: 'correct', text: currentScene.explanation });
+      setXp(x => x + (currentScene?.xp || 25));
+      setShowResult({ type: 'correct', text: currentScene?.explanation });
     } else {
       setHp(h => Math.max(0, h - 15));
-      setShowResult({ type: 'wrong', text: currentScene.explanation });
+      setShowResult({ type: 'wrong', text: currentScene?.explanation });
     }
-    const questionText = currentScene.text || currentScene.question;
+    const questionText = currentScene?.text || currentScene?.question;
     if (questionText) {
       setAskedQuestions(prev => [...prev, questionText]);
     }
-    setTimeout(() => {
-      setShowResult(null);
-      advanceScene();
-    }, 2500);
-  };
+  }, [currentScene]);
 
-  const handleBattle = (choice) => {
+  const handleBattle = useCallback((choice) => {
     if (choice.correct) {
       setEnemyHp(0);
-      setXp(x => x + (currentScene.xp || 35));
+      setXp(x => x + (currentScene?.xp || 35));
       setShowResult({ type: 'hit', damage: 100 });
     } else {
       setHp(h => Math.max(0, h - 20));
       setShowResult({ type: 'miss' });
     }
-    const questionText = currentScene.question;
+    const questionText = currentScene?.question;
     if (questionText) {
       setAskedQuestions(prev => [...prev, questionText]);
     }
-    setTimeout(() => {
-      setShowResult(null);
-      advanceScene();
-    }, 2000);
-  };
+  }, [currentScene]);
 
-  const collectReward = () => {
+  const collectReward = useCallback(() => {
     if (currentScene?.item) {
       setInventory(prev => [...prev, currentScene.item]);
     }
     setXp(x => x + 20);
     advanceScene();
-  };
+  }, [currentScene, advanceScene]);
 
-  const resetGame = () => {
+  const resetGame = useCallback(() => {
     setScreen('title');
     setTopic('');
     setStoryData(null);
@@ -749,20 +803,41 @@ export default function StoryQuestAI() {
     setCurrentConcept(null);
     setQuestionCount(0);
     setBlockedReason(null);
-  };
+  }, []);
+
+  // Handle result timeouts with proper cleanup
+  useEffect(() => {
+    if (!showResult) return;
+    
+    const delay = showResult.type === 'correct' || showResult.type === 'wrong' ? 2500 : 2000;
+    
+    const timer = setTimeout(() => {
+      setShowResult(null);
+      if (showResult.type === 'choice' || showResult.type === 'correct' || showResult.type === 'wrong') {
+        advanceScene();
+      } else if (showResult.type === 'hit' || showResult.type === 'miss') {
+        advanceScene();
+      }
+    }, delay);
+    
+    return () => clearTimeout(timer);
+  }, [showResult, advanceScene]);
 
   // ============================================
   // BLOCKED SCREENS
   // ============================================
   if (blockedReason === 'REST_DAY') {
+    console.log('🚫 Rendering REST_DAY screen');
     return <RestDayScreen onGoHome={goHome} />;
   }
 
   if (blockedReason === 'TIME_LIMIT_REACHED') {
+    console.log('🚫 Rendering TIME_LIMIT_REACHED screen');
     return <TimeLimitScreen onGoHome={goHome} />;
   }
 
   if (blockedReason === 'ONBOARDING_REQUIRED') {
+    console.log('🚫 Rendering ONBOARDING_REQUIRED screen');
     return <OnboardingScreen onGoToOnboarding={goToOnboarding} />;
   }
 
@@ -1014,7 +1089,11 @@ export default function StoryQuestAI() {
       {/* HUD */}
       <div className="bg-black/50 border-b-4 border-purple-900 p-3">
         <div className="flex items-center justify-between mb-2">
-          <button onClick={resetGame} className="p-2 hover:bg-slate-800 transition-colors rounded">
+          <button 
+            onClick={resetGame} 
+            className="p-2 hover:bg-slate-800 transition-colors rounded"
+            aria-label="Back to home"
+          >
             <Home className="w-5 h-5 text-slate-400" />
           </button>
           <div className="text-center">
