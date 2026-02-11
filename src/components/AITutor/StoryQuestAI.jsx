@@ -39,18 +39,15 @@ const getAuthToken = () => {
 // ============================================
 const SCHEDULE_ERROR_CODES = ['REST_DAY', 'TIME_LIMIT_REACHED', 'ONBOARDING_REQUIRED'];
 
-// Process API response and detect schedule guard errors
 const processApiResponse = async (response) => {
   console.log('🔍 Response status:', response.status, response.statusText);
   
-  // Check if response is ok BEFORE trying to parse
   if (response.ok) {
     const data = await response.json();
     console.log('✅ Response OK, data:', data);
     return data;
   }
 
-  // Response not OK - could be schedule error or other error
   console.log('❌ Response not OK, checking for schedule error...');
   
   let errorData = {};
@@ -65,24 +62,19 @@ const processApiResponse = async (response) => {
     errorData = { message: responseText };
   }
   
-  // Check multiple possible field names for error code
-  // Backend might return: { error: 'REST_DAY' }, { code: 'REST_DAY' }, { type: 'REST_DAY' }
   const errorCode = errorData.code || errorData.error || errorData.type;
   console.log('🔍 Extracted error code:', errorCode);
-  console.log('🔍 Is schedule error?', SCHEDULE_ERROR_CODES.includes(errorCode));
 
-  // Check for schedule guard errors
   if (SCHEDULE_ERROR_CODES.includes(errorCode)) {
     const error = new Error(errorData.message || errorCode);
     error.scheduleCode = errorCode;
     error.scheduleMessage = errorData.message || errorData.details;
     error.remainingMinutes = errorData.remaining || errorData.remainingMinutes;
-    error.fullErrorData = errorData; // Store full data for debugging
+    error.fullErrorData = errorData;
     console.log('🚫 Schedule error DETECTED:', errorCode, error);
     throw error;
   }
 
-  // Regular API error
   const error = new Error(errorData.message || errorData.error || `API error: ${response.status}`);
   error.status = response.status;
   error.data = errorData;
@@ -191,7 +183,7 @@ function generateLocalFallbackQuestion(topic, difficulty, questionIndex = 0) {
 }
 
 // ============================================
-// AI SERVICE - Uses processApiResponse for schedule error detection
+// AI SERVICE
 // ============================================
 const AIService = {
   generateStoryIntro: async (topic) => {
@@ -210,17 +202,14 @@ const AIService = {
       });
 
       console.log('📖 Story intro response status:', response.status);
-      // This will throw a schedule error if guard blocks
       return await processApiResponse(response);
     } catch (error) {
       console.log('📖 Story intro error caught:', error.message, 'scheduleCode:', error.scheduleCode);
-      // Re-throw schedule errors so the component can catch them
       if (error.scheduleCode) {
         console.log('🚫 Re-throwing schedule error from generateStoryIntro');
         throw error;
       }
       console.error('❌ Story intro error:', error.message);
-      // Return fallback for other errors
       return {
         title: `${topic} Adventure`,
         setting: `Welcome to the world of ${topic}!`,
@@ -508,39 +497,169 @@ const TimeLimitScreen = ({ onGoHome }) => (
   </div>
 );
 
-const OnboardingScreen = ({ onGoToOnboarding }) => (
-  <div className="min-h-screen bg-gradient-to-b from-purple-950 via-slate-900 to-slate-950 flex flex-col items-center justify-center p-6">
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="text-center max-w-sm"
-    >
+// ============================================
+// FORM LEVEL SETUP (Built-in Onboarding)
+// ============================================
+const FormLevelSetup = ({ onComplete, onGoHome }) => {
+  const [selectedLevel, setSelectedLevel] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const formLevels = [
+    { value: 'P1', label: 'Primary 1', tier: 'P1-P3', minutes: 15 },
+    { value: 'P2', label: 'Primary 2', tier: 'P1-P3', minutes: 15 },
+    { value: 'P3', label: 'Primary 3', tier: 'P1-P3', minutes: 15 },
+    { value: 'P4', label: 'Primary 4', tier: 'P4-P6', minutes: 25 },
+    { value: 'P5', label: 'Primary 5', tier: 'P4-P6', minutes: 25 },
+    { value: 'P6', label: 'Primary 6', tier: 'P4-P6', minutes: 25 },
+    { value: 'S1', label: 'Secondary 1', tier: 'S1-S3', minutes: 40 },
+    { value: 'S2', label: 'Secondary 2', tier: 'S1-S3', minutes: 40 },
+    { value: 'S3', label: 'Secondary 3', tier: 'S1-S3', minutes: 40 },
+    { value: 'S4', label: 'Secondary 4', tier: 'S4-S6', minutes: 60 },
+    { value: 'S5', label: 'Secondary 5', tier: 'S4-S6', minutes: 60 },
+    { value: 'S6', label: 'Secondary 6', tier: 'S4-S6', minutes: 60 },
+  ];
+
+  const selectedInfo = formLevels.find(l => l.value === selectedLevel);
+
+ // In the FormLevelSetup component, find the handleSubmit function and change:
+
+const handleSubmit = async () => {
+  if (!selectedLevel) return;
+  
+  setLoading(true);
+  setError('');
+  
+  try {
+    const token = getAuthToken();
+    if (!token) {
+      throw new Error('Not authenticated');
+    }
+
+    // CHANGE THIS LINE - use singular "student" not "students"
+    const response = await fetch(`${API_BASE}/api/student/profile`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ 
+        form_level: selectedLevel,
+        onboarding_completed: true
+      })
+    });
+
+    const data = await response.json();
+
+    if (response.ok && data.success) {
+      console.log('✅ Onboarding completed successfully');
+      onComplete();
+    } else {
+      throw new Error(data.message || 'Failed to save profile');
+    }
+  } catch (err) {
+    console.error('Setup error:', err);
+    setError(err.message || 'Failed to save. Please try again.');
+  } finally {
+    setLoading(false);
+  }
+};
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-purple-950 via-slate-900 to-slate-950 flex flex-col items-center justify-center p-6">
       <motion.div
-        animate={{ rotate: [0, 5, -5, 0] }}
-        transition={{ duration: 2, repeat: Infinity }}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="text-center max-w-sm w-full"
       >
-        <LogIn className="w-20 h-20 text-purple-400 mx-auto mb-6" />
+        <PixelOwl size={64} mood="excited" className="mx-auto mb-4" />
+
+        <h1 className="text-purple-300 mb-2" style={{ ...pixelText, fontSize: '18px', textShadow: '2px 2px 0 #000' }}>
+          WELCOME, SCHOLAR!
+        </h1>
+
+        <PixelCard className="p-6 mb-6">
+          <p className="text-slate-300 mb-4" style={{ ...pixelText, fontSize: '10px', lineHeight: '1.8' }}>
+            "Before we begin your adventure, tell me your current school level so I can prepare the right challenges for you!"
+          </p>
+          <p className="text-purple-400 mb-4" style={{ ...pixelText, fontSize: '9px' }}>— Archimedes</p>
+
+          <label className="block text-slate-400 mb-2 text-left" style={{ ...pixelText, fontSize: '9px' }}>
+            SELECT YOUR LEVEL:
+          </label>
+          
+          <select
+            value={selectedLevel}
+            onChange={(e) => setSelectedLevel(e.target.value)}
+            className="w-full bg-slate-900 border-4 border-slate-700 px-4 py-3 text-white focus:outline-none focus:border-purple-500 transition-colors mb-4 appearance-none cursor-pointer"
+            style={{ ...pixelText, fontSize: '11px' }}
+          >
+            <option value="">-- Choose Your Level --</option>
+            <optgroup label="🏫 Primary School">
+              {formLevels.filter(l => l.value.startsWith('P')).map(level => (
+                <option key={level.value} value={level.value}>{level.label}</option>
+              ))}
+            </optgroup>
+            <optgroup label="🎓 Secondary School">
+              {formLevels.filter(l => l.value.startsWith('S')).map(level => (
+                <option key={level.value} value={level.value}>{level.label}</option>
+              ))}
+            </optgroup>
+          </select>
+
+          {selectedInfo && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              className="bg-purple-950/50 border-2 border-purple-700 p-3 mb-4"
+            >
+              <p className="text-purple-300 mb-1" style={{ ...pixelText, fontSize: '9px' }}>
+                ✨ Daily study time: <span className="text-amber-400">{selectedInfo.minutes} minutes</span>
+              </p>
+              <p className="text-purple-300/70" style={{ ...pixelText, fontSize: '8px' }}>
+                Questions and lessons will be tailored for {selectedInfo.label} level
+              </p>
+            </motion.div>
+          )}
+
+          {error && (
+            <div className="bg-rose-950/50 border-2 border-rose-700 p-3 mb-4">
+              <p className="text-rose-400" style={{ ...pixelText, fontSize: '9px' }}>
+                ❌ {error}
+              </p>
+            </div>
+          )}
+        </PixelCard>
+
+        <div className="space-y-3">
+          <PixelButton 
+            onClick={handleSubmit} 
+            variant="secondary" 
+            className="w-full"
+            disabled={!selectedLevel || loading}
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-4 h-4" />
+                Begin My Journey
+              </>
+            )}
+          </PixelButton>
+
+          <PixelButton onClick={onGoHome} variant="ghost" className="w-full">
+            <Home className="w-4 h-4" />
+            Back to Home
+          </PixelButton>
+        </div>
       </motion.div>
-
-      <h1 className="text-purple-300 mb-3" style={{ ...pixelText, fontSize: '18px', textShadow: '2px 2px 0 #000' }}>
-        SETUP REQUIRED
-      </h1>
-
-      <PixelCard className="p-6 mb-6">
-        <PixelOwl size={48} mood="excited" className="mx-auto mb-4" />
-        <p className="text-slate-300 mb-3" style={{ ...pixelText, fontSize: '10px', lineHeight: '1.9' }}>
-          "Before we begin your adventure, I need to know a bit about you! Please complete the quick setup so I can tailor the journey to your level."
-        </p>
-        <p className="text-purple-400" style={{ ...pixelText, fontSize: '9px' }}>— Archimedes</p>
-      </PixelCard>
-
-      <PixelButton onClick={onGoToOnboarding} variant="secondary" className="w-full">
-        <Sparkles className="w-4 h-4" />
-        Complete Setup
-      </PixelButton>
-    </motion.div>
-  </div>
-);
+    </div>
+  );
+};
 
 // ============================================
 // MAIN APP
@@ -550,6 +669,7 @@ export default function StoryQuestAI() {
 
   const [screen, setScreen] = useState('title');
   const [topic, setTopic] = useState('');
+  const [pendingTopic, setPendingTopic] = useState(''); // Store topic when onboarding interrupts
   const [storyData, setStoryData] = useState(null);
   const [chapter, setChapter] = useState(1);
   const [sceneIndex, setSceneIndex] = useState(0);
@@ -567,7 +687,7 @@ export default function StoryQuestAI() {
   const [lessonCount, setLessonCount] = useState(0);
 
   // Schedule blocking state
-  const [blockedReason, setBlockedReason] = useState(null); // 'REST_DAY' | 'TIME_LIMIT_REACHED' | 'ONBOARDING_REQUIRED' | null
+  const [blockedReason, setBlockedReason] = useState(null);
 
   const topicRef = useRef(null);
 
@@ -590,33 +710,63 @@ export default function StoryQuestAI() {
     setChapterScenes(prev => [...prev, currentScene]);
   }, [currentScene, screen]);
 
-  // Handle schedule errors from any API call
   const handleScheduleError = useCallback((error) => {
     console.log('🔍 handleScheduleError called with:', error.message, 'scheduleCode:', error.scheduleCode);
     if (error.scheduleCode) {
       console.log('🚫 Schedule blocked DETECTED:', error.scheduleCode, error.scheduleMessage);
       setBlockedReason(error.scheduleCode);
       setLoading(false);
-      return true; // Error was handled
+      return true;
     }
     console.log('✅ Not a schedule error');
-    return false; // Not a schedule error
+    return false;
   }, []);
 
   const goHome = useCallback(() => {
     navigate('/dashboard');
   }, [navigate]);
 
-  const goToOnboarding = useCallback(() => {
-    navigate('/onboarding');
-  }, [navigate]);
+  // Called after onboarding completes - retry starting the game
+  const handleOnboardingComplete = useCallback(async () => {
+    console.log('✅ Onboarding complete, retrying game start...');
+    setBlockedReason(null);
+    
+    // Use the pending topic that was stored when onboarding was triggered
+    const topicToUse = pendingTopic || topicRef.current?.value?.trim();
+    if (!topicToUse) {
+      console.log('No topic available, returning to title screen');
+      setScreen('title');
+      return;
+    }
 
-  // Start the game
+    setTopic(topicToUse);
+    setLoading(true);
+
+    try {
+      const intro = await AIService.generateStoryIntro(topicToUse);
+      console.log('✅ Got intro after onboarding:', intro);
+      setStoryData(intro);
+      setPendingTopic(''); // Clear pending topic
+      setScreen('intro');
+    } catch (error) {
+      console.log('❌ Error after onboarding:', error);
+      if (handleScheduleError(error)) {
+        return;
+      }
+      console.error('Failed to generate story:', error);
+      alert('Failed to start game: ' + error.message);
+      setScreen('title');
+    } finally {
+      setLoading(false);
+    }
+  }, [pendingTopic, handleScheduleError]);
+
   const startGame = useCallback(async () => {
     const value = topicRef.current?.value?.trim();
     if (!value) return;
 
     console.log('🎮 Starting game with topic:', value);
+    setPendingTopic(value); // Store topic in case onboarding is needed
     setTopic(value);
     setLoading(true);
     setBlockedReason(null);
@@ -790,6 +940,7 @@ export default function StoryQuestAI() {
   const resetGame = useCallback(() => {
     setScreen('title');
     setTopic('');
+    setPendingTopic('');
     setStoryData(null);
     setChapter(1);
     setSceneIndex(0);
@@ -805,7 +956,6 @@ export default function StoryQuestAI() {
     setBlockedReason(null);
   }, []);
 
-  // Handle result timeouts with proper cleanup
   useEffect(() => {
     if (!showResult) return;
     
@@ -838,7 +988,12 @@ export default function StoryQuestAI() {
 
   if (blockedReason === 'ONBOARDING_REQUIRED') {
     console.log('🚫 Rendering ONBOARDING_REQUIRED screen');
-    return <OnboardingScreen onGoToOnboarding={goToOnboarding} />;
+    return (
+      <FormLevelSetup 
+        onComplete={handleOnboardingComplete}
+        onGoHome={goHome}
+      />
+    );
   }
 
   // ============================================

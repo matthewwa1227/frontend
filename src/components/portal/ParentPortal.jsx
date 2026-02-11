@@ -9,51 +9,20 @@ import {
   AlertCircle,
   Loader2,
   UserMinus,
-  Clock,
-  TrendingUp,
-  Award,
-  BookOpen,
-  ChevronRight
+  Clock
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { familyAPI } from '../../utils/api';
 import { getUser } from '../../utils/auth';
+import PixelCard from '../shared/PixelCard';
 
-// --- Reusable UI Components ---
-
-const QuestCard = ({ children, className = "", title, icon: Icon, color = "indigo", action }) => {
-  const colors = {
-    indigo: { border: "border-indigo-900", header: "bg-indigo-100 text-indigo-900" },
-    emerald: { border: "border-emerald-900", header: "bg-emerald-100 text-emerald-900" },
-    slate: { border: "border-slate-900", header: "bg-slate-100 text-slate-900" },
-    amber: { border: "border-amber-900", header: "bg-amber-100 text-amber-900" }
-  };
-  const c = colors[color] || colors.slate;
-
-  return (
-    <div className={`bg-white border-4 ${c.border} rounded-xl shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] overflow-hidden ${className}`}>
-      {title && (
-        <div className={`${c.header} border-b-4 ${c.border} p-4 flex items-center justify-between`}>
-          <div className="flex items-center gap-3">
-            {Icon && <Icon className="w-5 h-5" />}
-            <h3 className="font-bold text-base uppercase tracking-wide">{title}</h3>
-          </div>
-          {action}
-        </div>
-      )}
-      <div className="p-5">{children}</div>
-    </div>
-  );
-};
-
-const QuestButton = ({ onClick, children, variant = "primary", className = "", disabled = false, type = "button" }) => {
-  const base = "px-4 py-3 font-bold uppercase tracking-wider text-sm rounded-lg border-2 transition-all flex items-center justify-center gap-2";
+// Pixel-styled Button Component
+const PixelButton = ({ onClick, children, variant = "primary", className = "", disabled = false, type = "button" }) => {
   const variants = {
-    primary: "bg-indigo-600 text-white border-indigo-900 shadow-[0px_4px_0px_0px_rgba(49,46,129,1)] hover:bg-indigo-500 active:translate-y-1 active:shadow-none disabled:bg-indigo-400",
-    success: "bg-emerald-600 text-white border-emerald-900 shadow-[0px_4px_0px_0px_rgba(6,78,59,1)] hover:bg-emerald-500 active:translate-y-1 active:shadow-none disabled:bg-emerald-400",
-    secondary: "bg-white text-slate-900 border-slate-300 shadow-[0px_3px_0px_0px_rgba(203,213,225,1)] hover:bg-slate-50 active:translate-y-1 active:shadow-none",
-    danger: "bg-red-50 text-red-600 border-red-200 hover:bg-red-100 shadow-none",
-    ghost: "bg-transparent text-slate-600 border-transparent hover:bg-slate-100 shadow-none"
+    primary: "bg-indigo-600 border-white hover:bg-indigo-500",
+    success: "bg-pixel-success border-white hover:bg-green-600",
+    secondary: "bg-pixel-primary border-pixel-accent hover:bg-gray-700",
+    danger: "bg-red-800 border-red-500 hover:bg-red-700",
+    gold: "bg-pixel-gold border-white hover:bg-yellow-500 text-black"
   };
 
   return (
@@ -61,113 +30,22 @@ const QuestButton = ({ onClick, children, variant = "primary", className = "", d
       type={type}
       onClick={onClick}
       disabled={disabled}
-      className={`${base} ${variants[variant]} ${className} ${disabled ? 'cursor-not-allowed opacity-70' : ''}`}
+      className={`
+        px-4 py-3 font-pixel text-xs uppercase tracking-wider
+        border-4 ${variants[variant]}
+        transition-colors flex items-center justify-center gap-2
+        disabled:opacity-50 disabled:cursor-not-allowed
+        ${className}
+      `}
     >
       {children}
     </button>
   );
 };
 
-const StatBadge = ({ icon: Icon, label, value, color = "slate" }) => {
-  const colors = {
-    indigo: "bg-indigo-50 text-indigo-700 border-indigo-200",
-    emerald: "bg-emerald-50 text-emerald-700 border-emerald-200",
-    amber: "bg-amber-50 text-amber-700 border-amber-200",
-    slate: "bg-slate-50 text-slate-700 border-slate-200"
-  };
-
-  return (
-    <div className={`${colors[color]} border rounded-lg p-3 text-center`}>
-      <div className="flex items-center justify-center gap-1 mb-1">
-        <Icon className="w-3.5 h-3.5 opacity-70" />
-        <span className="text-xs font-semibold uppercase tracking-wide opacity-70">{label}</span>
-      </div>
-      <div className="text-lg font-bold">{value}</div>
-    </div>
-  );
-};
-
-// --- Main Component ---
-
+// Main Component - Student Only
 export default function FamilyPortal() {
   const user = getUser();
-  
-  // Auto-detect role from logged in user
-  const isParent = user?.role === 'parent';
-  const [activeRole, setActiveRole] = useState(isParent ? 'parent' : 'student');
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-100 to-slate-200 p-4 md:p-8 font-sans text-slate-900">
-      <div className="max-w-5xl mx-auto space-y-6">
-        
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 text-indigo-600 mb-1">
-              <Users className="w-5 h-5" />
-              <span className="text-sm font-bold uppercase tracking-wider">Family Portal</span>
-            </div>
-            <h1 className="text-3xl font-extrabold text-slate-900">
-              {activeRole === 'student' ? 'Guardian Management' : 'Student Dashboard'}
-            </h1>
-          </div>
-
-          {/* Role Toggle - Only show if user wants to switch views (for testing) */}
-          <div className="bg-white p-1.5 rounded-xl border-2 border-slate-200 shadow-sm inline-flex">
-            <button
-              onClick={() => setActiveRole('student')}
-              className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${
-                activeRole === 'student' 
-                  ? 'bg-indigo-600 text-white shadow-md' 
-                  : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
-              }`}
-            >
-              Student
-            </button>
-            <button
-              onClick={() => setActiveRole('parent')}
-              className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${
-                activeRole === 'parent' 
-                  ? 'bg-emerald-600 text-white shadow-md' 
-                  : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
-              }`}
-            >
-              Parent
-            </button>
-          </div>
-        </div>
-
-        {/* Content */}
-        <AnimatePresence mode="wait">
-          {activeRole === 'student' ? (
-            <motion.div
-              key="student"
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 20 }}
-              transition={{ duration: 0.2 }}
-            >
-              <StudentView />
-            </motion.div>
-          ) : (
-            <motion.div
-              key="parent"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.2 }}
-            >
-              <ParentView />
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-    </div>
-  );
-}
-
-// --- Student View ---
-function StudentView() {
   const [inviteCode, setInviteCode] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
@@ -221,7 +99,6 @@ function StudentView() {
       
       if (response.data.success) {
         setInviteCode(response.data.code);
-        // Calculate seconds until expiry
         const expiresAt = new Date(response.data.expiresAt);
         const now = new Date();
         const secondsLeft = Math.max(0, Math.floor((expiresAt - now) / 1000));
@@ -257,49 +134,75 @@ function StudentView() {
     }
   };
 
+  // Loading state
+  if (loadingGuardians) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-pixel-dark">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-pixel-gold border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-white font-pixel text-sm">Loading Guardian Data...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-      {/* Left: Generate Code */}
-      <div className="lg:col-span-2">
-        <QuestCard title="Invite Guardian" icon={LinkIcon} color="indigo" className="h-full">
+    <div className="max-w-7xl mx-auto px-4 py-8">
+      {/* Header */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-pixel text-white mb-2">
+          Family Portal 👨‍👩‍👧‍👦
+        </h1>
+        <p className="text-sm font-pixel text-gray-400">
+          Connect with your guardians to share your progress
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+        {/* Generate Invite Code */}
+        <PixelCard title="Invite Guardian" icon="🔗">
           <div className="flex flex-col items-center space-y-6 py-4">
-            <p className="text-slate-600 text-center text-sm">
+            <p className="text-gray-400 text-center font-pixel text-xs">
               Generate a temporary code to share with your parent or guardian.
             </p>
 
             {/* Error Display */}
             {error && (
-              <div className="w-full p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm flex items-center gap-2">
-                <AlertCircle className="w-4 h-4" />
-                {error}
+              <div className="w-full p-3 bg-red-900 border-2 border-red-500 flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-red-400" />
+                <span className="text-red-200 font-pixel text-xs">{error}</span>
               </div>
             )}
 
             {/* Code Display */}
             <div className="w-full">
               {inviteCode ? (
-                <motion.div
-                  initial={{ scale: 0.9, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  className="relative"
-                >
-                  <div className="absolute inset-0 bg-indigo-200 rounded-xl rotate-1"></div>
-                  <div className="relative bg-white border-2 border-indigo-500 rounded-xl p-6 text-center">
-                    <span className="text-xs font-bold text-indigo-500 uppercase tracking-widest block mb-2">
-                      Your Code
-                    </span>
-                    <div className="text-4xl font-black text-slate-900 tracking-widest font-mono mb-3">
-                      {inviteCode}
-                    </div>
-                    <div className="flex items-center justify-center gap-1 text-amber-600">
-                      <Clock className="w-4 h-4" />
-                      <span className="text-sm font-bold font-mono">{formatTime(expirySeconds)}</span>
-                    </div>
+                <div className="bg-black border-4 border-pixel-gold p-6 text-center relative overflow-hidden">
+                  {/* Scanline effect */}
+                  <div 
+                    className="absolute inset-0 opacity-10 pointer-events-none"
+                    style={{
+                      backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.3) 2px, rgba(0,0,0,0.3) 4px)'
+                    }} 
+                  />
+                  <span className="text-pixel-gold font-pixel text-xs uppercase tracking-widest block mb-2">
+                    Your Code
+                  </span>
+                  <div 
+                    className="text-4xl font-pixel text-pixel-success tracking-widest mb-3"
+                    style={{ textShadow: '0 0 10px rgba(74,222,128,0.5)' }}
+                  >
+                    {inviteCode}
                   </div>
-                </motion.div>
+                  <div className="flex items-center justify-center gap-2 text-pixel-warning">
+                    <Clock className="w-4 h-4" />
+                    <span className="font-pixel text-sm">{formatTime(expirySeconds)}</span>
+                  </div>
+                </div>
               ) : (
-                <div className="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center bg-slate-50">
-                  <div className="text-slate-400 text-sm font-medium">No active code</div>
+                <div className="bg-pixel-dark border-4 border-dashed border-pixel-accent p-8 text-center">
+                  <div className="text-gray-500 font-pixel text-xs">[ NO ACTIVE CODE ]</div>
                 </div>
               )}
             </div>
@@ -308,276 +211,103 @@ function StudentView() {
             <div className="flex w-full gap-3">
               {inviteCode ? (
                 <>
-                  <QuestButton onClick={handleCopy} variant="primary" className="flex-1">
+                  <PixelButton onClick={handleCopy} variant="success" className="flex-1">
                     {isCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                    {isCopied ? "Copied!" : "Copy"}
-                  </QuestButton>
-                  <QuestButton onClick={handleGenerate} variant="secondary" disabled={isGenerating}>
+                    {isCopied ? "Copied!" : "Copy Code"}
+                  </PixelButton>
+                  <PixelButton onClick={handleGenerate} variant="secondary" disabled={isGenerating}>
                     <RefreshCw className={`w-4 h-4 ${isGenerating ? 'animate-spin' : ''}`} />
-                  </QuestButton>
+                  </PixelButton>
                 </>
               ) : (
-                <QuestButton onClick={handleGenerate} variant="primary" className="w-full" disabled={isGenerating}>
+                <PixelButton onClick={handleGenerate} variant="gold" className="w-full" disabled={isGenerating}>
                   {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
                   Generate Code
-                </QuestButton>
+                </PixelButton>
               )}
             </div>
           </div>
-        </QuestCard>
-      </div>
+        </PixelCard>
 
-      {/* Right: Connected Guardians */}
-      <div className="lg:col-span-3 space-y-4">
-        <QuestCard title="Connected Guardians" icon={Shield} color="slate">
-          {loadingGuardians ? (
-            <div className="text-center py-10 text-slate-400">
-              <Loader2 className="w-10 h-10 mx-auto mb-3 animate-spin" />
-              <p className="font-medium">Loading guardians...</p>
-            </div>
-          ) : guardians.length === 0 ? (
-            <div className="text-center py-10 text-slate-400">
-              <Users className="w-10 h-10 mx-auto mb-3 opacity-50" />
-              <p className="font-medium">No guardians connected</p>
-              <p className="text-sm mt-1">Share your code to get started</p>
+        {/* Connected Guardians */}
+        <PixelCard title="Connected Guardians" icon="🛡️">
+          {guardians.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="text-6xl mb-4">👥</div>
+              <p className="text-white font-pixel text-sm mb-2">
+                No guardians connected
+              </p>
+              <p className="text-gray-400 font-pixel text-xs">
+                Share your code to get started
+              </p>
             </div>
           ) : (
             <div className="space-y-3">
               {guardians.map((g) => (
-                <div key={g.linkId} className="flex items-center justify-between p-4 bg-slate-50 border border-slate-200 rounded-lg group hover:border-indigo-300 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-indigo-100 text-indigo-700 rounded-full flex items-center justify-center font-bold">
-                      {g.name?.charAt(0) || '?'}
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-slate-800">{g.name}</h4>
-                      <div className="flex items-center gap-2 text-xs text-slate-500">
-                        <span>{g.email}</span>
-                        <span className="px-1.5 py-0.5 bg-indigo-100 text-indigo-600 rounded font-semibold">
-                          {g.relationship}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  <QuestButton 
-                    onClick={() => handleRemove(g.linkId, g.name)} 
-                    variant="danger" 
-                    className="p-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <UserMinus className="w-4 h-4" />
-                  </QuestButton>
-                </div>
-              ))}
-            </div>
-          )}
-        </QuestCard>
-
-        {/* Privacy Note */}
-        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex gap-3">
-          <Shield className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
-          <p className="text-sm text-blue-800">
-            <strong>Privacy:</strong> Guardians can view your study stats and achievements. They cannot access private notes or messages.
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// --- Parent View ---
-function ParentView() {
-  const [inputCode, setInputCode] = useState('');
-  const [status, setStatus] = useState({ type: 'idle', message: '' });
-  const [students, setStudents] = useState([]);
-  const [loadingStudents, setLoadingStudents] = useState(true);
-
-  // Fetch linked students on mount
-  useEffect(() => {
-    fetchStudents();
-  }, []);
-
-  const fetchStudents = async () => {
-    try {
-      setLoadingStudents(true);
-      const response = await familyAPI.getChildrenStats();
-      if (response.data.success) {
-        setStudents(response.data.children);
-      }
-    } catch (err) {
-      console.error('Failed to fetch students:', err);
-    } finally {
-      setLoadingStudents(false);
-    }
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (inputCode.length !== 6) return;
-
-    setStatus({ type: 'loading', message: '' });
-    
-    try {
-      const response = await familyAPI.linkChild(inputCode.trim().toUpperCase());
-      
-      if (response.data.success) {
-        setStatus({ type: 'success', message: `Successfully connected to ${response.data.student.fullName}!` });
-        setInputCode('');
-        // Refresh the students list
-        await fetchStudents();
-        setTimeout(() => setStatus({ type: 'idle', message: '' }), 3000);
-      }
-    } catch (err) {
-      console.error('Link error:', err);
-      setStatus({ 
-        type: 'error', 
-        message: err.response?.data?.message || 'Invalid or expired code.' 
-      });
-    }
-  };
-
-  const handleRemoveStudent = async (studentId, studentName) => {
-    if (!window.confirm(`Remove ${studentName} from your connected students?`)) {
-      return;
-    }
-
-    try {
-      await familyAPI.removeChild(studentId);
-      setStudents(prev => prev.filter(s => s.id !== studentId));
-    } catch (err) {
-      console.error('Remove error:', err);
-      alert(err.response?.data?.message || 'Failed to remove student');
-    }
-  };
-
-  // Helper to format study time
-  const formatStudyTime = (minutes) => {
-    if (!minutes) return '0h';
-    const hours = Math.floor(minutes / 60);
-    return `${hours}h`;
-  };
-
-  return (
-    <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-      {/* Left: Link Form */}
-      <div className="lg:col-span-2">
-        <QuestCard title="Link Student" icon={LinkIcon} color="emerald" className="h-full">
-          <form onSubmit={handleSubmit} className="flex flex-col items-center space-y-6 py-4">
-            <p className="text-slate-600 text-center text-sm">
-              Enter the 6-character code from your student's account.
-            </p>
-
-            <input
-              type="text"
-              maxLength={6}
-              value={inputCode}
-              onChange={(e) => setInputCode(e.target.value.toUpperCase())}
-              placeholder="ENTER CODE"
-              className="w-full text-center text-3xl font-mono font-bold tracking-widest py-4 border-b-4 border-slate-200 focus:border-emerald-500 outline-none transition-colors uppercase placeholder:text-slate-300 placeholder:tracking-normal placeholder:text-base placeholder:font-sans bg-transparent"
-            />
-
-            <AnimatePresence>
-              {status.message && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0 }}
-                  className={`w-full p-3 rounded-lg flex items-center gap-2 text-sm font-medium ${
-                    status.type === 'success' 
-                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
-                      : 'bg-red-50 text-red-700 border border-red-200'
-                  }`}
-                >
-                  {status.type === 'success' ? <Check className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
-                  {status.message}
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            <QuestButton
-              type="submit"
-              variant="success"
-              className="w-full"
-              disabled={status.type === 'loading' || inputCode.length !== 6}
-            >
-              {status.type === 'loading' ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Verifying...
-                </>
-              ) : (
-                <>
-                  <LinkIcon className="w-4 h-4" />
-                  Connect
-                </>
-              )}
-            </QuestButton>
-          </form>
-        </QuestCard>
-      </div>
-
-      {/* Right: Students List */}
-      <div className="lg:col-span-3">
-        <QuestCard title="Your Students" icon={Users} color="slate">
-          {loadingStudents ? (
-            <div className="text-center py-10 text-slate-400">
-              <Loader2 className="w-10 h-10 mx-auto mb-3 animate-spin" />
-              <p className="font-medium">Loading students...</p>
-            </div>
-          ) : students.length === 0 ? (
-            <div className="text-center py-10 text-slate-400">
-              <BookOpen className="w-10 h-10 mx-auto mb-3 opacity-50" />
-              <p className="font-medium">No students linked yet</p>
-              <p className="text-sm mt-1">Use a code to connect</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {students.map((s) => (
                 <div 
-                  key={s.id} 
-                  className="bg-slate-50 border border-slate-200 rounded-xl p-4 hover:border-emerald-300 transition-colors group"
+                  key={g.linkId} 
+                  className="bg-pixel-dark border-2 border-pixel-accent p-4 hover:border-pixel-gold transition-colors group"
                 >
-                  <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center font-bold text-lg border-2 border-emerald-200">
-                        {s.fullName?.charAt(0) || '?'}
+                      <div className="w-10 h-10 bg-indigo-600 border-2 border-indigo-400 flex items-center justify-center text-white font-pixel text-lg">
+                        {g.name?.charAt(0) || '?'}
                       </div>
                       <div>
-                        <h4 className="font-bold text-slate-800">{s.fullName}</h4>
-                        <p className="text-xs text-slate-500">Level {s.level || 1} Scholar</p>
+                        <h4 className="font-pixel text-sm text-white">{g.name}</h4>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-mono text-gray-400">{g.email}</span>
+                          <span className="px-2 py-0.5 bg-indigo-900 border border-indigo-500 text-indigo-300 font-pixel text-xs">
+                            {g.relationship}
+                          </span>
+                        </div>
                       </div>
                     </div>
                     <button
-                      onClick={() => handleRemoveStudent(s.id, s.fullName)}
-                      className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
+                      onClick={() => handleRemove(g.linkId, g.name)}
+                      className="p-2 text-red-400 hover:text-red-300 hover:bg-red-900 border-2 border-transparent hover:border-red-500 opacity-0 group-hover:opacity-100 transition-all"
                     >
                       <UserMinus className="w-4 h-4" />
                     </button>
                   </div>
-                  <div className="grid grid-cols-3 gap-3">
-                    <StatBadge 
-                      icon={Clock} 
-                      label="Study" 
-                      value={formatStudyTime(s.totalStudyTime)} 
-                      color="indigo" 
-                    />
-                    <StatBadge 
-                      icon={Award} 
-                      label="XP" 
-                      value={(s.xp || 0).toLocaleString()} 
-                      color="amber" 
-                    />
-                    <StatBadge 
-                      icon={TrendingUp} 
-                      label="Streak" 
-                      value={`${s.currentStreak || 0}d`} 
-                      color="emerald" 
-                    />
-                  </div>
                 </div>
               ))}
             </div>
           )}
-        </QuestCard>
+        </PixelCard>
+      </div>
+
+      {/* Privacy Info */}
+      <div className="mt-6 bg-blue-900 border-4 border-blue-500 p-4 flex gap-3">
+        <Shield className="w-5 h-5 text-blue-400 shrink-0" />
+        <p className="font-pixel text-xs text-blue-200">
+          <span className="text-blue-400">[INFO]</span> Guardians can view your study stats and achievements. They cannot access private notes or messages.
+        </p>
+      </div>
+
+      {/* Quick Action - Back to Dashboard */}
+      <div className="mt-6">
+        <PixelCard title="Quick Actions" icon="⚡">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <button
+              onClick={() => window.location.href = '/dashboard'}
+              className="bg-pixel-primary border-4 border-pixel-accent p-6 hover:bg-gray-700 transition-colors"
+            >
+              <div className="text-4xl mb-2">🏠</div>
+              <h3 className="font-pixel text-sm text-white mb-1">Back to Dashboard</h3>
+              <p className="text-xs font-mono text-gray-300">Return to main view</p>
+            </button>
+            
+            <button
+              onClick={() => window.location.href = '/sessions/new'}
+              className="bg-pixel-success border-4 border-white p-6 hover:bg-green-600 transition-colors"
+            >
+              <div className="text-4xl mb-2">🎯</div>
+              <h3 className="font-pixel text-sm text-white mb-1">Start Study Session</h3>
+              <p className="text-xs font-mono text-gray-300">Begin earning XP now</p>
+            </button>
+          </div>
+        </PixelCard>
       </div>
     </div>
   );

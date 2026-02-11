@@ -63,7 +63,7 @@ const StudyTimer = () => {
           if (elapsedMinutes > 180) {
             console.log('🗑️ Auto-ending old session (too old):', elapsedMinutes, 'minutes');
             await sessionAPI.endSession(activeSession.id, {
-              duration: Math.floor(elapsedMinutes * 60) // Convert to seconds
+              duration: Math.floor(elapsedMinutes * 60)
             });
             return; 
           }
@@ -96,7 +96,7 @@ const StudyTimer = () => {
               console.log('✅ Session recovered');
             } else {
               await sessionAPI.endSession(activeSession.id, {
-                duration: Math.floor(elapsedSeconds) // Send seconds
+                duration: Math.floor(elapsedSeconds)
               });
               
               console.log('🗑️ Abandoned session ended');
@@ -160,7 +160,7 @@ const StudyTimer = () => {
     return ((totalTime - timeRemaining) / totalTime) * 100;
   };
 
-  // ✅ UPDATED: Calculate estimated XP (1 XP per 10 seconds)
+  // Calculate estimated XP (1 XP per 10 seconds)
   const getEstimatedXP = () => {
     const secondsStudied = totalTime - timeRemaining;
     return Math.floor(secondsStudied / 10);
@@ -170,9 +170,9 @@ const StudyTimer = () => {
   const handleAchievementCheck = async () => {
     try {
       const response = await achievementAPI.checkAchievements();
-      if (response.data.unlocked_achievements?.length > 0) {
-        setUnlockedAchievements(response.data.unlocked_achievements);
-        console.log('🎉 New achievements unlocked:', response.data.unlocked_achievements);
+      if (response.data.newly_unlocked?.length > 0) {
+        setUnlockedAchievements(response.data.newly_unlocked);
+        console.log('🎉 New achievements unlocked:', response.data.newly_unlocked);
       }
     } catch (error) {
       console.error('Failed to check achievements:', error);
@@ -218,7 +218,6 @@ const StudyTimer = () => {
 
   // End session manually
   const handleEndSession = async () => {
-    // Capture sessionId synchronously
     const currentSessionId = sessionIdRef.current;
     
     if (!currentSessionId) {
@@ -226,7 +225,6 @@ const StudyTimer = () => {
       return;
     }
     
-    // Guard against double-firing
     if (isEndingSession.current) {
       console.log('⚠️ Already ending session, skipping');
       return;
@@ -235,10 +233,8 @@ const StudyTimer = () => {
     isEndingSession.current = true;
 
     try {
-      // ✅ UPDATED: Calculate duration in SECONDS
       const durationSeconds = totalTime - timeRemaining;
       
-      // ✅ UPDATED: Minimum 10 seconds instead of 1 minute
       if (durationSeconds < 10) {
         const shouldForceEnd = window.confirm(
           '⚠️ Session Too Short!\n\n' +
@@ -277,7 +273,6 @@ const StudyTimer = () => {
     } catch (error) {
       console.error('❌ Failed to end session:', error);
       
-      // If session not found, still reset the UI
       if (error.response?.status === 404) {
         console.log('⚠️ Session already ended on server, resetting UI');
         resetTimer();
@@ -292,10 +287,8 @@ const StudyTimer = () => {
 
   // Timer completed automatically
   const handleTimerComplete = async () => {
-    // Capture sessionId synchronously before any state changes
     const currentSessionId = sessionIdRef.current;
     
-    // Guard against double-firing or missing session
     if (!currentSessionId) {
       console.log('⚠️ handleTimerComplete - no session ID');
       return;
@@ -310,10 +303,8 @@ const StudyTimer = () => {
     console.log('🎯 Timer complete, ending session:', currentSessionId);
 
     try {
-      // Stop the timer immediately
       setIsActive(false);
       
-      // ✅ UPDATED: Duration in SECONDS
       const durationSeconds = totalTime;
       
       console.log('🏁 Auto-ending session:', currentSessionId, 'duration:', durationSeconds, 'seconds');
@@ -336,7 +327,6 @@ const StudyTimer = () => {
     } catch (error) {
       console.error('❌ Failed to complete session:', error);
       
-      // If it failed because session not found, still reset the UI
       if (error.response?.status === 404) {
         console.log('⚠️ Session already ended on server, resetting UI');
         resetTimer();
@@ -348,7 +338,7 @@ const StudyTimer = () => {
     }
   };
 
-  // ✅ NEW: Format duration for display (seconds to readable format)
+  // Format duration for display (seconds to readable format)
   const formatDurationDisplay = (seconds) => {
     if (seconds < 60) {
       return `${seconds} sec`;
@@ -405,7 +395,7 @@ const StudyTimer = () => {
           <div className="text-center mb-8">
             <div className="relative inline-block">
               {/* Progress Bar Background */}
-              <div className="w-72 h-72 border-8 border-gray-700 bg-gray-800 flex items-center justify-center">
+              <div className="w-72 h-72 border-8 border-gray-700 bg-gray-800 flex items-center justify-center relative overflow-hidden">
                 {/* Progress Bar Fill */}
                 <div 
                   className="absolute bottom-0 left-0 right-0 bg-pixel-gold transition-all duration-1000"
@@ -585,7 +575,7 @@ const StudyTimer = () => {
         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50">
           <div className="bg-pixel-dark border-4 border-pixel-accent shadow-pixel max-w-md w-full p-8 text-center">
             {sessionSummary.completed && (
-              <div className="mb-4 text-6xl">🎉</div>
+              <div className="mb-4 text-6xl animate-bounce">🎉</div>
             )}
             
             <h2 className="text-3xl font-pixel text-white mb-2 pixel-text-shadow">
@@ -616,23 +606,31 @@ const StudyTimer = () => {
             {/* Achievement Notifications */}
             {unlockedAchievements.length > 0 && (
               <div className="mb-6 space-y-3">
-                <div className="text-2xl mb-2">🏆</div>
+                <div className="text-4xl mb-2 animate-pulse">🏆</div>
                 <h3 className="font-pixel text-pixel-gold text-sm mb-3">
-                  ACHIEVEMENTS UNLOCKED!
+                  {unlockedAchievements.length > 1 ? 'ACHIEVEMENTS UNLOCKED!' : 'ACHIEVEMENT UNLOCKED!'}
                 </h3>
                 {unlockedAchievements.map((ach, index) => (
                   <div 
-                    key={index}
-                    className="bg-gradient-to-r from-yellow-900/50 to-orange-900/50 border-2 border-yellow-500 p-3 animate-pulse"
+                    key={ach.id || index}
+                    className="bg-gradient-to-r from-yellow-900/50 to-orange-900/50 border-2 border-yellow-500 p-3"
+                    style={{
+                      animation: `slideIn 0.5s ease-out ${index * 0.2}s both`
+                    }}
                   >
                     <div className="flex items-center gap-3">
-                      <div className="text-2xl">{ach.icon}</div>
+                      <div className="text-3xl">{ach.icon || '🏅'}</div>
                       <div className="flex-1 text-left">
-                        <div className="font-pixel text-white text-xs">
+                        <div className="font-pixel text-white text-sm">
                           {ach.name}
                         </div>
-                        <div className="text-[10px] text-yellow-400 font-pixel">
-                          +{ach.points_reward} pts
+                        {ach.description && (
+                          <div className="text-[10px] text-gray-400 font-pixel mt-1">
+                            {ach.description}
+                          </div>
+                        )}
+                        <div className="text-xs text-yellow-400 font-pixel mt-1">
+                          +{ach.points_reward || 0} pts
                         </div>
                       </div>
                     </div>
@@ -643,9 +641,9 @@ const StudyTimer = () => {
             
             <button
               onClick={handleCloseEndModal}
-              className="w-full px-6 py-3 bg-pixel-gold hover:bg-yellow-500 text-pixel-dark border-4 border-white shadow-pixel font-pixel transition-all"
+              className="w-full px-6 py-3 bg-pixel-gold hover:bg-yellow-500 text-pixel-dark border-4 border-white shadow-pixel font-pixel transition-all hover:-translate-y-1"
             >
-              CLOSE
+              AWESOME!
             </button>
           </div>
         </div>
@@ -653,34 +651,149 @@ const StudyTimer = () => {
 
       {/* Achievement Tester - Remove in production */}
       <div className="fixed bottom-4 right-4 z-50">
-        <div className="bg-purple-900 border-4 border-purple-500 p-4 rounded-lg shadow-2xl max-w-sm">
-          <h3 className="font-bold text-white text-sm mb-3 flex items-center gap-2">
+        <div className="bg-purple-900 border-4 border-purple-500 p-4 shadow-pixel max-w-sm">
+          <h3 className="font-pixel text-white text-sm mb-3 flex items-center gap-2">
             <Award className="w-4 h-4" />
             Achievement Tester
           </h3>
           
-          <button
-            onClick={async () => {
-              try {
-                const response = await achievementAPI.checkAchievements();
-                if (response.data.unlocked_achievements?.length > 0) {
-                  setUnlockedAchievements(response.data.unlocked_achievements);
-                  alert(`🎉 ${response.data.unlocked_achievements.length} achievement(s) unlocked!`);
-                } else {
-                  alert('No new achievements unlocked.');
+          <div className="space-y-2">
+            {/* Test Single Achievement */}
+            <button
+              onClick={() => {
+                setUnlockedAchievements([
+                  {
+                    id: 1,
+                    name: 'First Steps',
+                    icon: '🎯',
+                    description: 'Complete your first study session',
+                    points_reward: 50
+                  }
+                ]);
+                setSessionSummary({
+                  duration: 1500,
+                  durationFormatted: '25 min',
+                  xp_earned: 150,
+                  subject: 'Mathematics',
+                  completed: true
+                });
+                setShowEndModal(true);
+              }}
+              className="w-full bg-purple-500 hover:bg-purple-600 text-white font-pixel text-xs py-2 px-4 border-2 border-purple-300 flex items-center justify-center gap-2"
+            >
+              <Zap className="w-4 h-4" />
+              Test 1 Achievement
+            </button>
+
+            {/* Test Multiple Achievements */}
+            <button
+              onClick={() => {
+                setUnlockedAchievements([
+                  {
+                    id: 1,
+                    name: 'First Steps',
+                    icon: '🎯',
+                    description: 'Complete your first study session',
+                    points_reward: 50
+                  },
+                  {
+                    id: 2,
+                    name: 'Dedicated Learner',
+                    icon: '📚',
+                    description: 'Study for 100 minutes total',
+                    points_reward: 100
+                  },
+                  {
+                    id: 3,
+                    name: 'On Fire!',
+                    icon: '🔥',
+                    description: 'Reach a 7-day streak',
+                    points_reward: 200
+                  }
+                ]);
+                setSessionSummary({
+                  duration: 3600,
+                  durationFormatted: '1 hr',
+                  xp_earned: 360,
+                  subject: 'Computer Science',
+                  completed: true
+                });
+                setShowEndModal(true);
+              }}
+              className="w-full bg-orange-500 hover:bg-orange-600 text-white font-pixel text-xs py-2 px-4 border-2 border-orange-300 flex items-center justify-center gap-2"
+            >
+              <Award className="w-4 h-4" />
+              Test 3 Achievements
+            </button>
+
+            {/* Test Session End Without Achievements */}
+            <button
+              onClick={() => {
+                setUnlockedAchievements([]);
+                setSessionSummary({
+                  duration: 900,
+                  durationFormatted: '15 min',
+                  xp_earned: 90,
+                  subject: 'English',
+                  completed: false
+                });
+                setShowEndModal(true);
+              }}
+              className="w-full bg-gray-600 hover:bg-gray-700 text-white font-pixel text-xs py-2 px-4 border-2 border-gray-400 flex items-center justify-center gap-2"
+            >
+              <Square className="w-4 h-4" />
+              Test No Achievements
+            </button>
+
+            {/* Real Achievement Check */}
+            <button
+              onClick={async () => {
+                try {
+                  const response = await achievementAPI.checkAchievements();
+                  if (response.data.newly_unlocked?.length > 0) {
+                    setUnlockedAchievements(response.data.newly_unlocked);
+                    setSessionSummary({
+                      duration: 0,
+                      durationFormatted: '0 min',
+                      xp_earned: 0,
+                      subject: 'Achievement Check',
+                      completed: false
+                    });
+                    setShowEndModal(true);
+                  } else {
+                    alert('No new achievements to unlock.\n\nYour current progress has been updated!');
+                  }
+                } catch (error) {
+                  console.error('Error:', error);
+                  alert('Error checking achievements: ' + (error.response?.data?.message || error.message));
                 }
-              } catch (error) {
-                alert('Error checking achievements');
-                console.error(error);
-              }
-            }}
-            className="w-full bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-4 rounded flex items-center justify-center gap-2"
-          >
-            <Zap className="w-4 h-4" />
-            Check Achievements Now
-          </button>
+              }}
+              className="w-full bg-green-600 hover:bg-green-700 text-white font-pixel text-xs py-2 px-4 border-2 border-green-400 flex items-center justify-center gap-2"
+            >
+              <Zap className="w-4 h-4" />
+              Real Check (API)
+            </button>
+          </div>
+          
+          <p className="text-[10px] text-purple-300 mt-2 font-pixel">
+            ⚠️ Remove before production
+          </p>
         </div>
       </div>
+
+      {/* CSS for animations */}
+      <style>{`
+        @keyframes slideIn {
+          from {
+            opacity: 0;
+            transform: translateX(-20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+      `}</style>
     </div>
   );
 };
