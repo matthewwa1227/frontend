@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getUser } from '../../utils/auth';
 import { studentAPI } from '../../utils/api';
-import { Trophy, Target, Book, Star, Clock, TrendingUp, Zap } from 'lucide-react';
+import { Trophy, Target, Book, Star, Clock, TrendingUp, Zap, Skull, Flame, Sword } from 'lucide-react';
 
 // Pixel Art CSS styles
 const pixelStyles = `
@@ -252,6 +252,7 @@ export default function Dashboard() {
   const user = getUser();
   const [stats, setStats] = useState(null);
   const [sessions, setSessions] = useState([]);
+  const [heroStatus, setHeroStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -268,7 +269,23 @@ export default function Dashboard() {
       const studentStats = statsRes.data.student;
       
       setStats(studentStats);
-      setSessions(studentStats.recent_sessions || []); 
+      setSessions(studentStats.recent_sessions || []);
+
+      // Fetch hero status from new endpoint
+      const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+      if (token) {
+        try {
+          const heroRes = await fetch('http://localhost:5000/api/ai/story/hero-status', {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (heroRes.ok) {
+            const heroData = await heroRes.json();
+            setHeroStatus(heroData);
+          }
+        } catch (e) {
+          console.log('Hero status not available yet');
+        }
+      }
 
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
@@ -399,6 +416,67 @@ export default function Dashboard() {
               </p>
             </div>
           </div>
+
+          {/* Hero Power & Shadow Status */}
+          {heroStatus && (
+            <div className="mb-8">
+              <PixelCard title="HERO STATUS" icon="⚔️" color="gold">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Hero Power */}
+                  <div className="bg-gray-900 border-4 border-amber-600 p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <div className="bg-amber-500 p-2 pixel-border-sm">
+                          <Zap className="w-5 h-5 text-amber-900" />
+                        </div>
+                        <span className="font-pixel text-xs text-amber-400">HERO POWER</span>
+                      </div>
+                      <span className="font-pixel text-xl text-amber-400">
+                        {heroStatus.hero.power}
+                      </span>
+                    </div>
+                    <div className="h-4 bg-gray-800 border-2 border-gray-600">
+                      <div 
+                        className="h-full bg-amber-500 pixel-progress-bar transition-all duration-500"
+                        style={{ width: `${(heroStatus.hero.power / heroStatus.hero.powerMax) * 100}%` }}
+                      />
+                    </div>
+                    <p className="font-pixel text-[8px] text-amber-300 mt-2">
+                      {heroStatus.hero.message}
+                    </p>
+                  </div>
+
+                  {/* Shadow of Doom */}
+                  <div className={`border-4 p-4 ${heroStatus.shadow.level > 30 ? 'border-purple-600 bg-purple-950/30' : 'border-gray-600 bg-gray-900'}`}>
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <div className={`p-2 pixel-border-sm ${heroStatus.shadow.level > 30 ? 'bg-purple-600' : 'bg-gray-600'}`}>
+                          <Skull className={`w-5 h-5 ${heroStatus.shadow.level > 30 ? 'text-purple-200' : 'text-gray-300'}`} />
+                        </div>
+                        <span className={`font-pixel text-xs ${heroStatus.shadow.level > 30 ? 'text-purple-400' : 'text-gray-400'}`}>
+                          SHADOW OF DOOM
+                        </span>
+                      </div>
+                      <span className={`font-pixel text-xl ${heroStatus.shadow.level > 30 ? 'text-purple-400' : 'text-gray-400'}`}>
+                        {heroStatus.shadow.level}%
+                      </span>
+                    </div>
+                    <div className="h-4 bg-gray-800 border-2 border-gray-600">
+                      <div 
+                        className={`h-full pixel-progress-bar transition-all duration-500 ${heroStatus.shadow.level > 50 ? 'bg-purple-600' : 'bg-purple-800'}`}
+                        style={{ width: `${heroStatus.shadow.level}%` }}
+                      />
+                    </div>
+                    {heroStatus.shadow.message && (
+                      <p className="font-pixel text-[8px] text-purple-300 mt-2 animate-pulse">
+                        ⚠️ {heroStatus.shadow.message}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </PixelCard>
+            </div>
+          )}
 
           {/* Stats Overview */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -557,18 +635,18 @@ export default function Dashboard() {
                 </div>
               </button>
 
-              {/* Parent Portal */}
+              {/* AI Story Quest */}
               <button
-                onClick={() => navigate('/portal')}
-                className="bg-blue-800 border-4 border-blue-500 p-6 hover:bg-blue-700 transition-colors pixel-btn group"
+                onClick={() => navigate('/story-quest')}
+                className="bg-amber-800 border-4 border-amber-500 p-6 hover:bg-amber-700 transition-colors pixel-btn group"
               >
-                <div className="text-5xl mb-3 group-hover:bounce-pixel">👨‍👩‍👧‍👦</div>
-                <h3 className="font-pixel text-[10px] text-white mb-2">PARENT HQ</h3>
-                <p className="font-pixel text-[8px] text-blue-300">CONNECT</p>
+                <div className="text-5xl mb-3 group-hover:bounce-pixel">📖</div>
+                <h3 className="font-pixel text-[10px] text-white mb-2">STORY QUEST</h3>
+                <p className="font-pixel text-[8px] text-amber-300">DEFEAT THE SHADOW!</p>
                 <div className="mt-3 flex justify-center gap-1">
-                  <div className="w-2 h-2 bg-blue-400"></div>
-                  <div className="w-2 h-2 bg-blue-400"></div>
-                  <div className="w-2 h-2 bg-blue-400"></div>
+                  <div className="w-2 h-2 bg-amber-400"></div>
+                  <div className="w-2 h-2 bg-amber-400"></div>
+                  <div className="w-2 h-2 bg-amber-400"></div>
                 </div>
               </button>
             </div>
