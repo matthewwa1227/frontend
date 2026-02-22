@@ -640,15 +640,92 @@ export default function Dashboard() {
                 onClick={() => navigate('/story-quest')}
                 className="bg-amber-800 border-4 border-amber-500 p-6 hover:bg-amber-700 transition-colors pixel-btn group"
               >
-                <div className="text-5xl mb-3 group-hover:bounce-pixel">📖</div>
-                <h3 className="font-pixel text-[10px] text-white mb-2">STORY QUEST</h3>
-                <p className="font-pixel text-[8px] text-amber-300">DEFEAT THE SHADOW!</p>
+                <div className="text-5xl mb-3 group-hover:bounce-pixel">⚔️</div>
+                <h3 className="font-pixel text-[10px] text-white mb-2">EPIC QUEST</h3>
+                <p className="font-pixel text-[8px] text-amber-300">RPG ADVENTURE MODE</p>
                 <div className="mt-3 flex justify-center gap-1">
                   <div className="w-2 h-2 bg-amber-400"></div>
                   <div className="w-2 h-2 bg-amber-400"></div>
                   <div className="w-2 h-2 bg-amber-400"></div>
                 </div>
               </button>
+
+              {/* Study Buddy */}
+              <button
+                onClick={() => navigate('/study-buddy')}
+                className="bg-purple-800 border-4 border-purple-500 p-6 hover:bg-purple-700 transition-colors pixel-btn group"
+              >
+                <div className="text-5xl mb-3 group-hover:bounce-pixel">🤖</div>
+                <h3 className="font-pixel text-[10px] text-white mb-2">STUDY BUDDY</h3>
+                <p className="font-pixel text-[8px] text-purple-300">AI TUTOR CHAT</p>
+                <div className="mt-3 flex justify-center gap-1">
+                  <div className="w-2 h-2 bg-purple-400"></div>
+                  <div className="w-2 h-2 bg-purple-400"></div>
+                  <div className="w-2 h-2 bg-purple-400"></div>
+                </div>
+              </button>
+
+              {/* Revision Mode */}
+              <button
+                onClick={() => navigate('/revision')}
+                className="bg-blue-800 border-4 border-blue-500 p-6 hover:bg-blue-700 transition-colors pixel-btn group"
+              >
+                <div className="text-5xl mb-3 group-hover:bounce-pixel">📚</div>
+                <h3 className="font-pixel text-[10px] text-white mb-2">REVISION MODE</h3>
+                <p className="font-pixel text-[8px] text-blue-300">UPLOAD & QUIZ</p>
+                <div className="mt-3 flex justify-center gap-1">
+                  <div className="w-2 h-2 bg-blue-400"></div>
+                  <div className="w-2 h-2 bg-blue-400"></div>
+                  <div className="w-2 h-2 bg-blue-400"></div>
+                </div>
+              </button>
+
+              {/* Progress */}
+              <button
+                onClick={() => navigate('/progress')}
+                className="bg-emerald-800 border-4 border-emerald-500 p-6 hover:bg-emerald-700 transition-colors pixel-btn group"
+              >
+                <div className="text-5xl mb-3 group-hover:bounce-pixel">📊</div>
+                <h3 className="font-pixel text-[10px] text-white mb-2">PROGRESS</h3>
+                <p className="font-pixel text-[8px] text-emerald-300">GOALS & STATS</p>
+                <div className="mt-3 flex justify-center gap-1">
+                  <div className="w-2 h-2 bg-emerald-400"></div>
+                  <div className="w-2 h-2 bg-emerald-400"></div>
+                  <div className="w-2 h-2 bg-emerald-400"></div>
+                </div>
+              </button>
+
+              {/* Social Hub */}
+              <button
+                onClick={() => navigate('/social')}
+                className="bg-pink-800 border-4 border-pink-500 p-6 hover:bg-pink-700 transition-colors pixel-btn group"
+              >
+                <div className="text-5xl mb-3 group-hover:bounce-pixel">👥</div>
+                <h3 className="font-pixel text-[10px] text-white mb-2">SOCIAL</h3>
+                <p className="font-pixel text-[8px] text-pink-300">GROUPS & FRIENDS</p>
+                <div className="mt-3 flex justify-center gap-1">
+                  <div className="w-2 h-2 bg-pink-400"></div>
+                  <div className="w-2 h-2 bg-pink-400"></div>
+                  <div className="w-2 h-2 bg-pink-400"></div>
+                </div>
+              </button>
+
+              {/* Teacher (only for teachers) */}
+              {user?.role === 'teacher' && (
+                <button
+                  onClick={() => navigate('/teacher')}
+                  className="bg-indigo-800 border-4 border-indigo-500 p-6 hover:bg-indigo-700 transition-colors pixel-btn group"
+                >
+                  <div className="text-5xl mb-3 group-hover:bounce-pixel">👨‍🏫</div>
+                  <h3 className="font-pixel text-[10px] text-white mb-2">TEACHER</h3>
+                  <p className="font-pixel text-[8px] text-indigo-300">MANAGE CLASSES</p>
+                  <div className="mt-3 flex justify-center gap-1">
+                    <div className="w-2 h-2 bg-indigo-400"></div>
+                    <div className="w-2 h-2 bg-indigo-400"></div>
+                    <div className="w-2 h-2 bg-indigo-400"></div>
+                  </div>
+                </button>
+              )}
             </div>
           </PixelCard>
 

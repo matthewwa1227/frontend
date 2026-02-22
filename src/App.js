@@ -27,6 +27,12 @@ import StudyBuddy from './components/StudyBuddy/StudyBuddy';
 import ScheduleGenerator from './components/ScheduleGenerator/ScheduleGenerator';
 
 import AITutor from './components/AITutor/StoryQuestAI';
+import RevisionMode from './components/AITutor/RevisionMode';
+
+// --- New Feature Components ---
+import ProgressDashboard from './components/Progress/ProgressDashboard';
+import TeacherDashboard from './components/Teacher/TeacherDashboard';
+import SocialHub from './components/Social/SocialHub';
 
 /**
  * ProtectedRoute Wrapper - For Students
@@ -208,11 +214,67 @@ function App() {
               </ProtectedRoute>
             }            
           />
+
           <Route 
             path="/tutor" 
             element={
               <ProtectedRoute>
                 <AITutor />
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/story-quest" 
+            element={
+              <ProtectedRoute>
+                <AITutor />
+              </ProtectedRoute>
+            } 
+          />
+
+          <Route 
+            path="/revision" 
+            element={
+              <ProtectedRoute>
+                <RevisionMode />
+              </ProtectedRoute>
+            } 
+          />
+
+          <Route 
+            path="/story-quest" 
+            element={
+              <ProtectedRoute>
+                <AITutor />
+              </ProtectedRoute>
+            } 
+          />
+
+          {/* --- NEW FEATURE ROUTES --- */}
+          <Route 
+            path="/progress" 
+            element={
+              <ProtectedRoute>
+                <ProgressDashboard />
+              </ProtectedRoute>
+            } 
+          />
+
+          <Route 
+            path="/teacher" 
+            element={
+              <ProtectedRoute>
+                <TeacherDashboard />
+              </ProtectedRoute>
+            } 
+          />
+
+          <Route 
+            path="/social" 
+            element={
+              <ProtectedRoute>
+                <SocialHub />
               </ProtectedRoute>
             } 
           />

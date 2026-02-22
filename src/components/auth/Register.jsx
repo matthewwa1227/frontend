@@ -11,6 +11,8 @@ export default function Register() {
     username: '',
     email: '',
     password: '',
+    role: 'student',
+    fullName: '',
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -119,6 +121,40 @@ export default function Register() {
               <p className="text-xs font-mono text-gray-400 mt-2">
                 Min 6 characters
               </p>
+            </div>
+
+            {/* Full Name */}
+            <div>
+              <label className="block text-xs font-pixel text-white mb-2">
+                <User className="inline w-4 h-4 mr-2" />
+                Full Name (optional)
+              </label>
+              <input
+                type="text"
+                name="fullName"
+                value={formData.fullName}
+                onChange={handleChange}
+                className="w-full px-4 py-3 bg-pixel-primary border-4 border-pixel-accent text-white font-mono focus:border-pixel-gold focus:outline-none"
+                placeholder="John Doe"
+              />
+            </div>
+
+            {/* Role Selection */}
+            <div>
+              <label className="block text-xs font-pixel text-white mb-2">
+                <UserPlus className="inline w-4 h-4 mr-2" />
+                Account Type
+              </label>
+              <select
+                name="role"
+                value={formData.role}
+                onChange={handleChange}
+                className="w-full px-4 py-3 bg-pixel-primary border-4 border-pixel-accent text-white font-mono focus:border-pixel-gold focus:outline-none"
+              >
+                <option value="student">Student</option>
+                <option value="teacher">Teacher</option>
+                <option value="parent">Parent</option>
+              </select>
             </div>
 
             {/* Submit Button */}

@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { aiAPI } from '../../utils/api';
 import { getUser } from '../../utils/auth';
 
+const pixelText = { fontFamily: 'monospace' };
+
 // Markdown Renderer Component
 const MarkdownRenderer = ({ content }) => {
   const [copiedIndex, setCopiedIndex] = useState(null);
@@ -446,7 +448,10 @@ const StudyBuddy = () => {
         const assistantMessage = {
           role: 'assistant',
           content: response.data.response,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          isHint: !response.data.meta?.isDirectAnswer && response.data.meta?.isHomework,
+          isDirectAnswer: response.data.meta?.isDirectAnswer,
+          hintLevel: response.data.meta?.hintLevel || 0
         };
         setMessages(prev => [...prev, assistantMessage]);
         setUploadProgress(100);
@@ -498,9 +503,9 @@ const StudyBuddy = () => {
   };
 
   const quickPrompts = [
-    { text: "Help me focus", emoji: "🎯" },
-    { text: "Explain a concept", emoji: "💡" },
-    { text: "Quiz me", emoji: "📝" },
+    { text: "Help me understand", emoji: "🧠" },
+    { text: "Give me a hint", emoji: "💡" },
+    { text: "Explain step by step", emoji: "📚" },
     { text: "Motivate me", emoji: "🔥" }
   ];
 
@@ -519,7 +524,7 @@ const StudyBuddy = () => {
               <div className="text-4xl animate-bounce">🤖</div>
               <div>
                 <h1 className="text-xl md:text-2xl font-pixel text-white">Study Buddy</h1>
-                <p className="text-purple-200 text-sm">Your AI Learning Companion</p>
+                <p className="text-purple-200 text-sm">Socratic AI Tutor - Learn by Thinking!</p>
               </div>
             </div>
             <div className="flex gap-2">
@@ -537,6 +542,13 @@ const StudyBuddy = () => {
                 💡 Tips
               </button>
             </div>
+          </div>
+          {/* Socratic Method Info */}
+          <div className="mt-3 p-2 bg-black/30 rounded border border-purple-400/50">
+            <p className="text-purple-200 text-xs font-pixel">
+              🎓 <span className="text-yellow-300">SOCRATIC MODE:</span> I guide you to answers rather than giving them directly. 
+              Ask up to 3 times for hints, then I'll explain fully!
+            </p>
           </div>
         </div>
 
@@ -635,6 +647,28 @@ const StudyBuddy = () => {
                       <MessageMedia media={message.media} />
                     )}
                     
+                    {/* Hint/Direct Answer Badge */}
+                    {message.isHint && (
+                      <div className="mb-2 p-2 bg-amber-900/50 border border-amber-600 rounded">
+                        <p className="text-amber-400 text-xs flex items-center gap-1" style={pixelText}>
+                          💡 HINT MODE (Attempt {message.hintLevel || 1}/3)
+                        </p>
+                        <p className="text-amber-300/70 text-[10px] mt-1">
+                          I'm guiding you to find the answer yourself. Try again if you need more help!
+                        </p>
+                      </div>
+                    )}
+                    {message.isDirectAnswer && (
+                      <div className="mb-2 p-2 bg-emerald-900/50 border border-emerald-600 rounded">
+                        <p className="text-emerald-400 text-xs flex items-center gap-1" style={pixelText}>
+                          📚 FULL EXPLANATION
+                        </p>
+                        <p className="text-emerald-300/70 text-[10px] mt-1">
+                          You've asked about this a few times. Here's the complete answer with explanation!
+                        </p>
+                      </div>
+                    )}
+
                     {/* Conditional rendering: Markdown for assistant, plain text for user */}
                     {message.role === 'assistant' ? (
                       <MarkdownRenderer content={message.content} />

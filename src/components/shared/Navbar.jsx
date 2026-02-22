@@ -16,7 +16,8 @@ import {
   X,
   ChevronDown,
   Sparkles,
-  CheckSquare
+  CheckSquare,
+  TrendingUp
 } from 'lucide-react';
 
 export default function Navbar() {
@@ -44,6 +45,8 @@ export default function Navbar() {
     { path: '/dashboard', label: 'Quests', icon: Target },
     { path: '/tasks', label: 'Tasks', icon: CheckSquare },
     { path: '/timer', label: 'Timer', icon: Timer },
+    { path: '/progress', label: 'Progress', icon: TrendingUp },
+    { path: '/social', label: 'Social', icon: Users },
     { path: '/leaderboard', label: 'Leaderboard', icon: Trophy },
   ];
 
@@ -57,6 +60,7 @@ export default function Navbar() {
   // Secondary nav items
   const secondaryNavItems = [
     { path: '/portal', label: 'Parents', icon: Users },
+    ...(user?.role === 'teacher' ? [{ path: '/teacher', label: 'Teacher', icon: GraduationCap }] : []),
     { path: '/profile', label: 'Profile', icon: User },
   ];
 

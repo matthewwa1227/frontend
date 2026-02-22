@@ -157,6 +157,9 @@ export const aiAPI = {
   chat: (message, conversationHistory = []) => 
     api.post('/ai/chat', { message, conversationHistory }),
   
+  chatWithMedia: (message, conversationHistory = [], mediaContent = []) => 
+    api.post('/ai/chat/media', { message, conversationHistory, mediaContent }),
+  
   generateSchedule: (preferences = {}, dateRange = 7, tasks = []) => 
     api.post('/ai/generate-schedule', { preferences, dateRange, tasks }),
   
@@ -168,6 +171,35 @@ export const aiAPI = {
   
   getSessions: (startDate, endDate) => 
     api.get('/ai/sessions', { params: { startDate, endDate } })
+};
+
+// Revision Mode API
+export const revisionAPI = {
+  // Upload document
+  uploadDocument: (file) => {
+    const formData = new FormData();
+    formData.append('document', file);
+    return api.post('/revision/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+  },
+  
+  // Get user's documents
+  getDocuments: () => api.get('/revision/documents'),
+  
+  // Generate quiz from document
+  generateQuiz: (documentId, numQuestions = 5) => 
+    api.post('/revision/quiz/generate', { documentId, numQuestions }),
+  
+  // Get quiz by ID
+  getQuiz: (quizId) => api.get(`/revision/quiz/${quizId}`),
+  
+  // Chat with document
+  chatWithDocument: (documentId, message) => 
+    api.post('/revision/chat', { documentId, message }),
+  
+  // Fetch URL content
+  fetchUrl: (url) => api.post('/revision/fetch-url', { url })
 };
 
 export const taskAPI = {
