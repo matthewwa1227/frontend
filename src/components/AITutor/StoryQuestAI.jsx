@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -9,6 +9,7 @@ import {
   Lightbulb, Swords, ShieldCheck
 } from 'lucide-react';
 import StudyJourney from './StudyJourney';
+import api from '../../utils/api';
 
 const pixelText = { fontFamily: 'monospace' };
 const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000';
@@ -327,50 +328,97 @@ const StoryScene = ({ scene, theme, onContinue }) => (
 );
 
 // ============================================
-// LEARN SCENE
+// LEARN SCENE - Simplified with AI content
 // ============================================
-const LearnScene = ({ scene, theme, onContinue }) => (
-  <motion.div
-    initial={{ opacity: 0 }}
-    animate={{ opacity: 1 }}
-    exit={{ opacity: 0 }}
-    className={`min-h-screen bg-gradient-to-b ${theme.gradient} flex flex-col items-center justify-center p-6`}
-  >
-    <div className="w-full max-w-2xl">
-      <Card variant="primary" glow className="text-center">
-        <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ type: "spring", stiffness: 200, damping: 15 }}
-          className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-blue-500 to-blue-700 rounded-full flex items-center justify-center text-5xl shadow-2xl shadow-blue-500/50"
-        >
-          💡
-        </motion.div>
-        
-        <h2 className="text-2xl text-blue-400 font-bold mb-2" style={{ ...pixelText, textShadow: '2px 2px 4px rgba(0,0,0,0.5)' }}>
-          {scene.title}
-        </h2>
-        
-        <div className="w-16 h-1 bg-blue-500 mx-auto mb-6 rounded-full" />
-        
-        <p className="text-white text-lg leading-relaxed mb-6" style={{ ...pixelText, lineHeight: '2' }}>
-          {scene.text}
-        </p>
+const LearnScene = ({ topic, onComplete }) => {
+  const [content, setContent] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-        <div className="p-4 bg-blue-950/50 border border-blue-500/30 rounded-lg mb-6">
-          <div className="flex items-center gap-2 justify-center">
-            <Lightbulb className="w-5 h-5 text-amber-400" />
-            <span className="text-amber-400 text-sm" style={pixelText}>This will help in the upcoming battle!</span>
-          </div>
+  useEffect(() => {
+    if (topic) {
+      fetchExplanation();
+    }
+  }, [topic]);
+
+  const fetchExplanation = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await api.post('/storyquest/learn', { topic });
+      setContent(res.data.content);
+    } catch (err) {
+      console.error('LearnScene error:', err);
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Loading State
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-950 p-4 flex items-center justify-center">
+        <div className="text-center">
+          <motion.div
+            animate={{ rotate: [0, 10, -10, 0] }}
+            transition={{ duration: 2, repeat: Infinity }}
+            className="text-6xl mb-4"
+          >
+            📜
+          </motion.div>
+          <p className="font-['Press_Start_2P'] text-sm text-amber-400 animate-pulse">
+            Consulting the ancient scrolls...
+          </p>
         </div>
+      </div>
+    );
+  }
 
-        <PixelButton onClick={onContinue} variant="primary" icon={ShieldCheck}>
-          I UNDERSTAND
-        </PixelButton>
-      </Card>
+  // Error State
+  if (error) {
+    return (
+      <div className="min-h-screen bg-slate-950 p-4 flex items-center justify-center">
+        <Card variant="danger" glow className="max-w-md text-center">
+          <div className="text-5xl mb-4">💀</div>
+          <h2 className="font-['Press_Start_2P'] text-sm text-rose-400 mb-4">
+            ⚠️ ERROR
+          </h2>
+          <p className="font-['Press_Start_2P'] text-xs text-rose-300 mb-6">
+            Scroll damaged... Try again?
+          </p>
+          <PixelButton variant="gold" onClick={fetchExplanation}>
+            RETRY ↻
+          </PixelButton>
+        </Card>
+      </div>
+    );
+  }
+
+  // Content State
+  return (
+    <div className="min-h-screen bg-slate-950 p-4 flex items-center justify-center">
+      <div className="w-full max-w-2xl">
+        <Card variant="primary" glow>
+          <div className="flex items-center gap-3 mb-6">
+            <span className="text-3xl">💡</span>
+            <h2 className="font-['Press_Start_2P'] text-sm text-blue-400">
+              📜 LEARNING SCENE
+            </h2>
+          </div>
+          <div className="bg-slate-900 p-6 border-2 border-slate-700 mb-6">
+            <p className="font-['Press_Start_2P'] text-xs text-blue-300 leading-6">
+              {content}
+            </p>
+          </div>
+          <PixelButton variant="gold" onClick={onComplete}>
+            I UNDERSTOOD! →
+          </PixelButton>
+        </Card>
+      </div>
     </div>
-  </motion.div>
-);
+  );
+};
 
 // ============================================
 // BATTLE SCENE
@@ -1024,7 +1072,7 @@ export default function StoryQuestAI() {
     }
 
     if (scene.type === 'learn') {
-      return <LearnScene scene={scene} theme={theme} onContinue={handleSceneComplete} />;
+      return <LearnScene topic={topic} onComplete={handleSceneComplete} />;
     }
 
     if (scene.type === 'battle') {

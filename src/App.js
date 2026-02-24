@@ -32,6 +32,7 @@ import RevisionMode from './components/AITutor/RevisionMode';
 // --- New Feature Components ---
 import ProgressDashboard from './components/Progress/ProgressDashboard';
 import TeacherDashboard from './components/Teacher/TeacherDashboard';
+import TeacherLayout from './components/Teacher/TeacherLayout';
 import SocialHub from './components/Social/SocialHub';
 
 /**
@@ -88,6 +89,10 @@ function SmartHomeRedirect() {
   
   if (user.role === 'parent') {
     return <Navigate to="/parent/dashboard" replace />;
+  }
+  
+  if (user.role === 'teacher') {
+    return <Navigate to="/teacher" replace />;
   }
   
   return <Navigate to="/dashboard" replace />;
@@ -261,12 +266,15 @@ function App() {
             } 
           />
 
+          {/* --- Protected Teacher Routes --- */}
           <Route 
             path="/teacher" 
             element={
-              <ProtectedRoute>
+              isAuthenticated() && getUser()?.role === 'teacher' ? (
                 <TeacherDashboard />
-              </ProtectedRoute>
+              ) : (
+                <Navigate to="/login" replace />
+              )
             } 
           />
 
