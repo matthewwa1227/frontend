@@ -23,7 +23,6 @@ import GuardianManagement from './components/GuardianManagement';
 import Navbar from './components/shared/Navbar';
 import TestAnimation from './TestAnimation';
 
-import StudyBuddy from './components/StudyBuddy/StudyBuddy';
 import ScheduleGenerator from './components/ScheduleGenerator/ScheduleGenerator';
 
 import AITutor from './components/AITutor/StoryQuestAI';
@@ -203,15 +202,6 @@ function App() {
           />
 
           <Route 
-            path="/study-buddy" 
-            element={
-              <ProtectedRoute>
-                <StudyBuddy />
-              </ProtectedRoute>
-            } 
-          />
-
-          <Route 
             path="/schedule" 
             element={
               <ProtectedRoute>
@@ -220,15 +210,6 @@ function App() {
             }            
           />
 
-          <Route 
-            path="/tutor" 
-            element={
-              <ProtectedRoute>
-                <AITutor />
-              </ProtectedRoute>
-            } 
-          />
-          
           <Route 
             path="/story-quest" 
             element={

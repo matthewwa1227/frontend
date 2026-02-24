@@ -152,25 +152,25 @@ export const familyAPI = {
     api.patch(`/family/children/${studentId}/burnout-ack`),
 };
 
-// AI API
+// Story Quest RPG API
+export const storyQuestAPI = {
+  // Generate story content
+  generateIntro: (topic) => api.post('/storyquest/intro', { topic }),
+  generateScene: (data) => api.post('/storyquest/scene', data),
+  generateLesson: (data) => api.post('/storyquest/lesson', data),
+  generateQuestion: (data) => api.post('/storyquest/question', data),
+  
+  // Simple learn endpoint
+  learn: (topic) => api.post('/storyquest/learn', { topic }),
+  
+  // Health check
+  health: () => api.get('/storyquest/health')
+};
+
+// Schedule Generator API (kept for ScheduleGenerator component)
 export const aiAPI = {
-  chat: (message, conversationHistory = []) => 
-    api.post('/ai/chat', { message, conversationHistory }),
-  
-  chatWithMedia: (message, conversationHistory = [], mediaContent = []) => 
-    api.post('/ai/chat/media', { message, conversationHistory, mediaContent }),
-  
   generateSchedule: (preferences = {}, dateRange = 7, tasks = []) => 
     api.post('/ai/generate-schedule', { preferences, dateRange, tasks }),
-  
-  getTips: (subject, difficulty) => 
-    api.get('/ai/tips', { params: { subject, difficulty } }),
-  
-  getHistory: (limit = 20) => 
-    api.get('/ai/history', { params: { limit } }),
-  
-  getSessions: (startDate, endDate) => 
-    api.get('/ai/sessions', { params: { startDate, endDate } })
 };
 
 // Revision Mode API
@@ -211,28 +211,6 @@ export const taskAPI = {
   toggle: (id) => api.patch(`/tasks/${id}/toggle`)
 };
 
-// Tutor API
-export const tutorAPI = {
-  // Start a new tutoring session
-  startSession: (data) => api.post('/tutor/session/start', data),
-  
-  // Send a message in the session
-  sendMessage: (sessionId, message) => 
-    api.post('/tutor/session/message', { sessionId, message }),
-  
-  // End the tutoring session
-  endSession: (sessionId) => 
-    api.post('/tutor/session/end', { sessionId }),
-  
-  // Get session history
-  getSessions: (params = {}) => 
-    api.get('/tutor/sessions', { params }),
-  
-  // Get tutor stats
-  getStats: () => api.get('/tutor/stats'),
-  
-  // Health check
-  health: () => api.get('/tutor/health'),
-};
+
 
 export default api;
