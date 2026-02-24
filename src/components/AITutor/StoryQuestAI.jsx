@@ -679,7 +679,7 @@ const ChapterMap = ({ chapters, currentChapter, onSelectChapter, theme, onBack, 
 // ============================================
 // VICTORY SCREEN
 // ============================================
-const VictoryScreen = ({ stats, theme, topic, onReset }) => (
+const VictoryScreen = ({ stats, theme, topic, onReset, onContinue }) => (
   <div className={`min-h-screen bg-gradient-to-b ${theme.gradient} flex items-center justify-center p-6`}>
     <motion.div 
       initial={{ scale: 0.5, opacity: 0 }}
@@ -715,9 +715,14 @@ const VictoryScreen = ({ stats, theme, topic, onReset }) => (
         </div>
       </Card>
 
-      <PixelButton onClick={onReset} variant="gold" className="w-full" icon={RotateCcw}>
-        NEW ADVENTURE
-      </PixelButton>
+      <div className="space-y-3">
+        <PixelButton onClick={onContinue} variant="primary" className="w-full" icon={ChevronRight}>
+          CONTINUE QUEST →
+        </PixelButton>
+        <PixelButton onClick={onReset} variant="ghost" className="w-full">
+          NEW ADVENTURE
+        </PixelButton>
+      </div>
     </motion.div>
   </div>
 );
@@ -960,6 +965,13 @@ export default function StoryQuestAI() {
     setStats({ xp: 0, battlesWon: 0 });
   };
 
+  const backToMap = () => {
+    setScreen('map');
+    setCurrentScene(0);
+    setCurrentQuestion(null);
+    // Keep topic, chapter, and stats so user can continue
+  };
+
   // RENDER SCREENS
   if (screen === 'title') {
     return (
@@ -1108,6 +1120,7 @@ export default function StoryQuestAI() {
         theme={theme}
         topic={topic}
         onReset={resetGame}
+        onContinue={backToMap}
       />
     );
   }
