@@ -219,20 +219,16 @@ function App() {
             } 
           />
 
+          {/* Redirect old AI Tutor routes to Story Quest */}
+          <Route path="/tutor" element={<Navigate to="/story-quest" replace />} />
+          <Route path="/study-buddy" element={<Navigate to="/story-quest" replace />} />
+          <Route path="/ai-tutor" element={<Navigate to="/story-quest" replace />} />
+
           <Route 
             path="/revision" 
             element={
               <ProtectedRoute>
                 <RevisionMode />
-              </ProtectedRoute>
-            } 
-          />
-
-          <Route 
-            path="/story-quest" 
-            element={
-              <ProtectedRoute>
-                <AITutor />
               </ProtectedRoute>
             } 
           />

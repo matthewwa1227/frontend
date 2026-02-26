@@ -52,8 +52,7 @@ export default function Navbar() {
 
   // AI Tools dropdown items
   const aiTools = [
-    { path: '/study-buddy', label: 'AI Study Buddy', icon: Bot, description: 'Chat & get help' },
-    { path: '/tutor', label: 'AI Tutor', icon: GraduationCap, description: 'Learn with guidance' },
+    { path: '/story-quest', label: 'Story Quest', icon: Bot, description: 'RPG Learning Adventure' },
     { path: '/schedule', label: 'Schedule Generator', icon: CalendarDays, description: 'Plan your study time' },
   ];
 

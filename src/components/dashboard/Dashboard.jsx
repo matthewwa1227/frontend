@@ -650,14 +650,14 @@ export default function Dashboard() {
                 </div>
               </button>
 
-              {/* Study Buddy */}
+              {/* Story Quest RPG */}
               <button
-                onClick={() => navigate('/study-buddy')}
+                onClick={() => navigate('/story-quest')}
                 className="bg-purple-800 border-4 border-purple-500 p-6 hover:bg-purple-700 transition-colors pixel-btn group"
               >
-                <div className="text-5xl mb-3 group-hover:bounce-pixel">🤖</div>
-                <h3 className="font-pixel text-[10px] text-white mb-2">STUDY BUDDY</h3>
-                <p className="font-pixel text-[8px] text-purple-300">AI TUTOR CHAT</p>
+                <div className="text-5xl mb-3 group-hover:bounce-pixel">⚔️</div>
+                <h3 className="font-pixel text-[10px] text-white mb-2">STORY QUEST</h3>
+                <p className="font-pixel text-[8px] text-purple-300">RPG ADVENTURE MODE</p>
                 <div className="mt-3 flex justify-center gap-1">
                   <div className="w-2 h-2 bg-purple-400"></div>
                   <div className="w-2 h-2 bg-purple-400"></div>

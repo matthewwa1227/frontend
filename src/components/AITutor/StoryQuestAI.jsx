@@ -328,68 +328,215 @@ const StoryScene = ({ scene, theme, onContinue }) => (
 );
 
 // ============================================
-// LEARN SCENE - Simplified with AI content
+// LEARN SCENE - Enhanced with robust error handling
 // ============================================
 const LearnScene = ({ topic, onComplete }) => {
   const [content, setContent] = useState('');
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [errorCount, setErrorCount] = useState(0);
+  const [retryDelay, setRetryDelay] = useState(0);
+  const [longLoading, setLongLoading] = useState(false);
+  const [dots, setDots] = useState('');
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const maxRetries = 3;
 
+  // Handle online/offline status
   useEffect(() => {
-    if (topic) {
-      fetchExplanation();
-    }
-  }, [topic]);
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
-  const fetchExplanation = async () => {
+  // Dot animation for loading text
+  useEffect(() => {
+    if (!loading) return;
+    const interval = setInterval(() => {
+      setDots(prev => {
+        if (prev === '') return '.';
+        if (prev === '.') return '..';
+        if (prev === '..') return '...';
+        return '';
+      });
+    }, 500);
+    return () => clearInterval(interval);
+  }, [loading]);
+
+  // Long loading timeout (8 seconds)
+  useEffect(() => {
+    if (!loading || content) return;
+    const timer = setTimeout(() => setLongLoading(true), 8000);
+    return () => clearTimeout(timer);
+  }, [loading, content]);
+
+  // Retry delay countdown
+  useEffect(() => {
+    if (retryDelay <= 0) return;
+    const timer = setTimeout(() => setRetryDelay(prev => prev - 1000), 1000);
+    return () => clearTimeout(timer);
+  }, [retryDelay]);
+
+  // Fetch explanation with retry logic
+  const fetchExplanation = async (isRetry = false) => {
+    // Check online status
+    if (!navigator.onLine) {
+      setIsOnline(false);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setLongLoading(false);
+    
     try {
-      setLoading(true);
-      setError(null);
       const res = await api.post('/storyquest/learn', { topic });
       setContent(res.data.content);
+      setErrorCount(0);
     } catch (err) {
       console.error('LearnScene error:', err);
-      setError(true);
+      const newErrorCount = errorCount + 1;
+      setErrorCount(newErrorCount);
+      
+      // Exponential backoff delay
+      if (newErrorCount >= 2) {
+        setRetryDelay(newErrorCount === 2 ? 1000 : 2000);
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  // Loading State
-  if (loading) {
+  // Initial fetch
+  useEffect(() => {
+    if (topic && !content && errorCount === 0) {
+      fetchExplanation();
+    }
+  }, [topic]);
+
+  // Handle skip
+  const handleSkip = () => {
+    if (onComplete) {
+      onComplete({ skipped: true });
+    }
+  };
+
+  // Handle success completion
+  const handleComplete = () => {
+    if (onComplete) {
+      onComplete({ skipped: false, content });
+    }
+  };
+
+  // Offline State
+  if (!isOnline) {
     return (
       <div className="min-h-screen bg-slate-950 p-4 flex items-center justify-center">
-        <div className="text-center">
-          <motion.div
-            animate={{ rotate: [0, 10, -10, 0] }}
-            transition={{ duration: 2, repeat: Infinity }}
-            className="text-6xl mb-4"
-          >
-            📜
-          </motion.div>
-          <p className="font-['Press_Start_2P'] text-sm text-amber-400 animate-pulse">
-            Consulting the ancient scrolls...
+        <Card variant="danger" glow className="max-w-md text-center">
+          <div className="text-5xl mb-4">📡</div>
+          <h2 className="font-['Press_Start_2P'] text-sm text-rose-400 mb-4">
+            NO INTERNET
+          </h2>
+          <p className="font-['Press_Start_2P'] text-xs text-rose-300 mb-6">
+            The spirit realm is unreachable...
           </p>
-        </div>
+          <div className="flex gap-2 justify-center">
+            <PixelButton 
+              variant="danger" 
+              onClick={() => {
+                setIsOnline(navigator.onLine);
+                if (navigator.onLine) fetchExplanation();
+              }}
+            >
+              RETRY ↻
+            </PixelButton>
+            <PixelButton variant="secondary" onClick={handleSkip}>
+              SKIP →
+            </PixelButton>
+          </div>
+        </Card>
       </div>
     );
   }
 
-  // Error State
-  if (error) {
+  // Loading State
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-950 p-4 flex items-center justify-center">
+        <Card variant="gold" glow className="max-w-md text-center">
+          <div className="py-8">
+            <motion.div
+              animate={{ rotate: [0, 10, -10, 0], scale: [1, 1.1, 1] }}
+              transition={{ duration: 2, repeat: Infinity }}
+              className="text-6xl mb-6"
+            >
+              🔮
+            </motion.div>
+            <p className="font-['Press_Start_2P'] text-sm text-amber-400 animate-pulse mb-2">
+              Consulting the ancient scrolls{dots}
+            </p>
+            <p className="font-['Press_Start_2P'] text-[10px] text-amber-600">
+              Channeling knowledge from the elders...
+            </p>
+            
+            {longLoading && (
+              <div className="mt-6">
+                <p className="font-['Press_Start_2P'] text-[10px] text-amber-700 mb-3">
+                  The spirits are slow today...
+                </p>
+                <PixelButton variant="secondary" onClick={handleSkip}>
+                  SKIP →
+                </PixelButton>
+              </div>
+            )}
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  // Error State (with retries exhausted)
+  if (errorCount > 0 && !content) {
+    const isMaxRetries = errorCount >= maxRetries;
+    const errorMessage = errorCount === 1 
+      ? "📜 Scroll damaged..." 
+      : errorCount === 2 
+      ? "🔮 Connection unstable..."
+      : "⚠️ The knowledge crystal is dim";
+
     return (
       <div className="min-h-screen bg-slate-950 p-4 flex items-center justify-center">
         <Card variant="danger" glow className="max-w-md text-center">
           <div className="text-5xl mb-4">💀</div>
-          <h2 className="font-['Press_Start_2P'] text-sm text-rose-400 mb-4">
-            ⚠️ ERROR
-          </h2>
-          <p className="font-['Press_Start_2P'] text-xs text-rose-300 mb-6">
-            Scroll damaged... Try again?
+          <p className="font-['Press_Start_2P'] text-xs text-rose-400 mb-6">
+            {errorMessage}
           </p>
-          <PixelButton variant="gold" onClick={fetchExplanation}>
-            RETRY ↻
-          </PixelButton>
+          
+          {isMaxRetries && (
+            <p className="font-['Press_Start_2P'] text-[10px] text-rose-500 mb-4">
+              Max retries reached. You may skip this lesson.
+            </p>
+          )}
+          
+          <div className="flex gap-2 justify-center">
+            {!isMaxRetries && (
+              <PixelButton 
+                variant="danger" 
+                onClick={() => fetchExplanation(true)}
+                disabled={retryDelay > 0}
+              >
+                {retryDelay > 0 ? `WAIT ${retryDelay/1000}s` : 'RETRY ↻'}
+              </PixelButton>
+            )}
+            <PixelButton variant="secondary" onClick={handleSkip}>
+              {isMaxRetries ? 'SKIP LEARNING →' : 'SKIP →'}
+            </PixelButton>
+          </div>
         </Card>
       </div>
     );
@@ -411,7 +558,7 @@ const LearnScene = ({ topic, onComplete }) => {
               {content}
             </p>
           </div>
-          <PixelButton variant="gold" onClick={onComplete}>
+          <PixelButton variant="gold" onClick={handleComplete}>
             I UNDERSTOOD! →
           </PixelButton>
         </Card>
@@ -829,7 +976,12 @@ export default function StoryQuestAI() {
     setScreen('adventure');
   };
 
-  const handleSceneComplete = async () => {
+  const handleSceneComplete = async (result = null) => {
+    // Log if user skipped learning
+    if (result && result.skipped) {
+      console.log('📜 User skipped learning scene');
+    }
+    
     const chapter = chapters[currentChapter];
     
     if (!chapter) return;
