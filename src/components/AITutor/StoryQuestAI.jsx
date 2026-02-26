@@ -733,9 +733,9 @@ const BattleScene = ({ scene, question, onAnswer, battleNumber, totalBattles }) 
 // ============================================
 // CHAPTER MAP
 // ============================================
-const ChapterMap = ({ chapters, currentChapter, onSelectChapter, theme, onBack, stats, completedChapters }) => {
+const ChapterMap = ({ chapters, currentChapter, onSelectChapter, theme, onBack, stats, completedChapters, unlockedChapters, setCompletedChapters, setUnlockedChapters }) => {
   // Debug logging
-  console.log('🗺️ ChapterMap render - completedChapters:', completedChapters);
+  console.log('🗺️ ChapterMap render - completed:', completedChapters, 'unlocked:', unlockedChapters);
   
   return (
     <div className={`min-h-screen bg-gradient-to-b ${theme.gradient} p-6`}>
@@ -774,16 +774,79 @@ const ChapterMap = ({ chapters, currentChapter, onSelectChapter, theme, onBack, 
           </div>
         </Card>
 
+        {/* DEBUG BUTTON - Remove after testing */}
+        <div className="mb-4 p-3 bg-red-900/50 border-2 border-red-500 rounded-lg">
+          <p className="text-red-300 text-xs mb-2 font-bold">DEBUG CONTROLS</p>
+          <div className="flex gap-2">
+            <button 
+              onClick={() => {
+                console.log("🚨 FORCE UNLOCK CHAPTER 2");
+                setUnlockedChapters([1, 2]);
+                setCompletedChapters([1]);
+                localStorage.setItem('studyquest_progress', JSON.stringify({
+                  completed: [1],
+                  unlocked: [1, 2],
+                  lastPlayed: new Date().toISOString()
+                }));
+              }}
+              className="px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-500"
+            >
+              Unlock Ch.2
+            </button>
+            <button 
+              onClick={() => {
+                console.log("🚨 UNLOCK ALL CHAPTERS");
+                setUnlockedChapters([1, 2, 3, 4]);
+                setCompletedChapters([1, 2, 3]);
+                localStorage.setItem('studyquest_progress', JSON.stringify({
+                  completed: [1, 2, 3],
+                  unlocked: [1, 2, 3, 4],
+                  lastPlayed: new Date().toISOString()
+                }));
+              }}
+              className="px-3 py-1 bg-orange-600 text-white text-xs rounded hover:bg-orange-500"
+            >
+              Unlock All
+            </button>
+            <button 
+              onClick={() => {
+                console.log("🗑️ CLEAR PROGRESS");
+                setUnlockedChapters([1]);
+                setCompletedChapters([]);
+                localStorage.removeItem('studyquest_progress');
+              }}
+              className="px-3 py-1 bg-gray-600 text-white text-xs rounded hover:bg-gray-500"
+            >
+              Reset
+            </button>
+          </div>
+          <p className="text-red-400 text-[10px] mt-2">
+            completed: {JSON.stringify(completedChapters)} | unlocked: {JSON.stringify(unlockedChapters)}
+          </p>
+        </div>
+
         {/* Chapter Path */}
         <div className="space-y-4">
           {chapters.map((chapter, index) => {
             const isCompleted = completedChapters.includes(chapter.id);
             const isCurrent = index === currentChapter;
-            // Chapter is unlocked if: it's chapter 1 (id=1), OR previous chapter is completed
-            const isUnlocked = chapter.id === 1 || completedChapters.includes(chapter.id - 1);
+            // Chapter is unlocked if it's in the unlockedChapters array
+            const isUnlocked = unlockedChapters.includes(chapter.id);
             const isLocked = !isUnlocked;
 
-            console.log(`📍 Chapter ${chapter.id}: completed=${isCompleted}, unlocked=${isUnlocked}, locked=${isLocked}`);
+            // Brute force unlock check
+            const isChapterUnlocked = (id) => {
+              if (id === 1) return true;
+              const prevId = id - 1;
+              const result = completedChapters.includes(prevId);
+              console.log(`  🔓 Check Ch ${id}: prev=${prevId} in completed? ${result}`);
+              return result;
+            };
+            const bruteForceUnlocked = isChapterUnlocked(chapter.id);
+            
+            console.log(`📍 Chapter ${chapter.id}: completed=${isCompleted}, unlocked=${isUnlocked}, locked=${isLocked}, bruteForce=${bruteForceUnlocked}`);
+            console.log(`   unlockedChapters array:`, unlockedChapters);
+            console.log(`   completedChapters array:`, completedChapters);
 
             return (
               <motion.div
@@ -905,9 +968,61 @@ export default function StoryQuestAI() {
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState({ xp: 0, battlesWon: 0 });
   const [currentBattleIndex, setCurrentBattleIndex] = useState(0); // Track battle within current chapter
-  const [completedChapters, setCompletedChapters] = useState([]); // Track completed chapter IDs
+  const [completedChapters, setCompletedChapters] = useState([]); // Chapters fully completed
+  const [unlockedChapters, setUnlockedChapters] = useState([1]); // Chapters available to play (starts with 1)
 
   const topicRef = useRef(null);
+
+  // Load saved progress from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('studyquest_progress');
+    if (saved) {
+      try {
+        const data = JSON.parse(saved);
+        console.log('📂 Loaded saved progress:', data);
+        if (data.completed && Array.isArray(data.completed)) {
+          setCompletedChapters(data.completed);
+        }
+        if (data.unlocked && Array.isArray(data.unlocked)) {
+          setUnlockedChapters(data.unlocked);
+        }
+      } catch (e) {
+        console.error('Failed to load progress:', e);
+      }
+    }
+  }, []);
+
+  // Save progress whenever states change
+  useEffect(() => {
+    localStorage.setItem('studyquest_progress', JSON.stringify({
+      completed: completedChapters,
+      unlocked: unlockedChapters,
+      lastPlayed: new Date().toISOString()
+    }));
+    console.log('💾 Saved progress - completed:', completedChapters, 'unlocked:', unlockedChapters);
+  }, [completedChapters, unlockedChapters]);
+
+  // RELOAD progress when returning to map screen
+  useEffect(() => {
+    if (screen === 'map') {
+      console.log("🗺️ Map screen active, reloading progress from storage");
+      const saved = localStorage.getItem('studyquest_progress');
+      if (saved) {
+        try {
+          const data = JSON.parse(saved);
+          console.log('📂 Reloaded from storage:', data);
+          if (data.completed && Array.isArray(data.completed)) {
+            setCompletedChapters(data.completed);
+          }
+          if (data.unlocked && Array.isArray(data.unlocked)) {
+            setUnlockedChapters(data.unlocked);
+          }
+        } catch (e) {
+          console.error('Failed to reload progress:', e);
+        }
+      }
+    }
+  }, [screen]);
 
   // Generate chapters structure
   const generateChapters = (topic, theme) => [
@@ -1010,7 +1125,10 @@ export default function StoryQuestAI() {
     
     // Check if we've completed all scenes in this chapter
     if (nextSceneIndex >= chapter.scenes.length) {
-      // Chapter complete
+      // Chapter complete - unlock next chapter
+      console.log(`📜 All scenes in chapter ${chapter.id} complete`);
+      completeChapterAndUnlock(currentChapter);
+      
       if (currentChapter < chapters.length - 1) {
         setScreen('map');
       } else {
@@ -1079,6 +1197,48 @@ export default function StoryQuestAI() {
     }
   };
 
+  const completeChapterAndUnlock = (chapterIndex) => {
+    const chapterId = chapters[chapterIndex]?.id;
+    if (!chapterId) return;
+    
+    const nextChapterId = chapterId + 1;
+    console.log(`🏆 COMPLETING CHAPTER ${chapterId}, unlocking ${nextChapterId}`);
+    
+    // Mark current as completed
+    setCompletedChapters(prev => {
+      if (prev.includes(chapterId)) {
+        console.log(`  Chapter ${chapterId} already in completed list`);
+        return prev;
+      }
+      const newCompleted = [...prev, chapterId];
+      console.log(`  New completed chapters:`, newCompleted);
+      return newCompleted;
+    });
+    
+    // Unlock next chapter
+    if (nextChapterId <= chapters.length) {
+      setUnlockedChapters(prev => {
+        if (prev.includes(nextChapterId)) {
+          console.log(`  Chapter ${nextChapterId} already unlocked`);
+          return prev;
+        }
+        const newUnlocked = [...prev, nextChapterId];
+        console.log(`  New unlocked chapters:`, newUnlocked);
+        return newUnlocked;
+      });
+    }
+    
+    // Save to localStorage immediately
+    const saved = {
+      completed: [...completedChapters, chapterId],
+      unlocked: [...unlockedChapters, nextChapterId].filter((v, i, a) => a.indexOf(v) === i),
+      lastChapter: chapterId,
+      timestamp: new Date().toISOString()
+    };
+    localStorage.setItem('studyquest_progress', JSON.stringify(saved));
+    console.log(`  💾 Saved to localStorage:`, saved);
+  };
+
   const handleBattleAnswer = async (choice, correct) => {
     const chapter = chapters[currentChapter];
     const totalBattlesInChapter = chapter.scenes.filter(s => s.type === 'battle').length;
@@ -1099,8 +1259,10 @@ export default function StoryQuestAI() {
         setCurrentScene(s => s + 1);
         setCurrentQuestion(null);
       } else {
-        // All battles in this chapter complete
+        // All battles in this chapter complete - UNLOCK NEXT CHAPTER
         console.log(`✅ All ${totalBattlesInChapter} battles complete! Chapter finished.`);
+        completeChapterAndUnlock(currentChapter);
+        
         if (currentChapter < chapters.length - 1) {
           setScreen('map');
         } else {
@@ -1136,27 +1298,35 @@ export default function StoryQuestAI() {
   };
 
   const resetGame = () => {
+    console.log("🔄 NEW ADVENTURE - Resetting all progress");
+    
+    // Clear localStorage first
+    localStorage.removeItem('studyquest_progress');
+    console.log("  🗑️ Cleared localStorage");
+    
+    // Reset all state
     setScreen('title');
     setTopic('');
     setCurrentChapter(0);
     setCurrentScene(0);
     setCurrentQuestion(null);
     setStats({ xp: 0, battlesWon: 0 });
+    setCurrentBattleIndex(0);
+    
+    // Reset progress to ONLY chapter 1 unlocked
+    setCompletedChapters([]);
+    setUnlockedChapters([1]);
+    
+    console.log("  ✅ Reset complete - only Chapter 1 unlocked");
   };
 
   const backToMap = () => {
-    // Mark current chapter as completed when returning from victory
-    const currentChapterId = chapters[currentChapter]?.id;
-    if (currentChapterId && !completedChapters.includes(currentChapterId)) {
-      console.log(`🏆 Marking Chapter ${currentChapterId} as COMPLETED`);
-      setCompletedChapters(prev => [...prev, currentChapterId]);
-    }
-    
+    console.log("🏠 Returning to map from victory");
+    // Chapter unlock is now handled in completeChapterAndUnlock
     setScreen('map');
     setCurrentScene(0);
     setCurrentQuestion(null);
     setCurrentBattleIndex(0);
-    // Keep topic, chapter, and stats so user can continue
   };
 
   // RENDER SCREENS
@@ -1235,6 +1405,9 @@ export default function StoryQuestAI() {
         onBack={() => setScreen('title')}
         stats={stats}
         completedChapters={completedChapters}
+        unlockedChapters={unlockedChapters}
+        setCompletedChapters={setCompletedChapters}
+        setUnlockedChapters={setUnlockedChapters}
       />
     );
   }
