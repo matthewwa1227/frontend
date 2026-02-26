@@ -733,95 +733,110 @@ const BattleScene = ({ scene, question, onAnswer, battleNumber, totalBattles }) 
 // ============================================
 // CHAPTER MAP
 // ============================================
-const ChapterMap = ({ chapters, currentChapter, onSelectChapter, theme, onBack, stats }) => (
-  <div className={`min-h-screen bg-gradient-to-b ${theme.gradient} p-6`}>
-    <div className="max-w-2xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center gap-4 mb-8">
-        <button onClick={onBack} className="p-3 bg-slate-800/50 rounded-xl hover:bg-slate-700/50 transition-colors">
-          <ArrowLeft className="w-6 h-6 text-slate-300" />
-        </button>
-        <div>
-          <h1 className="text-3xl font-bold text-white" style={{ ...pixelText, textShadow: '2px 2px 4px rgba(0,0,0,0.5)' }}>
-            QUEST MAP
-          </h1>
-          <p className="text-slate-300 text-sm" style={pixelText}>{theme.world}</p>
-        </div>
-      </div>
-
-      {/* Stats Bar */}
-      <Card className="mb-8" variant="default">
-        <div className="flex items-center justify-around">
-          <div className="text-center">
-            <Zap className="w-6 h-6 text-amber-400 mx-auto mb-1" />
-            <p className="text-2xl font-bold text-amber-400" style={pixelText}>{stats.xp}</p>
-            <p className="text-slate-500 text-xs" style={pixelText}>XP</p>
-          </div>
-          <div className="text-center">
-            <Swords className="w-6 h-6 text-rose-400 mx-auto mb-1" />
-            <p className="text-2xl font-bold text-rose-400" style={pixelText}>{stats.battlesWon}</p>
-            <p className="text-slate-500 text-xs" style={pixelText}>WINS</p>
-          </div>
-          <div className="text-center">
-            <Target className="w-6 h-6 text-blue-400 mx-auto mb-1" />
-            <p className="text-2xl font-bold text-blue-400" style={pixelText}>{currentChapter + 1}/{chapters.length}</p>
-            <p className="text-slate-500 text-xs" style={pixelText}>CHAPTER</p>
+const ChapterMap = ({ chapters, currentChapter, onSelectChapter, theme, onBack, stats, completedChapters }) => {
+  // Debug logging
+  console.log('🗺️ ChapterMap render - completedChapters:', completedChapters);
+  
+  return (
+    <div className={`min-h-screen bg-gradient-to-b ${theme.gradient} p-6`}>
+      <div className="max-w-2xl mx-auto">
+        {/* Header */}
+        <div className="flex items-center gap-4 mb-8">
+          <button onClick={onBack} className="p-3 bg-slate-800/50 rounded-xl hover:bg-slate-700/50 transition-colors">
+            <ArrowLeft className="w-6 h-6 text-slate-300" />
+          </button>
+          <div>
+            <h1 className="text-3xl font-bold text-white" style={{ ...pixelText, textShadow: '2px 2px 4px rgba(0,0,0,0.5)' }}>
+              QUEST MAP
+            </h1>
+            <p className="text-slate-300 text-sm" style={pixelText}>{theme.world}</p>
           </div>
         </div>
-      </Card>
 
-      {/* Chapter Path */}
-      <div className="space-y-4">
-        {chapters.map((chapter, index) => {
-          const isCompleted = index < currentChapter;
-          const isCurrent = index === currentChapter;
-          const isLocked = index > currentChapter;
-          const isUnlocked = !isLocked; // <-- ADD THIS LINE
+        {/* Stats Bar */}
+        <Card className="mb-8" variant="default">
+          <div className="flex items-center justify-around">
+            <div className="text-center">
+              <Zap className="w-6 h-6 text-amber-400 mx-auto mb-1" />
+              <p className="text-2xl font-bold text-amber-400" style={pixelText}>{stats.xp}</p>
+              <p className="text-slate-500 text-xs" style={pixelText}>XP</p>
+            </div>
+            <div className="text-center">
+              <Swords className="w-6 h-6 text-rose-400 mx-auto mb-1" />
+              <p className="text-2xl font-bold text-rose-400" style={pixelText}>{stats.battlesWon}</p>
+              <p className="text-slate-500 text-xs" style={pixelText}>WINS</p>
+            </div>
+            <div className="text-center">
+              <Target className="w-6 h-6 text-blue-400 mx-auto mb-1" />
+              <p className="text-2xl font-bold text-blue-400" style={pixelText}>{currentChapter + 1}/{chapters.length}</p>
+              <p className="text-slate-500 text-xs" style={pixelText}>CHAPTER</p>
+            </div>
+          </div>
+        </Card>
 
-          return (
-            <motion.div
-              key={chapter.id}
-              initial={{ opacity: 0, x: -50 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: index * 0.1 }}
-              onClick={() => !isLocked && onSelectChapter(index)}
-              className={`
-                relative p-5 rounded-xl border-2 cursor-pointer transition-all
-                ${isCompleted ? 'bg-emerald-900/40 border-emerald-500/50' : ''}
-                ${isCurrent ? 'bg-amber-900/40 border-amber-500 shadow-lg shadow-amber-500/20' : ''}
-                ${isUnlocked && !isCurrent && !isCompleted ? 'bg-slate-800/40 border-slate-600 hover:border-blue-500' : ''}
-                ${isLocked ? 'bg-slate-900/40 border-slate-800 opacity-50 cursor-not-allowed' : ''}
-              `}
-            >
-              <div className="flex items-center gap-4">
-                <div className={`
-                  w-14 h-14 rounded-xl flex items-center justify-center text-2xl
-                  ${isCompleted ? 'bg-emerald-600 shadow-lg shadow-emerald-500/50' : 
-                    isCurrent ? 'bg-amber-500 shadow-lg shadow-amber-500/50 animate-pulse' : 
-                    isLocked ? 'bg-slate-800' : 'bg-blue-900 shadow-lg shadow-blue-500/30'}
-                `}>
-                  {isCompleted ? '✓' : isLocked ? '🔒' : chapter.id}
-                </div>
-                <div className="flex-1">
-                  <h3 className={`text-lg font-bold ${isCurrent ? 'text-amber-400' : 'text-white'}`} style={pixelText}>
-                    {chapter.title}
-                  </h3>
-                  <p className="text-slate-400 text-sm" style={pixelText}>{chapter.subtitle}</p>
-                  <div className="flex items-center gap-4 mt-2 text-xs text-slate-500">
-                    <span style={pixelText}>{chapter.scenes.filter(s => s.type === 'battle').length} battles</span>
-                    <span style={pixelText}>•</span>
-                    <span style={pixelText}>{chapter.scenes.filter(s => s.type === 'learn').length} lessons</span>
+        {/* Chapter Path */}
+        <div className="space-y-4">
+          {chapters.map((chapter, index) => {
+            const isCompleted = completedChapters.includes(chapter.id);
+            const isCurrent = index === currentChapter;
+            // Chapter is unlocked if: it's chapter 1 (id=1), OR previous chapter is completed
+            const isUnlocked = chapter.id === 1 || completedChapters.includes(chapter.id - 1);
+            const isLocked = !isUnlocked;
+
+            console.log(`📍 Chapter ${chapter.id}: completed=${isCompleted}, unlocked=${isUnlocked}, locked=${isLocked}`);
+
+            return (
+              <motion.div
+                key={chapter.id}
+                initial={{ opacity: 0, x: -50 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: index * 0.1 }}
+                onClick={() => !isLocked && onSelectChapter(index)}
+                className={`
+                  relative p-5 rounded-xl border-2 cursor-pointer transition-all
+                  ${isCompleted ? 'bg-emerald-900/40 border-emerald-500/50' : ''}
+                  ${isCurrent ? 'bg-amber-900/40 border-amber-500 shadow-lg shadow-amber-500/20' : ''}
+                  ${isUnlocked && !isCurrent && !isCompleted ? 'bg-slate-800/40 border-slate-600 hover:border-blue-500' : ''}
+                  ${isLocked ? 'bg-slate-900/40 border-slate-800 opacity-50 cursor-not-allowed' : ''}
+                `}
+              >
+                <div className="flex items-center gap-4">
+                  <div className={`
+                    w-14 h-14 rounded-xl flex items-center justify-center text-2xl
+                    ${isCompleted ? 'bg-emerald-600 shadow-lg shadow-emerald-500/50' : 
+                      isCurrent ? 'bg-amber-500 shadow-lg shadow-amber-500/50 animate-pulse' : 
+                      isLocked ? 'bg-slate-800' : 'bg-blue-900 shadow-lg shadow-blue-500/30'}
+                  `}>
+                    {isCompleted ? '✓' : isLocked ? '🔒' : chapter.id}
                   </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <h3 className={`text-lg font-bold ${isCurrent ? 'text-amber-400' : isCompleted ? 'text-emerald-400' : 'text-white'}`} style={pixelText}>
+                        {chapter.title}
+                      </h3>
+                      {isCompleted && (
+                        <span className="px-2 py-0.5 bg-emerald-600 text-emerald-100 text-[10px] rounded font-bold" style={pixelText}>
+                          COMPLETE
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-slate-400 text-sm" style={pixelText}>{chapter.subtitle}</p>
+                    <div className="flex items-center gap-4 mt-2 text-xs text-slate-500">
+                      <span style={pixelText}>{chapter.scenes.filter(s => s.type === 'battle').length} battles</span>
+                      <span style={pixelText}>•</span>
+                      <span style={pixelText}>{chapter.scenes.filter(s => s.type === 'learn').length} lessons</span>
+                    </div>
+                  </div>
+                  <ChevronRight className={`w-6 h-6 ${isUnlocked ? 'text-slate-400' : 'text-slate-700'}`} />
                 </div>
-                <ChevronRight className={`w-6 h-6 ${isUnlocked ? 'text-slate-400' : 'text-slate-700'}`} />
-              </div>
-            </motion.div>
-          );
-        })}
+              </motion.div>
+            );
+          })}
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 // ============================================
 // VICTORY SCREEN
@@ -889,6 +904,8 @@ export default function StoryQuestAI() {
   const [currentQuestion, setCurrentQuestion] = useState(null);
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState({ xp: 0, battlesWon: 0 });
+  const [currentBattleIndex, setCurrentBattleIndex] = useState(0); // Track battle within current chapter
+  const [completedChapters, setCompletedChapters] = useState([]); // Track completed chapter IDs
 
   const topicRef = useRef(null);
 
@@ -970,9 +987,11 @@ export default function StoryQuestAI() {
   };
 
   const startChapter = (chapterIndex) => {
+    console.log(`🗺️ Starting chapter ${chapterIndex + 1}`);
     setCurrentChapter(chapterIndex);
     setCurrentScene(0);
     setCurrentQuestion(null);
+    setCurrentBattleIndex(0); // Reset battle counter for new chapter
     setScreen('adventure');
   };
 
@@ -1061,19 +1080,27 @@ export default function StoryQuestAI() {
   };
 
   const handleBattleAnswer = async (choice, correct) => {
+    const chapter = chapters[currentChapter];
+    const totalBattlesInChapter = chapter.scenes.filter(s => s.type === 'battle').length;
+    
     if (correct) {
+      console.log(`⚔️ Battle ${currentBattleIndex + 1}/${totalBattlesInChapter} WON!`);
+      
       setStats(s => ({ 
         xp: s.xp + (currentQuestion?.xp || 25), 
         battlesWon: s.battlesWon + 1 
       }));
       
-      // Move to next scene after correct answer
-      const chapter = chapters[currentChapter];
-      if (currentScene < chapter.scenes.length - 1) {
+      // Check if there are more battles in this chapter
+      if (currentBattleIndex < totalBattlesInChapter - 1) {
+        // More battles remaining - stay in battle mode, increment battle index
+        console.log(`⚔️ Advancing to battle ${currentBattleIndex + 2}/${totalBattlesInChapter}`);
+        setCurrentBattleIndex(prev => prev + 1);
         setCurrentScene(s => s + 1);
         setCurrentQuestion(null);
       } else {
-        // Chapter complete
+        // All battles in this chapter complete
+        console.log(`✅ All ${totalBattlesInChapter} battles complete! Chapter finished.`);
         if (currentChapter < chapters.length - 1) {
           setScreen('map');
         } else {
@@ -1118,9 +1145,17 @@ export default function StoryQuestAI() {
   };
 
   const backToMap = () => {
+    // Mark current chapter as completed when returning from victory
+    const currentChapterId = chapters[currentChapter]?.id;
+    if (currentChapterId && !completedChapters.includes(currentChapterId)) {
+      console.log(`🏆 Marking Chapter ${currentChapterId} as COMPLETED`);
+      setCompletedChapters(prev => [...prev, currentChapterId]);
+    }
+    
     setScreen('map');
     setCurrentScene(0);
     setCurrentQuestion(null);
+    setCurrentBattleIndex(0);
     // Keep topic, chapter, and stats so user can continue
   };
 
@@ -1199,6 +1234,7 @@ export default function StoryQuestAI() {
         theme={theme}
         onBack={() => setScreen('title')}
         stats={stats}
+        completedChapters={completedChapters}
       />
     );
   }
@@ -1253,13 +1289,19 @@ export default function StoryQuestAI() {
         xp: 25
       };
       
+      // Calculate battles in current chapter only
+      const chapter = chapters[currentChapter];
+      const battlesInChapter = chapter.scenes.filter(s => s.type === 'battle').length;
+      
+      console.log(`⚔️ Rendering Battle ${currentBattleIndex + 1}/${battlesInChapter}`);
+      
       return (
         <BattleScene
           scene={scene}
           question={question}
           onAnswer={handleBattleAnswer}
-          battleNumber={stats.battlesWon + 1}
-          totalBattles={chapters.reduce((acc, ch) => acc + ch.scenes.filter(s => s.type === 'battle').length, 0)}
+          battleNumber={currentBattleIndex + 1}
+          totalBattles={battlesInChapter}
         />
       );
     }
