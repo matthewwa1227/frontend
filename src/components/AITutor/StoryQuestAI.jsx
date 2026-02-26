@@ -575,6 +575,17 @@ const BattleScene = ({ scene, question, onAnswer, battleNumber, totalBattles }) 
   const [showResult, setShowResult] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
 
+  // CRITICAL: Reset state when battle number changes
+  useEffect(() => {
+    console.log(`⚔️ Battle changed to ${battleNumber}/${totalBattles}, resetting state`);
+    setSelected(null);
+    setShowResult(false);
+    setIsCorrect(false);
+  }, [battleNumber, totalBattles]);
+
+  // Debug render
+  console.log(`🎮 Rendering Battle ${battleNumber}: selected=${selected}, showResult=${showResult}, isCorrect=${isCorrect}`);
+
   if (!question) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center">
