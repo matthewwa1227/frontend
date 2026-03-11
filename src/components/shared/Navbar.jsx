@@ -17,7 +17,9 @@ import {
   ChevronDown,
   Sparkles,
   CheckSquare,
-  TrendingUp
+  TrendingUp,
+  FileText,
+  MessageCircle
 } from 'lucide-react';
 
 export default function Navbar() {
@@ -52,8 +54,10 @@ export default function Navbar() {
 
   // AI Tools dropdown items
   const aiTools = [
+    { path: '/study-buddy', label: 'Study Buddy', icon: MessageCircle, description: 'Chat with AI tutor' },
     { path: '/story-quest', label: 'Story Quest', icon: Bot, description: 'RPG Learning Adventure' },
     { path: '/schedule', label: 'Schedule Generator', icon: CalendarDays, description: 'Plan your study time' },
+    { path: '/exercise-generator', label: 'Exercise Generator', icon: FileText, description: 'Printable worksheets' },
   ];
 
   // Secondary nav items

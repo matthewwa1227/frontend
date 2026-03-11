@@ -24,8 +24,10 @@ import Navbar from './components/shared/Navbar';
 import TestAnimation from './TestAnimation';
 
 import ScheduleGenerator from './components/ScheduleGenerator/ScheduleGenerator';
+import ExerciseGenerator from './components/ExerciseGenerator/ExerciseGenerator';
 
 import AITutor from './components/AITutor/StoryQuestAI';
+import StudyBuddy from './components/StudyBuddy/StudyBuddy';
 import RevisionMode from './components/AITutor/RevisionMode';
 
 // --- New Feature Components ---
@@ -211,6 +213,15 @@ function App() {
           />
 
           <Route 
+            path="/study-buddy" 
+            element={
+              <ProtectedRoute>
+                <StudyBuddy />
+              </ProtectedRoute>
+            } 
+          />
+
+          <Route 
             path="/story-quest" 
             element={
               <ProtectedRoute>
@@ -219,10 +230,10 @@ function App() {
             } 
           />
 
-          {/* Redirect old AI Tutor routes to Story Quest */}
-          <Route path="/tutor" element={<Navigate to="/story-quest" replace />} />
-          <Route path="/study-buddy" element={<Navigate to="/story-quest" replace />} />
-          <Route path="/ai-tutor" element={<Navigate to="/story-quest" replace />} />
+          {/* Redirect old AI Tutor routes */}
+          <Route path="/tutor" element={<Navigate to="/study-buddy" replace />} />
+          <Route path="/ai-buddy" element={<Navigate to="/study-buddy" replace />} />
+          <Route path="/ai-tutor" element={<Navigate to="/study-buddy" replace />} />
 
           <Route 
             path="/revision" 
@@ -260,6 +271,16 @@ function App() {
             element={
               <ProtectedRoute>
                 <SocialHub />
+              </ProtectedRoute>
+            } 
+          />
+
+          {/* --- Exercise Generator --- */}
+          <Route 
+            path="/exercise-generator" 
+            element={
+              <ProtectedRoute>
+                <ExerciseGenerator />
               </ProtectedRoute>
             } 
           />

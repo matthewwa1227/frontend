@@ -160,8 +160,13 @@ export const storyQuestAPI = {
   generateLesson: (data) => api.post('/storyquest/lesson', data),
   generateQuestion: (data) => api.post('/storyquest/question', data),
   
-  // Simple learn endpoint
-  learn: (topic) => api.post('/storyquest/learn', { topic }),
+  // Simple learn endpoint - now with subject context
+  learn: (topic, subject, chapterTitle, focus) => api.post('/storyquest/learn', { 
+    topic, 
+    subject, 
+    chapterTitle, 
+    focus 
+  }),
   
   // Health check
   health: () => api.get('/storyquest/health')
@@ -171,6 +176,18 @@ export const storyQuestAPI = {
 export const aiAPI = {
   generateSchedule: (preferences = {}, dateRange = 7, tasks = []) => 
     api.post('/ai/generate-schedule', { preferences, dateRange, tasks }),
+  
+  // Study Buddy Chat
+  getHistory: (limit = 20) => api.get(`/ai/history?limit=${limit}`),
+  chatWithMedia: (message, conversationHistory, media) => 
+    api.post('/ai/chat', { message, context: conversationHistory, media }),
+  getTips: (subject, difficulty) => api.get(`/ai/tips?subject=${subject}&difficulty=${difficulty}`),
+};
+
+// Exercise Generator API
+export const exerciseAPI = {
+  generate: (data) => api.post('/exercises/generate', data),
+  health: () => api.get('/exercises/health')
 };
 
 // Revision Mode API
