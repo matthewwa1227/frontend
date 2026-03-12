@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Printer, RotateCcw, BookOpen, Wand2 } from 'lucide-react';
+import React, { useState, useRef, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Printer, RotateCcw, Wand2, Copy, Upload, FileText, X, Check, Sparkles } from 'lucide-react';
 import { exerciseAPI } from '../../utils/api';
 
 const pixelText = { fontFamily: 'monospace' };
@@ -13,7 +13,9 @@ const PixelButton = ({ children, onClick, variant = 'primary', disabled = false,
     primary: `${baseStyles} bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 border-blue-800 text-white shadow-lg shadow-blue-900/50`,
     gold: `${baseStyles} bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 border-amber-700 text-amber-950 shadow-lg shadow-amber-900/50`,
     success: `${baseStyles} bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 border-emerald-800 text-white shadow-lg shadow-emerald-900/50`,
-    secondary: `${baseStyles} bg-slate-700/80 hover:bg-slate-600 border-slate-900 text-slate-200`
+    secondary: `${baseStyles} bg-slate-700/80 hover:bg-slate-600 border-slate-900 text-slate-200`,
+    accent: `${baseStyles} bg-gradient-to-r from-violet-500 to-violet-600 hover:from-violet-400 hover:to-violet-500 border-violet-800 text-white shadow-lg shadow-violet-900/50`,
+    outline: `${baseStyles} bg-transparent border-2 border-violet-500 text-violet-400 hover:bg-violet-500/10`
   };
 
   return (
@@ -50,39 +52,249 @@ const PixelCard = ({ children, title, icon: Icon, className = '' }) => (
   </motion.div>
 );
 
+// Mode Toggle Component
+const ModeToggle = ({ mode, onChange }) => (
+  <div className="flex gap-2 p-1 bg-slate-900 rounded-lg border-2 border-slate-600">
+    <button
+      onClick={() => onChange('original')}
+      className={`flex-1 py-2 px-4 rounded-md text-sm font-bold transition-all ${
+        mode === 'original'
+          ? 'bg-blue-600 text-white shadow-lg'
+          : 'text-slate-400 hover:text-white'
+      }`}
+      style={pixelText}
+    >
+      ✨ ORIGINAL
+    </button>
+    <button
+      onClick={() => onChange('similar')}
+      className={`flex-1 py-2 px-4 rounded-md text-sm font-bold transition-all ${
+        mode === 'similar'
+          ? 'bg-violet-600 text-white shadow-lg'
+          : 'text-slate-400 hover:text-white'
+      }`}
+      style={pixelText}
+    >
+      📋 SIMILAR PRACTICE
+    </button>
+  </div>
+);
+
+// File Upload Component
+const FileUploadZone = ({ onFileSelect, file, analyzing, analyzed }) => {
+  const fileInputRef = useRef(null);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const handleDragOver = useCallback((e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e) => {
+    e.preventDefault();
+    setIsDragging(false);
+  }, []);
+
+  const handleDrop = useCallback((e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const droppedFile = e.dataTransfer.files[0];
+    if (droppedFile) onFileSelect(droppedFile);
+  }, [onFileSelect]);
+
+  const handleFileInput = (e) => {
+    const selectedFile = e.target.files[0];
+    if (selectedFile) onFileSelect(selectedFile);
+  };
+
+  const getFileIcon = () => {
+    if (analyzing) return '⏳';
+    if (analyzed) return '✅';
+    if (file) return '📄';
+    return '📎';
+  };
+
+  return (
+    <div
+      onClick={() => fileInputRef.current?.click()}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      className={`
+        relative border-2 border-dashed rounded-xl p-8 text-center cursor-pointer
+        transition-all duration-200
+        ${isDragging ? 'border-violet-400 bg-violet-500/10' : ''}
+        ${file ? 'border-emerald-500 bg-emerald-500/10' : 'border-slate-600 hover:border-slate-500'}
+        ${analyzing ? 'border-amber-500 bg-amber-500/10' : ''}
+      `}
+    >
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".pdf,.docx,.txt,.md,.jpg,.jpeg,.png,.webp"
+        onChange={handleFileInput}
+        className="hidden"
+      />
+      
+      <motion.div
+        animate={analyzing ? { rotate: 360 } : {}}
+        transition={analyzing ? { duration: 2, repeat: Infinity, ease: "linear" } : {}}
+        className="text-4xl mb-3"
+      >
+        {getFileIcon()}
+      </motion.div>
+      
+      {file ? (
+        <div>
+          <p className="text-emerald-400 font-bold" style={pixelText}>{file.name}</p>
+          <p className="text-slate-400 text-xs mt-1" style={pixelText}>
+            {(file.size / 1024 / 1024).toFixed(2)} MB
+          </p>
+          {analyzing && (
+            <p className="text-amber-400 text-sm mt-2" style={pixelText}>
+              🔍 Analyzing document...
+            </p>
+          )}
+          {analyzed && (
+            <p className="text-emerald-400 text-sm mt-2" style={pixelText}>
+              ✨ Auto-detected subject & concept!
+            </p>
+          )}
+        </div>
+      ) : (
+        <div>
+          <p className="text-violet-400 font-bold mb-1" style={pixelText}>
+            Drop file here or click to browse
+          </p>
+          <p className="text-slate-500 text-xs" style={pixelText}>
+            PDF, DOCX, TXT, MD, or Images (JPG, PNG, WebP)
+          </p>
+          <p className="text-slate-600 text-xs mt-1" style={pixelText}>
+            Max 10MB
+          </p>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const ExerciseGenerator = () => {
+  // Mode: 'original' or 'similar'
+  const [mode, setMode] = useState('original');
+  
+  // Common fields
   const [subject, setSubject] = useState('');
-  const [topic, setTopic] = useState('');
   const [concept, setConcept] = useState('');
   const [numExercises, setNumExercises] = useState(10);
   const [difficulty, setDifficulty] = useState('medium');
+  
+  // File upload state
+  const [uploadedFile, setUploadedFile] = useState(null);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analyzed, setAnalyzed] = useState(false);
+  const [extractedExercises, setExtractedExercises] = useState([]);
+  const [autoDetected, setAutoDetected] = useState(false);
+  
+  // Similar mode text input (fallback)
+  const [referenceExercises, setReferenceExercises] = useState('');
+  const [preservePattern, setPreservePattern] = useState(true);
+  
+  // Output state
   const [exercises, setExercises] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  // Handle file selection and analysis
+  const handleFileSelect = async (file) => {
+    setUploadedFile(file);
+    setAnalyzed(false);
+    setAutoDetected(false);
+    
+    // Analyze the document
+    setAnalyzing(true);
+    setError(null);
+    
+    try {
+      const result = await exerciseAPI.analyzeDocument(file);
+      
+      if (result.data.success) {
+        // Auto-fill the fields
+        setSubject(result.data.subject || '');
+        setConcept(result.data.concept || '');
+        setDifficulty(result.data.difficulty || 'medium');
+        setExtractedExercises(result.data.extractedExercises || []);
+        setNumExercises(result.data.suggestedQuestionCount || 10);
+        setAnalyzed(true);
+        setAutoDetected(true);
+        
+        console.log(`✅ Analyzed: ${result.data.subject} - ${result.data.concept}`);
+      } else {
+        setError(result.data.message || 'Failed to analyze document');
+      }
+    } catch (err) {
+      console.error('Document analysis error:', err);
+      setError('Failed to analyze document. Please try again or enter details manually.');
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
+  const clearFile = () => {
+    setUploadedFile(null);
+    setAnalyzed(false);
+    setAutoDetected(false);
+    setExtractedExercises([]);
+  };
+
   const generateExercises = async () => {
-    if (!subject || !topic || !concept) {
-      setError('Please fill in all fields');
-      return;
+    // Validation
+    if (mode === 'original') {
+      if (!subject || !concept) {
+        setError('Please fill in Subject and Grammar/Concept Focus');
+        return;
+      }
+    } else {
+      // Similar mode - either file or text required
+      if (!uploadedFile && !referenceExercises.trim()) {
+        setError('Please upload a document or paste reference exercises');
+        return;
+      }
     }
     
     setLoading(true);
     setError(null);
     
     try {
-      const res = await exerciseAPI.generate({
-        subject,
-        topic,
-        concept,
-        numExercises,
-        difficulty
-      });
+      let res;
+      
+      if (mode === 'original') {
+        // Original mode - use standard endpoint
+        res = await exerciseAPI.generate({
+          subject,
+          concept,
+          numExercises,
+          difficulty
+        });
+      } else {
+        // Similar mode - use file upload endpoint
+        res = await exerciseAPI.generateSimilar({
+          document: uploadedFile,
+          subject,
+          concept,
+          numExercises,
+          difficulty,
+          preservePattern,
+          referenceExercises: extractedExercises.length > 0 
+            ? JSON.stringify(extractedExercises) 
+            : referenceExercises
+        });
+      }
       
       setExercises(res.data);
       console.log(`✅ Generated ${res.data.questions?.length || 0} exercises`);
     } catch (err) {
       console.error('Failed to generate exercises:', err);
-      setError('Failed to generate exercises. Please try again.');
+      setError(err.response?.data?.message || 'Failed to generate exercises. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -90,6 +302,25 @@ const ExerciseGenerator = () => {
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleCopyReference = () => {
+    if (exercises?.questions) {
+      const text = exercises.questions.map((q, i) => {
+        let questionText = `${i + 1}. ${q.question}`;
+        if (q.choices) {
+          questionText += '\n' + q.choices.map((c, idx) => `   ${String.fromCharCode(65 + idx)}. ${c}`).join('\n');
+        }
+        if (q.items) {
+          questionText += '\n' + q.items.map(item => `   - ${item.sentence}`).join('\n');
+        }
+        questionText += `\n   Answer: ${q.answer}`;
+        return questionText;
+      }).join('\n\n');
+      
+      navigator.clipboard.writeText(text);
+      alert('Exercises copied! You can paste them in "Similar Practice" mode to generate more like these.');
+    }
   };
 
   // Sample exercise structure for preview
@@ -199,15 +430,119 @@ const ExerciseGenerator = () => {
             )}
             
             <div className="space-y-5">
+              {/* Mode Toggle */}
+              <div>
+                <label className="text-amber-400 font-bold text-xs block mb-2" style={pixelText}>
+                  GENERATION MODE
+                </label>
+                <ModeToggle mode={mode} onChange={(newMode) => {
+                  setMode(newMode);
+                  clearFile();
+                }} />
+                <p className="text-slate-500 text-xs mt-1" style={pixelText}>
+                  {mode === 'original' 
+                    ? 'Generate brand new exercises based on your settings' 
+                    : 'Create exercises similar to your uploaded document'}
+                </p>
+              </div>
+
+              {/* Similar Mode - File Upload */}
+              <AnimatePresence>
+                {mode === 'similar' && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="space-y-3"
+                  >
+                    <div>
+                      <label className="text-violet-400 font-bold text-xs block mb-2" style={pixelText}>
+                        UPLOAD REFERENCE EXERCISES
+                      </label>
+                      
+                      <FileUploadZone
+                        onFileSelect={handleFileSelect}
+                        file={uploadedFile}
+                        analyzing={analyzing}
+                        analyzed={analyzed}
+                      />
+                      
+                      {uploadedFile && (
+                        <div className="mt-2 flex items-center justify-between">
+                          <button
+                            onClick={clearFile}
+                            className="text-rose-400 text-xs hover:text-rose-300 flex items-center gap-1"
+                            style={pixelText}
+                          >
+                            <X className="w-3 h-3" /> Remove file
+                          </button>
+                          {autoDetected && (
+                            <span className="text-emerald-400 text-xs flex items-center gap-1" style={pixelText}>
+                              <Sparkles className="w-3 h-3" /> Auto-detected!
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      
+                      <p className="text-slate-500 text-xs mt-2" style={pixelText}>
+                        Upload a PDF, image, or document containing exercises. AI will analyze and create similar ones.
+                      </p>
+                    </div>
+
+                    {/* Text fallback for similar mode */}
+                    {!uploadedFile && (
+                      <div className="relative">
+                        <div className="absolute inset-0 flex items-center">
+                          <div className="w-full border-t border-slate-600"></div>
+                        </div>
+                        <div className="relative flex justify-center">
+                          <span className="bg-slate-800 px-2 text-slate-400 text-xs" style={pixelText}>OR</span>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {!uploadedFile && (
+                      <div>
+                        <label className="text-slate-400 font-bold text-xs block mb-2" style={pixelText}>
+                          PASTE EXERCISES MANUALLY
+                        </label>
+                        <textarea
+                          value={referenceExercises}
+                          onChange={(e) => setReferenceExercises(e.target.value)}
+                          placeholder={`Paste example exercises here...`}
+                          className="w-full h-32 bg-slate-900 border-2 border-slate-600 rounded-lg p-3 text-white placeholder-slate-500 focus:border-violet-500 focus:outline-none transition-colors resize-none text-sm"
+                          style={pixelText}
+                        />
+                      </div>
+                    )}
+
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="preservePattern"
+                        checked={preservePattern}
+                        onChange={(e) => setPreservePattern(e.target.checked)}
+                        className="w-4 h-4 accent-violet-500"
+                      />
+                      <label htmlFor="preservePattern" className="text-slate-300 text-sm" style={pixelText}>
+                        Strictly preserve the exact pattern from reference exercises
+                      </label>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
               {/* Subject */}
               <div>
                 <label className="text-amber-400 font-bold text-xs block mb-2" style={pixelText}>
-                  SUBJECT *
+                  SUBJECT {autoDetected && <span className="text-emerald-400">(Auto-detected)</span>}
                 </label>
                 <select 
                   value={subject} 
                   onChange={(e) => setSubject(e.target.value)}
-                  className="w-full bg-slate-900 border-2 border-slate-600 rounded-lg p-3 text-white focus:border-amber-500 focus:outline-none transition-colors"
+                  className={`w-full bg-slate-900 border-2 rounded-lg p-3 text-white focus:border-amber-500 focus:outline-none transition-colors ${
+                    autoDetected ? 'border-emerald-600/50' : 'border-slate-600'
+                  }`}
                   style={pixelText}
                 >
                   <option value="">Select Subject</option>
@@ -216,35 +551,25 @@ const ExerciseGenerator = () => {
                   <option value="History">History</option>
                   <option value="Science">Science</option>
                   <option value="Chinese">Chinese</option>
+                  <option value="Geography">Geography</option>
+                  <option value="Other">Other</option>
                 </select>
-              </div>
-
-              {/* Topic */}
-              <div>
-                <label className="text-amber-400 font-bold text-xs block mb-2" style={pixelText}>
-                  TOPIC / THEME *
-                </label>
-                <input 
-                  type="text"
-                  placeholder="e.g., Hong Kong History, Ancient Egypt, Place Value"
-                  value={topic}
-                  onChange={(e) => setTopic(e.target.value)}
-                  className="w-full bg-slate-900 border-2 border-slate-600 rounded-lg p-3 text-white placeholder-slate-500 focus:border-amber-500 focus:outline-none transition-colors"
-                  style={pixelText}
-                />
               </div>
 
               {/* Concept */}
               <div>
                 <label className="text-amber-400 font-bold text-xs block mb-2" style={pixelText}>
-                  GRAMMAR / CONCEPT FOCUS *
+                  GRAMMAR / CONCEPT FOCUS {mode === 'similar' && !autoDetected && <span className="text-slate-500">(Optional if file uploaded)</span>}
+                  {autoDetected && <span className="text-emerald-400 ml-1">(Auto-detected)</span>}
                 </label>
                 <input 
                   type="text"
-                  placeholder="e.g., there was/were, past tense, multiplication tables"
+                  placeholder={mode === 'similar' && uploadedFile ? "Will be auto-detected from file..." : "e.g., past tense, fractions, photosynthesis"}
                   value={concept}
                   onChange={(e) => setConcept(e.target.value)}
-                  className="w-full bg-slate-900 border-2 border-slate-600 rounded-lg p-3 text-white placeholder-slate-500 focus:border-amber-500 focus:outline-none transition-colors"
+                  className={`w-full bg-slate-900 border-2 rounded-lg p-3 text-white placeholder-slate-500 focus:border-amber-500 focus:outline-none transition-colors ${
+                    autoDetected ? 'border-emerald-600/50' : 'border-slate-600'
+                  }`}
                   style={pixelText}
                 />
                 <p className="text-slate-500 text-xs mt-1" style={pixelText}>
@@ -290,11 +615,11 @@ const ExerciseGenerator = () => {
 
               {/* Generate Button */}
               <PixelButton 
-                variant="gold" 
+                variant={mode === 'similar' ? 'accent' : 'gold'}
                 onClick={generateExercises} 
-                disabled={loading}
+                disabled={loading || analyzing}
                 className="w-full mt-4"
-                icon={loading ? null : Wand2}
+                icon={loading ? null : mode === 'similar' ? Copy : Wand2}
               >
                 {loading ? (
                   <span className="flex items-center gap-2">
@@ -306,6 +631,8 @@ const ExerciseGenerator = () => {
                     </motion.span>
                     GENERATING...
                   </span>
+                ) : mode === 'similar' ? (
+                  'GENERATE SIMILAR EXERCISES'
                 ) : (
                   'GENERATE WORKSHEET'
                 )}
@@ -325,9 +652,14 @@ const ExerciseGenerator = () => {
                   {exercises.title || `${subject} Practice Worksheet`}
                 </h1>
                 <div className="text-sm space-y-1" style={{ fontFamily: 'sans-serif' }}>
-                  <p><strong>Subject:</strong> {exercises.subject || subject} | <strong>Topic:</strong> {exercises.topic || topic}</p>
-                  <p><strong>Focus:</strong> {exercises.concept || concept} | <strong>Difficulty:</strong> {exercises.difficulty || difficulty}</p>
-                  <p><strong>Total Questions:</strong> {exercises.questions?.length || 0}</p>
+                  <p><strong>Subject:</strong> {exercises.subject || subject} | <strong>Focus:</strong> {exercises.concept || concept}</p>
+                  <p><strong>Difficulty:</strong> {exercises.difficulty || difficulty} | <strong>Total Questions:</strong> {exercises.questions?.length || 0}</p>
+                  {exercises.basedOn && (
+                    <p><em>Generated based on {exercises.basedOn} reference exercises</em></p>
+                  )}
+                  {exercises.autoDetected && (
+                    <p className="text-emerald-600"><em>✨ Subject & concept auto-detected from document</em></p>
+                  )}
                 </div>
                 
                 {/* Student Info Fields */}
@@ -387,6 +719,14 @@ const ExerciseGenerator = () => {
                 icon={Printer}
               >
                 🖨️ PRINT WORKSHEET
+              </PixelButton>
+              
+              <PixelButton 
+                variant="accent" 
+                onClick={handleCopyReference}
+                icon={Copy}
+              >
+                📋 COPY FOR SIMILAR MODE
               </PixelButton>
               
               <PixelButton 

@@ -187,6 +187,38 @@ export const aiAPI = {
 // Exercise Generator API
 export const exerciseAPI = {
   generate: (data) => api.post('/exercises/generate', data),
+  
+  // Analyze document to extract subject/concept/exercises
+  analyzeDocument: (file) => {
+    const formData = new FormData();
+    formData.append('document', file);
+    return api.post('/exercises/analyze-document', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+  },
+  
+  // Generate similar exercises with optional file upload
+  generateSimilar: (data) => {
+    // If document is provided, use FormData
+    if (data.document) {
+      const formData = new FormData();
+      formData.append('document', data.document);
+      if (data.subject) formData.append('subject', data.subject);
+      if (data.concept) formData.append('concept', data.concept);
+      formData.append('numExercises', data.numExercises || 10);
+      formData.append('difficulty', data.difficulty || 'medium');
+      formData.append('preservePattern', data.preservePattern ? 'true' : 'false');
+      if (data.referenceExercises) formData.append('referenceExercises', data.referenceExercises);
+      
+      return api.post('/exercises/generate-similar', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+    }
+    
+    // Otherwise, send as JSON
+    return api.post('/exercises/generate-similar', data);
+  },
+  
   health: () => api.get('/exercises/health')
 };
 
