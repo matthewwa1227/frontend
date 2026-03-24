@@ -189,9 +189,15 @@ export const exerciseAPI = {
   generate: (data) => api.post('/exercises/generate', data),
   
   // Analyze document to extract subject/concept/exercises
-  analyzeDocument: (file) => {
+  // MISSION 52: Support single file or array of files
+  analyzeDocument: (files) => {
     const formData = new FormData();
-    formData.append('document', file);
+    const fileArray = Array.isArray(files) ? files : [files];
+    
+    fileArray.forEach(file => {
+      formData.append('documents', file);
+    });
+    
     return api.post('/exercises/analyze-document', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
