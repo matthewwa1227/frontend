@@ -1,0 +1,10 @@
+# Nixpacks Configuration for Railway Frontend
+
+[phases.build]
+cmds = ["npm run build"]
+
+[phases.setup]
+nixPkgs = ["nodejs_18"]
+
+[start]
+cmd = "npx serve -s build -l $PORT"

@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:5000/api';
+// Environment-aware API URL
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
 const api = axios.create({
   baseURL: API_URL,
@@ -187,6 +188,9 @@ export const aiAPI = {
 // Exercise Generator API
 export const exerciseAPI = {
   generate: (data) => api.post('/exercises/generate', data),
+  
+  // MISSION 55: Generate reading comprehension
+  generateReading: (data) => api.post('/exercises/generate-reading', data),
   
   // Analyze document to extract subject/concept/exercises
   // MISSION 52: Support single file or array of files

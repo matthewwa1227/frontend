@@ -52,12 +52,12 @@ const PixelCard = ({ children, title, icon: Icon, className = '' }) => (
   </motion.div>
 );
 
-// Mode Toggle Component
+// Mode Toggle Component - MISSION 55: Added Reading Mode
 const ModeToggle = ({ mode, onChange }) => (
-  <div className="flex gap-2 p-1 bg-slate-900 rounded-lg border-2 border-slate-600">
+  <div className="flex gap-1 p-1 bg-slate-900 rounded-lg border-2 border-slate-600 flex-wrap">
     <button
       onClick={() => onChange('original')}
-      className={`flex-1 py-2 px-4 rounded-md text-sm font-bold transition-all ${
+      className={`flex-1 py-2 px-3 rounded-md text-xs font-bold transition-all min-w-[80px] ${
         mode === 'original'
           ? 'bg-blue-600 text-white shadow-lg'
           : 'text-slate-400 hover:text-white'
@@ -68,14 +68,25 @@ const ModeToggle = ({ mode, onChange }) => (
     </button>
     <button
       onClick={() => onChange('similar')}
-      className={`flex-1 py-2 px-4 rounded-md text-sm font-bold transition-all ${
+      className={`flex-1 py-2 px-3 rounded-md text-xs font-bold transition-all min-w-[80px] ${
         mode === 'similar'
           ? 'bg-violet-600 text-white shadow-lg'
           : 'text-slate-400 hover:text-white'
       }`}
       style={pixelText}
     >
-      📋 SIMILAR PRACTICE
+      📋 SIMILAR
+    </button>
+    <button
+      onClick={() => onChange('reading')}
+      className={`flex-1 py-2 px-3 rounded-md text-xs font-bold transition-all min-w-[80px] ${
+        mode === 'reading'
+          ? 'bg-emerald-600 text-white shadow-lg'
+          : 'text-slate-400 hover:text-white'
+      }`}
+      style={pixelText}
+    >
+      📖 READING
     </button>
   </div>
 );
@@ -182,7 +193,7 @@ const FileUploadZone = ({ onFilesSelect, files, analyzing, analyzed, onRemoveFil
 };
 
 const ExerciseGenerator = () => {
-  // Mode: 'original' or 'similar'
+  // Mode: 'original', 'similar', or 'reading' - MISSION 55: Added reading mode
   const [mode, setMode] = useState('original');
   
   // Common fields
@@ -190,6 +201,10 @@ const ExerciseGenerator = () => {
   const [concept, setConcept] = useState('');
   const [numExercises, setNumExercises] = useState(10);
   const [difficulty, setDifficulty] = useState('medium');
+  
+  // MISSION 55: Reading mode specific fields
+  const [passageType, setPassageType] = useState('narrative');
+  const [includeVocabulary, setIncludeVocabulary] = useState(true);
   
   // File upload state - MISSION 51: Support multiple files
   const [uploadedFiles, setUploadedFiles] = useState([]);
@@ -205,6 +220,7 @@ const ExerciseGenerator = () => {
   // Output state
   const [exercises, setExercises] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [loadingStatus, setLoadingStatus] = useState(''); // MISSION 56: For reading mode progress
   const [error, setError] = useState(null);
 
   // Handle file selection and analysis - MISSION 52: Batch all files in one API call
@@ -268,25 +284,37 @@ const ExerciseGenerator = () => {
   };
 
   const generateExercises = async () => {
-    // Validation
+    // Validation based on mode
     if (mode === 'original') {
       if (!subject || !concept) {
         setError('Please fill in Subject and Grammar/Concept Focus');
         return;
       }
-    } else {
+    } else if (mode === 'similar') {
       // Similar mode - either file or text required
       if (uploadedFiles.length === 0 && !referenceExercises.trim()) {
         setError('Please upload a document or paste reference exercises');
+        return;
+      }
+    } else if (mode === 'reading') {
+      // MISSION 55: Reading mode validation
+      if (!subject || !['English', 'Chinese'].includes(subject)) {
+        setError('Please select English or Chinese for Reading mode');
         return;
       }
     }
     
     setLoading(true);
     setError(null);
+    setLoadingStatus(mode === 'reading' ? 'writing_passage' : '');
     
     // Cap at 15 exercises to avoid timeout
     const safeCount = Math.min(numExercises, 15);
+    
+    // MISSION 57: Synchronized timeouts - 240s frontend, 300s backend for reading
+    const timeoutDuration = mode === 'reading' ? 240000 : 60000; // 240s (4 min) for reading, 60s for others
+    
+    console.log(`⏱️ MISSION 57: Frontend timeout set to ${timeoutDuration/1000}s for ${mode} mode`);
     
     try {
       let res;
@@ -299,6 +327,42 @@ const ExerciseGenerator = () => {
           numExercises: safeCount,
           difficulty
         });
+      } else if (mode === 'reading') {
+        // MISSION 57: Reading comprehension with 240s frontend timeout
+        setLoadingStatus('writing_passage');
+        
+        const startTime = Date.now();
+        
+        // Create timeout promise (frontend safeguard)
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => {
+            const elapsed = Date.now() - startTime;
+            console.error(`⏱️ MISSION 57: Frontend timeout after ${elapsed}ms`);
+            reject(new Error('TIMEOUT'));
+          }, timeoutDuration);
+        });
+        
+        // Log progress every 30s
+        const progressInterval = setInterval(() => {
+          const elapsed = Date.now() - startTime;
+          console.log(`⏳ MISSION 57: Still waiting for reading generation... (${elapsed/1000}s elapsed)`);
+        }, 30000);
+        
+        // Race between API call and timeout
+        res = await Promise.race([
+          exerciseAPI.generateReading({
+            subject,
+            difficulty,
+            passageType,
+            numQuestions: safeCount
+          }),
+          timeoutPromise
+        ]);
+        
+        clearInterval(progressInterval);
+        console.log(`✅ MISSION 57: Reading received after ${(Date.now() - startTime)/1000}s`);
+        
+        setLoadingStatus('creating_questions');
       } else {
         // Similar mode - use file upload endpoint (use first file for now)
         res = await exerciseAPI.generateSimilar({
@@ -324,9 +388,25 @@ const ExerciseGenerator = () => {
       console.log(`✅ Generated ${res.data.questions?.length || 0} exercises`);
     } catch (err) {
       console.error('Failed to generate exercises:', err);
-      setError('Something went wrong. Please try again.');
+      
+      // MISSION 57: Better error messages with specific guidance
+      if (err.message === 'TIMEOUT') {
+        setError(mode === 'reading' 
+          ? `⏱️ Timeout: Reading passages take 2-4 minutes. Please try again or reduce to 5 questions.` 
+          : 'Generation timed out. Please try again.');
+      } else if (err.message?.includes('timeout') || err.message?.includes('longer than')) {
+        // Backend timeout message
+        setError(`⏱️ ${err.message}`);
+      } else if (err.message?.includes('aborted') || err.message?.includes('AbortError')) {
+        setError(mode === 'reading'
+          ? '⏱️ Connection timeout. Reading passages need 2-4 minutes. Please wait or try with fewer questions.'
+          : 'Generation timed out. Please try again.');
+      } else {
+        setError('Something went wrong. Please try again.');
+      }
     } finally {
       setLoading(false);
+      setLoadingStatus('');
     }
   };
 
@@ -548,13 +628,110 @@ const ExerciseGenerator = () => {
                 <ModeToggle mode={mode} onChange={(newMode) => {
                   setMode(newMode);
                   clearAllFiles();
+                  // MISSION 55: Reset subject when switching to/from reading mode
+                  if (newMode === 'reading') {
+                    setSubject('English'); // Default for reading
+                  }
                 }} />
                 <p className="text-slate-500 text-xs mt-1" style={pixelText}>
                   {mode === 'original' 
                     ? 'Generate brand new exercises based on your settings' 
-                    : 'Create exercises similar to your uploaded document'}
+                    : mode === 'reading'
+                      ? '📖 Generate reading comprehension passages with questions'
+                      : 'Create exercises similar to your uploaded document'}
                 </p>
               </div>
+
+              {/* MISSION 55: Reading Mode Configuration */}
+              <AnimatePresence>
+                {mode === 'reading' && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto'}}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="bg-emerald-900/20 border border-emerald-600/30 rounded-lg p-4 space-y-4"
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-2xl">📖</span>
+                      <span className="text-emerald-400 font-bold text-sm" style={pixelText}>
+                        READING COMPREHENSION MODE
+                      </span>
+                    </div>
+                    
+                    {/* Passage Type */}
+                    <div>
+                      <label className="text-emerald-400 font-bold text-xs block mb-2" style={pixelText}>
+                        PASSAGE TYPE
+                      </label>
+                      <select
+                        value={passageType}
+                        onChange={(e) => setPassageType(e.target.value)}
+                        className="w-full bg-slate-900 border-2 border-slate-600 rounded-lg p-3 text-white focus:border-emerald-500 focus:outline-none transition-colors"
+                        style={pixelText}
+                      >
+                        <option value="narrative">📖 Narrative (Story)</option>
+                        <option value="argumentative">💬 Argumentative (Debate)</option>
+                        <option value="descriptive">🎨 Descriptive (Description)</option>
+                        <option value="expository">📚 Expository (Informative)</option>
+                        {subject === 'Chinese' && (
+                          <option value="classical">📜 Classical Chinese (文言文)</option>
+                        )}
+                      </select>
+                    </div>
+
+                    {/* Subject for Reading */}
+                    <div>
+                      <label className="text-emerald-400 font-bold text-xs block mb-2" style={pixelText}>
+                        LANGUAGE
+                      </label>
+                      <div className="grid grid-cols-2 gap-3">
+                        <button
+                          onClick={() => setSubject('English')}
+                          className={`py-3 px-4 rounded-lg border-2 font-bold text-sm transition-all ${
+                            subject === 'English'
+                              ? 'bg-emerald-600 border-emerald-500 text-white'
+                              : 'bg-slate-900 border-slate-600 text-slate-400 hover:border-emerald-600/50'
+                          }`}
+                          style={pixelText}
+                        >
+                          🇬🇧 English (DSE Style)
+                        </button>
+                        <button
+                          onClick={() => setSubject('Chinese')}
+                          className={`py-3 px-4 rounded-lg border-2 font-bold text-sm transition-all ${
+                            subject === 'Chinese'
+                              ? 'bg-emerald-600 border-emerald-500 text-white'
+                              : 'bg-slate-900 border-slate-600 text-slate-400 hover:border-emerald-600/50'
+                          }`}
+                          style={pixelText}
+                        >
+                          🇭🇰 Chinese (閱讀理解)
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Include Vocabulary */}
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="includeVocabulary"
+                        checked={includeVocabulary}
+                        onChange={(e) => setIncludeVocabulary(e.target.checked)}
+                        className="w-4 h-4 accent-emerald-500"
+                      />
+                      <label htmlFor="includeVocabulary" className="text-slate-300 text-sm" style={pixelText}>
+                        Include vocabulary list with definitions
+                      </label>
+                    </div>
+
+                    <p className="text-slate-500 text-xs" style={pixelText}>
+                      {subject === 'Chinese' 
+                        ? '生成中文閱讀理解，包括：段意、詞意、主旨、推理題型'
+                        : 'Generate English reading comprehension: main idea, details, inference, vocabulary'}
+                    </p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               {/* Similar Mode - File Upload */}
               <AnimatePresence>
@@ -658,66 +835,74 @@ const ExerciseGenerator = () => {
                       </div>
                     )}
 
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id="preservePattern"
-                        checked={preservePattern}
-                        onChange={(e) => setPreservePattern(e.target.checked)}
-                        className="w-4 h-4 accent-violet-500"
-                      />
-                      <label htmlFor="preservePattern" className="text-slate-300 text-sm" style={pixelText}>
-                        Strictly preserve the exact pattern from reference exercises
-                      </label>
-                    </div>
+                    {/* MISSION 56: Hide preserve pattern checkbox in reading mode */}
+                    {mode !== 'reading' && (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id="preservePattern"
+                          checked={preservePattern}
+                          onChange={(e) => setPreservePattern(e.target.checked)}
+                          className="w-4 h-4 accent-violet-500"
+                        />
+                        <label htmlFor="preservePattern" className="text-slate-300 text-sm" style={pixelText}>
+                          Strictly preserve the exact pattern from reference exercises
+                        </label>
+                      </div>
+                    )}
                   </motion.div>
                 )}
               </AnimatePresence>
 
-              {/* Subject */}
-              <div>
-                <label className="text-amber-400 font-bold text-xs block mb-2" style={pixelText}>
-                  SUBJECT {autoDetected && <span className="text-emerald-400">(Auto-detected)</span>}
-                </label>
-                <select 
-                  value={subject} 
-                  onChange={(e) => setSubject(e.target.value)}
-                  className={`w-full bg-slate-900 border-2 rounded-lg p-3 text-white focus:border-amber-500 focus:outline-none transition-colors ${
-                    autoDetected ? 'border-emerald-600/50' : 'border-slate-600'
-                  }`}
-                  style={pixelText}
-                >
-                  <option value="">Select Subject</option>
-                  <option value="English">English</option>
-                  <option value="Mathematics">Mathematics</option>
-                  <option value="History">History</option>
-                  <option value="Science">Science</option>
-                  <option value="Chinese">Chinese</option>
-                  <option value="Geography">Geography</option>
-                  <option value="Other">Other</option>
-                </select>
-              </div>
+              {/* MISSION 56: Subject and Concept fields - Hidden in reading mode */}
+              {mode !== 'reading' && (
+                <>
+                  {/* Subject */}
+                  <div>
+                    <label className="text-amber-400 font-bold text-xs block mb-2" style={pixelText}>
+                      SUBJECT {autoDetected && <span className="text-emerald-400">(Auto-detected)</span>}
+                    </label>
+                    <select 
+                      value={subject} 
+                      onChange={(e) => setSubject(e.target.value)}
+                      className={`w-full bg-slate-900 border-2 rounded-lg p-3 text-white focus:border-amber-500 focus:outline-none transition-colors ${
+                        autoDetected ? 'border-emerald-600/50' : 'border-slate-600'
+                      }`}
+                      style={pixelText}
+                    >
+                      <option value="">Select Subject</option>
+                      <option value="English">English</option>
+                      <option value="Mathematics">Mathematics</option>
+                      <option value="History">History</option>
+                      <option value="Science">Science</option>
+                      <option value="Chinese">Chinese</option>
+                      <option value="Geography">Geography</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
 
-              {/* Concept */}
-              <div>
-                <label className="text-amber-400 font-bold text-xs block mb-2" style={pixelText}>
-                  GRAMMAR / CONCEPT FOCUS {mode === 'similar' && !autoDetected && <span className="text-slate-500">(Optional if file uploaded)</span>}
-                  {autoDetected && <span className="text-emerald-400 ml-1">(Auto-detected)</span>}
-                </label>
-                <input 
-                  type="text"
-                  placeholder={mode === 'similar' && uploadedFiles.length > 0 ? "Will be auto-detected from file..." : "e.g., past tense, fractions, photosynthesis"}
-                  value={concept}
-                  onChange={(e) => setConcept(e.target.value)}
-                  className={`w-full bg-slate-900 border-2 rounded-lg p-3 text-white placeholder-slate-500 focus:border-amber-500 focus:outline-none transition-colors ${
-                    autoDetected ? 'border-emerald-600/50' : 'border-slate-600'
-                  }`}
-                  style={pixelText}
-                />
-                <p className="text-slate-500 text-xs mt-1" style={pixelText}>
-                  The specific skill or grammar point to practice
-                </p>
-              </div>
+                  {/* Concept */}
+                  <div>
+                    <label className="text-amber-400 font-bold text-xs block mb-2" style={pixelText}>
+                      GRAMMAR / CONCEPT FOCUS {mode === 'similar' && !autoDetected && <span className="text-slate-500">(Optional if file uploaded)</span>}
+                      {autoDetected && <span className="text-emerald-400 ml-1">(Auto-detected)</span>}
+                    </label>
+                    <input 
+                      type="text"
+                      placeholder={mode === 'similar' && uploadedFiles.length > 0 ? "Will be auto-detected from file..." : "e.g., past tense, fractions, photosynthesis"}
+                      value={concept}
+                      onChange={(e) => setConcept(e.target.value)}
+                      className={`w-full bg-slate-900 border-2 rounded-lg p-3 text-white placeholder-slate-500 focus:border-amber-500 focus:outline-none transition-colors ${
+                        autoDetected ? 'border-emerald-600/50' : 'border-slate-600'
+                      }`}
+                      style={pixelText}
+                    />
+                    <p className="text-slate-500 text-xs mt-1" style={pixelText}>
+                      The specific skill or grammar point to practice
+                    </p>
+                  </div>
+                </>
+              )}
 
               {/* Number & Difficulty Row */}
               <div className="grid grid-cols-2 gap-4">
@@ -732,7 +917,10 @@ const ExerciseGenerator = () => {
                     style={pixelText}
                   >
                     <option value={5}>5 Questions (Fast)</option>
-                    <option value={10}>10 Questions (Max)</option>
+                    <option value={10}>10 Questions</option>
+                    {mode === 'reading' && (
+                      <option value={15}>15 Questions (Comprehensive)</option>
+                    )}
                   </select>
                 </div>
                 
@@ -753,23 +941,25 @@ const ExerciseGenerator = () => {
                 </div>
               </div>
 
-              {/* Generation Warning */}
-              {numExercises === 10 && (
+              {/* Generation Warning - MISSION 57: Updated timing for reading mode */}
+              {(numExercises >= 10 || mode === 'reading') && (
                 <div className="bg-amber-900/30 border border-amber-600/50 rounded-lg p-3 mb-4">
                   <p className="text-amber-400 text-xs font-bold flex items-center gap-2" style={pixelText}>
                     <span>⏱️</span>
-                    This may take 15-30 seconds. Please wait while AI writes your exercises...
+                    {mode === 'reading' 
+                      ? 'Reading passages take 2-4 minutes. Please wait and don\'t close this page...'
+                      : 'This may take 15-30 seconds. Please wait while AI writes your exercises...'}
                   </p>
                 </div>
               )}
 
               {/* Generate Button */}
               <PixelButton 
-                variant={mode === 'similar' ? 'accent' : 'gold'}
+                variant={mode === 'similar' ? 'accent' : mode === 'reading' ? 'success' : 'gold'}
                 onClick={generateExercises} 
                 disabled={loading || analyzing}
                 className="w-full mt-2"
-                icon={loading ? null : mode === 'similar' ? Copy : Wand2}
+                icon={loading ? null : mode === 'similar' ? Copy : mode === 'reading' ? null : Wand2}
               >
                 {loading ? (
                   <span className="flex items-center gap-2">
@@ -777,15 +967,35 @@ const ExerciseGenerator = () => {
                       animate={{ rotate: 360 }}
                       transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                     >
-                      ✨
+                      {mode === 'reading' ? '📖' : '✨'}
                     </motion.span>
                     <span className="flex flex-col items-start">
-                      <span>AI IS WRITING EXERCISES...</span>
-                      <span className="text-[10px] opacity-70 font-normal">This may take 15-30 seconds</span>
+                      {mode === 'reading' ? (
+                        // MISSION 57: Reading mode loading states (2-4 minutes)
+                        <>
+                          <span>
+                            {loadingStatus === 'writing_passage' 
+                              ? '📝 AI IS WRITING PASSAGE...' 
+                              : '❓ CREATING COMPREHENSION QUESTIONS...'}
+                          </span>
+                          <span className="text-[10px] opacity-70 font-normal">
+                            This may take 2-4 minutes • Please don't close this page
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <span>AI IS WRITING EXERCISES...</span>
+                          <span className="text-[10px] opacity-70 font-normal">
+                            This may take 15-30 seconds
+                          </span>
+                        </>
+                      )}
                     </span>
                   </span>
                 ) : mode === 'similar' ? (
                   'GENERATE SIMILAR EXERCISES'
+                ) : mode === 'reading' ? (
+                  '📖 GENERATE READING PRACTICE'
                 ) : (
                   'GENERATE WORKSHEET'
                 )}
@@ -823,11 +1033,27 @@ const ExerciseGenerator = () => {
               {/* Header */}
               <div className="text-center mb-8 border-b-4 border-black pb-6">
                 <h1 className="text-3xl font-bold mb-3" style={{ fontFamily: 'serif' }}>
-                  {exercises.title || `${subject} Practice Worksheet`}
+                  {exercises.isReadingComprehension 
+                    ? `📖 ${exercises.subject === 'Chinese' ? '閱讀理解練習' : 'Reading Comprehension'}`
+                    : (exercises.title || `${subject} Practice Worksheet`)}
                 </h1>
                 <div className="text-sm space-y-1" style={{ fontFamily: 'sans-serif' }}>
-                  <p><strong>Subject:</strong> {exercises.subject || subject} | <strong>Focus:</strong> {exercises.concept || concept}</p>
-                  <p><strong>Difficulty:</strong> {exercises.difficulty || difficulty} | <strong>Total Questions:</strong> {exercises.questions?.length || 0}</p>
+                  <p>
+                    <strong>Subject:</strong> {exercises.subject || subject} 
+                    {!exercises.isReadingComprehension && (
+                      <span> | <strong>Focus:</strong> {exercises.concept || concept}</span>
+                    )}
+                    {exercises.isReadingComprehension && exercises.passageType && (
+                      <span> | <strong>Type:</strong> {exercises.passageType}</span>
+                    )}
+                  </p>
+                  <p>
+                    <strong>Difficulty:</strong> {exercises.difficulty || difficulty} 
+                    <span> | <strong>Total Questions:</strong> {exercises.questions?.length || 0}</span>
+                    {exercises.wordCount && (
+                      <span> | <strong>Word Count:</strong> {exercises.wordCount}</span>
+                    )}
+                  </p>
                   {exercises.basedOn && (
                     <p><em>Generated based on {exercises.basedOn} reference exercises</em></p>
                   )}
@@ -846,43 +1072,131 @@ const ExerciseGenerator = () => {
                 </div>
               </div>
 
-              {/* Instructions */}
-              <div className="bg-gray-100 p-4 rounded-lg mb-6 text-sm italic">
-                <strong>Instructions:</strong> Read each question carefully. Write your answers clearly. 
-                For multiple choice, circle the correct letter. For fill-in-the-blanks, write the correct word(s).
-              </div>
-
-              {/* Questions */}
-              <div className="space-y-8">
-                {exercises.questions?.map((q, idx) => {
-                  const hasChoices = q.choices && q.choices.length > 0;
-                  const isFillBlank = q.type === 'fill_blank';
-                  const isTrueFalse = q.answer === 'T' || q.answer === 'F' || 
-                                     q.answer?.toString().toLowerCase() === 'true' || 
-                                     q.answer?.toString().toLowerCase() === 'false';
-                  
-                  // MISSION 54: Get type icon
-                  const typeIcon = q.type === 'multiple_choice' || (isFillBlank && hasChoices && !isTrueFalse) 
-                    ? '🔘' 
-                    : isTrueFalse 
-                      ? '✓/✗' 
-                      : q.type === 'match' 
-                        ? '⇄' 
-                        : q.type === 'error_correction'
-                          ? '✏️'
-                          : '✏️';
-                  
-                  return (
-                    <div key={idx} className="break-inside-avoid">
-                      <p className="font-bold text-base mb-3" style={{ fontFamily: 'serif' }}>
-                        <span className="text-slate-500 mr-1">{typeIcon}</span>
-                        {idx + 1}. {cleanQuestionText(q.question, hasChoices)}
-                      </p>
-                      {renderQuestion(q, idx)}
+              {/* MISSION 55: Reading Comprehension Display */}
+              {exercises.isReadingComprehension ? (
+                <>
+                  {/* Passage Title */}
+                  {exercises.title && (
+                    <div className="text-center mb-6">
+                      <h2 className="text-xl font-bold" style={{ fontFamily: 'serif' }}>
+                        {exercises.title}
+                      </h2>
+                      {exercises.wordCount && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          ({exercises.wordCount} words)
+                        </p>
+                      )}
                     </div>
-                  );
-                })}
-              </div>
+                  )}
+
+                  {/* Reading Passage */}
+                  <div className="bg-gray-50 p-6 rounded-lg mb-8 border-2 border-gray-200">
+                    <h3 className="text-sm font-bold text-gray-600 mb-3 uppercase tracking-wide">
+                      📖 Reading Passage
+                    </h3>
+                    <div 
+                      className="text-sm leading-relaxed text-justify"
+                      style={{ fontFamily: 'serif', lineHeight: '1.8' }}
+                    >
+                      {exercises.passage?.split('\n').map((paragraph, idx) => (
+                        <p key={idx} className="mb-4 indent-8">
+                          {paragraph}
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Vocabulary List */}
+                  {exercises.vocabulary && exercises.vocabulary.length > 0 && (
+                    <div className="bg-amber-50 p-4 rounded-lg mb-8 border border-amber-200">
+                      <h3 className="text-sm font-bold text-amber-800 mb-3">
+                        📝 Vocabulary ({exercises.subject === 'Chinese' ? '詞彙' : 'Vocabulary'})
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                        {exercises.vocabulary.map((v, idx) => (
+                          <div key={idx} className="bg-white p-2 rounded border border-amber-100">
+                            <span className="font-bold text-amber-900">{v.word}</span>
+                            <span className="text-gray-600"> — {v.meaning}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Instructions */}
+                  <div className="bg-gray-100 p-4 rounded-lg mb-6 text-sm italic">
+                    <strong>Instructions:</strong> {exercises.subject === 'Chinese' 
+                      ? '閱讀以上文章，然後回答下列問題。請在選擇題中圈出正確答案。' 
+                      : 'Read the passage above, then answer the questions below. Circle the correct letter for multiple choice questions.'}
+                  </div>
+
+                  {/* Reading Questions */}
+                  <div className="space-y-6">
+                    {exercises.questions?.map((q, idx) => (
+                      <div key={idx} className="break-inside-avoid">
+                        <p className="font-bold text-base mb-2" style={{ fontFamily: 'serif' }}>
+                          <span className="text-emerald-600 text-sm mr-2">
+                            [{q.type === 'main_idea' || q.type === '主旨' ? '主旨' :
+                              q.type === 'detail' || q.type === '段意' ? '段意' :
+                              q.type === 'vocabulary' || q.type === '詞意' ? '詞意' :
+                              q.type === 'inference' || q.type === '推理' ? '推理' :
+                              q.type === 'tone' || q.type === '語氣' ? '語氣' :
+                              q.type === '賞析' ? '賞析' : '理解'}]
+                          </span>
+                          {idx + 1}. {q.question}
+                        </p>
+                        <div className="ml-4 grid grid-cols-1 md:grid-cols-2 gap-2">
+                          {q.options?.map((option, i) => (
+                            <p key={i} className="text-sm">
+                              <span className="font-bold">{String.fromCharCode(65 + i)}.</span> {option.replace(/^[A-D]\.\s*/, '')}
+                            </p>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* Instructions */}
+                  <div className="bg-gray-100 p-4 rounded-lg mb-6 text-sm italic">
+                    <strong>Instructions:</strong> Read each question carefully. Write your answers clearly. 
+                    For multiple choice, circle the correct letter. For fill-in-the-blanks, write the correct word(s).
+                  </div>
+
+                  {/* Questions */}
+                  <div className="space-y-8">
+                    {exercises.questions?.map((q, idx) => {
+                      const hasChoices = q.choices && q.choices.length > 0;
+                      const isFillBlank = q.type === 'fill_blank';
+                      const isTrueFalse = q.answer === 'T' || q.answer === 'F' || 
+                                         q.answer?.toString().toLowerCase() === 'true' || 
+                                         q.answer?.toString().toLowerCase() === 'false';
+                      
+                      // MISSION 54: Get type icon
+                      const typeIcon = q.type === 'multiple_choice' || (isFillBlank && hasChoices && !isTrueFalse) 
+                        ? '🔘' 
+                        : isTrueFalse 
+                          ? '✓/✗' 
+                          : q.type === 'match' 
+                            ? '⇄' 
+                            : q.type === 'error_correction'
+                              ? '✏️'
+                              : '✏️';
+                      
+                      return (
+                        <div key={idx} className="break-inside-avoid">
+                          <p className="font-bold text-base mb-3" style={{ fontFamily: 'serif' }}>
+                            <span className="text-slate-500 mr-1">{typeIcon}</span>
+                            {idx + 1}. {cleanQuestionText(q.question, hasChoices)}
+                          </p>
+                          {renderQuestion(q, idx)}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
 
               {/* Footer */}
               <div className="mt-12 pt-6 border-t-2 border-gray-300 text-center text-xs text-gray-500">
@@ -895,19 +1209,42 @@ const ExerciseGenerator = () => {
                 <h3 className="text-xl font-bold mb-6 text-center" style={{ fontFamily: 'serif' }}>
                   ANSWER KEY (For Teacher Use Only)
                 </h3>
-                <div className="grid grid-cols-4 md:grid-cols-5 gap-4 text-sm">
-                  {exercises.questions?.map((q, idx) => {
-                    // MISSION 54: Format answer cleanly
-                    let answerText = typeof q.answer === 'object' ? q.answer.text : q.answer;
-                    // Clean duplicate prefixes and leading letter markers
-                    answerText = cleanText(answerText).replace(/^[A-D]\.\s*/, '');
-                    return (
-                      <div key={idx} className="bg-gray-100 p-2 rounded">
-                        <span className="font-bold">{idx + 1}.</span> {answerText}
+                
+                {exercises.isReadingComprehension ? (
+                  // MISSION 55: Reading comprehension answer key with explanations
+                  <div className="space-y-3 text-sm">
+                    {exercises.questions?.map((q, idx) => (
+                      <div key={idx} className="bg-gray-100 p-3 rounded">
+                        <div className="flex items-start gap-2">
+                          <span className="font-bold whitespace-nowrap">{idx + 1}.</span>
+                          <div>
+                            <span className="font-bold text-emerald-700">{q.answer}</span>
+                            {q.explanation && (
+                              <p className="text-xs text-gray-600 mt-1 italic">
+                                {q.explanation}
+                              </p>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                    );
-                  })}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  // Standard answer key
+                  <div className="grid grid-cols-4 md:grid-cols-5 gap-4 text-sm">
+                    {exercises.questions?.map((q, idx) => {
+                      // MISSION 54: Format answer cleanly
+                      let answerText = typeof q.answer === 'object' ? q.answer.text : q.answer;
+                      // Clean duplicate prefixes and leading letter markers
+                      answerText = cleanText(answerText).replace(/^[A-D]\.\s*/, '');
+                      return (
+                        <div key={idx} className="bg-gray-100 p-2 rounded">
+                          <span className="font-bold">{idx + 1}.</span> {answerText}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
 
