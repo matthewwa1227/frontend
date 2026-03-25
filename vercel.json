@@ -1,6 +1,11 @@
 {
   "version": 2,
   "name": "studyquest-frontend",
+  "build": {
+    "env": {
+      "CI": "false"
+    }
+  },
   "builds": [
     {
       "src": "package.json",
