@@ -135,6 +135,7 @@ export default function Login() {
             <div className="bg-pixel-dark border-2 border-pixel-accent p-3">
               <p className="text-xs font-mono text-gray-400">Email: alice@example.com</p>
               <p className="text-xs font-mono text-gray-400">Password: Alice123</p>
+              <br />
               <p className="text-xs font-mono text-gray-400">Email: Test@test.com</p>
               <p className="text-xs font-mono text-gray-400">Password: Test1234</p>
               <br />
