@@ -7,7 +7,7 @@ import Login from './components/auth/Login';
 import Register from './components/auth/Register';
 
 // --- Student Components ---
-import Dashboard from './components/dashboard/Dashboard';
+import Dashboard from './pages/Dashboard';
 import StudyTimer from './components/StudyTimer/StudyTimer';
 import Achievements from './components/Achievements/Achievements';
 import Profile from './components/profile/Profile';
