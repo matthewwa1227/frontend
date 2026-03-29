@@ -243,10 +243,129 @@ const StudyBuddy = () => {
   const [attachedFiles, setAttachedFiles] = useState([]);
   const [uploadProgress, setUploadProgress] = useState(null);
   const [showFileLimits, setShowFileLimits] = useState(false);
+  const [showCapabilities, setShowCapabilities] = useState(true);
+  const [capabilities, setCapabilities] = useState([]);
+  const [activeCategory, setActiveCategory] = useState(null);
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
   const videoInputRef = useRef(null);
   const user = getUser();
+
+  // Capability categories with icons and colors
+  const capabilityCategories = [
+    {
+      id: 'knowledge',
+      title: '📚 Knowledge & Research',
+      description: 'Ask me anything! Science, History, Coding, Creative Writing, Analysis, and more.',
+      color: 'from-blue-500 to-cyan-500',
+      bgColor: 'bg-blue-900/30',
+      borderColor: 'border-blue-500',
+      examples: [
+        'Explain photosynthesis like I\'m 12',
+        'What caused World War II?',
+        'How do I write a good essay introduction?',
+        'Help me understand Pythagorean theorem'
+      ]
+    },
+    {
+      id: 'images',
+      title: '🖼️ Image Analysis',
+      description: 'Upload images and I\'ll analyze them! Worksheets, diagrams, charts, problems, and more.',
+      color: 'from-purple-500 to-pink-500',
+      bgColor: 'bg-purple-900/30',
+      borderColor: 'border-purple-500',
+      examples: [
+        'Help me solve this math problem (upload image)',
+        'What does this diagram show?',
+        'Read the text in this photo',
+        'Explain this chart to me'
+      ]
+    },
+    {
+      id: 'coding',
+      title: '💻 Coding & Programming',
+      description: 'Write and debug code in Python, JavaScript, HTML/CSS, and more.',
+      color: 'from-green-500 to-emerald-500',
+      bgColor: 'bg-green-900/30',
+      borderColor: 'border-green-500',
+      examples: [
+        'Write a Python function to calculate factorial',
+        'Debug this JavaScript code',
+        'Explain what this code does',
+        'Help me create a simple calculator app'
+      ]
+    },
+    {
+      id: 'writing',
+      title: '✍️ Writing & Content',
+      description: 'Draft essays, reports, emails, creative writing, and get feedback.',
+      color: 'from-orange-500 to-amber-500',
+      bgColor: 'bg-orange-900/30',
+      borderColor: 'border-orange-500',
+      examples: [
+        'Help me write an email to my teacher',
+        'Give me feedback on this essay paragraph',
+        'Help me start a creative story',
+        'How do I structure a book report?'
+      ]
+    },
+    {
+      id: 'language',
+      title: '🌐 Translation & Language',
+      description: 'Translate between English and Chinese, explain grammar, build vocabulary.',
+      color: 'from-indigo-500 to-violet-500',
+      bgColor: 'bg-indigo-900/30',
+      borderColor: 'border-indigo-500',
+      examples: [
+        'Translate this to Chinese',
+        'Explain the difference between affect and effect',
+        'How do I say "thank you" formally in English?',
+        'Help me practice English conversation'
+      ]
+    },
+    {
+      id: 'study',
+      title: '🧠 Study Skills',
+      description: 'Study techniques, memory tips, test prep strategies, and study plans.',
+      color: 'from-teal-500 to-cyan-500',
+      bgColor: 'bg-teal-900/30',
+      borderColor: 'border-teal-500',
+      examples: [
+        'What\'s the best way to memorize vocabulary?',
+        'Help me create a study schedule',
+        'How do I prepare for a DSE exam?',
+        'Give me tips for staying focused'
+      ]
+    },
+    {
+      id: 'data',
+      title: '📊 Data & Analysis',
+      description: 'Analyze data, create charts, help with statistics and calculations.',
+      color: 'from-rose-500 to-pink-500',
+      bgColor: 'bg-rose-900/30',
+      borderColor: 'border-rose-500',
+      examples: [
+        'Help me understand this data',
+        'How do I calculate the average?',
+        'Explain what correlation means',
+        'Help me organize this information'
+      ]
+    },
+    {
+      id: 'homework',
+      title: '📝 Homework Help',
+      description: 'Get guidance on homework using the Socratic method - I\'ll guide you to the answer!',
+      color: 'from-yellow-500 to-amber-500',
+      bgColor: 'bg-yellow-900/30',
+      borderColor: 'border-yellow-500',
+      examples: [
+        'I\'m stuck on this problem, can you give me a hint?',
+        'How do I approach this question?',
+        'What formula should I use here?',
+        'Check my work on this problem'
+      ]
+    }
+  ];
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -282,16 +401,42 @@ const StudyBuddy = () => {
           { role: 'assistant', content: conv.ai_response, timestamp: conv.created_at }
         ]);
         setMessages(formattedMessages);
+        // If we have history, hide the capabilities panel
+        if (formattedMessages.length > 0) {
+          setShowCapabilities(false);
+        }
       }
     } catch (error) {
       console.error('Failed to load history:', error);
-      setMessages([{
-        role: 'assistant',
-        content: `Hey there! 🤖 I'm your Study Buddy. I'm here to help you learn, stay motivated, and crush your goals. You can also share images or videos with me, and I'll help analyze them! What would you like to work on today?`,
-        timestamp: new Date().toISOString()
-      }]);
+      // Keep capabilities visible for new users
     } finally {
       setIsLoadingHistory(false);
+    }
+  };
+
+  const handleExampleClick = (example) => {
+    setInputMessage(example);
+    setActiveCategory(null);
+    // Optionally auto-send: sendMessage({ preventDefault: () => {} });
+  };
+
+  const handleQuickAction = async (actionType, context = {}) => {
+    try {
+      setIsLoading(true);
+      const response = await aiAPI.quickAction(actionType, context);
+      
+      if (response.data.success) {
+        const assistantMessage = {
+          role: 'assistant',
+          content: response.data.response,
+          timestamp: new Date().toISOString()
+        };
+        setMessages(prev => [...prev, assistantMessage]);
+      }
+    } catch (error) {
+      console.error('Quick action error:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -494,22 +639,21 @@ const StudyBuddy = () => {
 
   const clearChat = async () => {
     try {
-      setMessages([{
-        role: 'assistant',
-        content: `Chat cleared! 🎉 Ready to start fresh. What would you like to learn about?`,
-        timestamp: new Date().toISOString()
-      }]);
+      setMessages([]);
       setAttachedFiles([]);
+      setShowCapabilities(true);
     } catch (error) {
       console.error('Failed to clear chat:', error);
     }
   };
 
   const quickPrompts = [
-    { text: "Help me understand", emoji: "📚" },
+    { text: "Explain like I'm 12", emoji: "📚" },
     { text: "Give me a hint", emoji: "💡" },
-    { text: "Explain step by step", emoji: "📝" },
-    { text: "Motivate me", emoji: "🔥" }
+    { text: "Step by step", emoji: "📝" },
+    { text: "Motivate me!", emoji: "🔥" },
+    { text: "Study tips", emoji: "🧠" },
+    { text: "Practice problem", emoji: "✏️" }
   ];
 
   const formatTime = (timestamp) => {
@@ -531,6 +675,15 @@ const StudyBuddy = () => {
               </div>
             </div>
             <div className="flex gap-2">
+              {messages.length > 0 && (
+                <button
+                  onClick={() => setShowCapabilities(!showCapabilities)}
+                  className="bg-blue-500 hover:bg-blue-400 text-white px-3 py-2 text-sm border-2 border-white transition-all hover:scale-105 rounded"
+                  title={showCapabilities ? "Hide capabilities" : "Show what I can do"}
+                >
+                  {showCapabilities ? '💬 Chat' : '✨ Capabilities'}
+                </button>
+              )}
               <button
                 onClick={clearChat}
                 className="bg-red-500 hover:bg-red-400 text-white px-3 py-2 text-sm border-2 border-white transition-all hover:scale-105 rounded"
@@ -610,12 +763,100 @@ const StudyBuddy = () => {
                   <p className="text-gray-400">Loading conversation...</p>
                 </div>
               </div>
-            ) : messages.length === 0 ? (
-              <div className="flex items-center justify-center h-full">
-                <div className="text-center">
-                  <div className="text-6xl mb-4">🤖</div>
-                  <p className="text-gray-400 mb-2">Start a conversation!</p>
-                  <p className="text-gray-500 text-sm">Ask me anything about studying, share images or videos for analysis, or let me help you understand difficult concepts.</p>
+            ) : showCapabilities ? (
+              /* Capabilities Showcase */
+              <div className="space-y-4">
+                {/* Welcome Header */}
+                <div className="text-center py-4">
+                  <div className="text-5xl mb-3">🤖</div>
+                  <h2 className="text-xl font-bold text-white mb-2" style={pixelText}>Hello, I'm Study Buddy!</h2>
+                  <p className="text-gray-400 text-sm max-w-md mx-auto">
+                    Your AI learning companion! I can help with homework, explain concepts, 
+                    analyze images, write code, and much more. What would you like to explore?
+                  </p>
+                </div>
+
+                {/* Capability Categories Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {capabilityCategories.map((category) => (
+                    <div
+                      key={category.id}
+                      className={`p-3 rounded-lg border-2 ${category.borderColor} ${category.bgColor} cursor-pointer transition-all hover:scale-[1.02]`}
+                      onClick={() => setActiveCategory(activeCategory === category.id ? null : category.id)}
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-xl">{category.title.split(' ')[0]}</span>
+                        <h3 className="font-bold text-white text-sm">{category.title.split(' ').slice(1).join(' ')}</h3>
+                      </div>
+                      <p className="text-gray-300 text-xs mb-2">{category.description}</p>
+                      
+                      {/* Expanded Examples */}
+                      {activeCategory === category.id && (
+                        <div className="mt-2 pt-2 border-t border-gray-600/50 space-y-1">
+                          <p className="text-xs text-gray-400 mb-1">Try asking:</p>
+                          {category.examples.map((example, idx) => (
+                            <button
+                              key={idx}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleExampleClick(example);
+                              }}
+                              className="block w-full text-left text-xs text-gray-300 hover:text-white hover:bg-white/10 px-2 py-1 rounded transition-colors"
+                            >
+                              💬 "{example}"
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      
+                      {activeCategory !== category.id && (
+                        <div className="text-xs text-gray-500 flex items-center gap-1">
+                          <span>Click to see examples</span>
+                          <span>▼</span>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Quick Actions */}
+                <div className="bg-slate-700/50 rounded-lg p-3 border border-slate-600">
+                  <h3 className="text-sm font-bold text-white mb-2 flex items-center gap-2">
+                    <span>⚡</span> Quick Actions
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() => handleQuickAction('motivation')}
+                      className="px-3 py-1.5 bg-gradient-to-r from-pink-500 to-rose-500 text-white text-xs rounded-full hover:scale-105 transition-transform"
+                    >
+                      🌟 Get Motivated
+                    </button>
+                    <button
+                      onClick={() => handleQuickAction('study_tips', { subject: 'general' })}
+                      className="px-3 py-1.5 bg-gradient-to-r from-blue-500 to-cyan-500 text-white text-xs rounded-full hover:scale-105 transition-transform"
+                    >
+                      📚 Study Tips
+                    </button>
+                    <button
+                      onClick={() => handleQuickAction('memory_trick', { topic: 'vocabulary' })}
+                      className="px-3 py-1.5 bg-gradient-to-r from-green-500 to-emerald-500 text-white text-xs rounded-full hover:scale-105 transition-transform"
+                    >
+                      🧠 Memory Trick
+                    </button>
+                    <button
+                      onClick={() => handleQuickAction('practice_problem', { subject: 'math' })}
+                      className="px-3 py-1.5 bg-gradient-to-r from-purple-500 to-violet-500 text-white text-xs rounded-full hover:scale-105 transition-transform"
+                    >
+                      ✏️ Practice Problem
+                    </button>
+                  </div>
+                </div>
+
+                {/* File Upload Hint */}
+                <div className="text-center py-2">
+                  <p className="text-xs text-gray-500">
+                    💡 <span className="text-purple-400">Pro tip:</span> You can upload images (📷) and videos (🎥) for me to analyze!
+                  </p>
                 </div>
               </div>
             ) : (

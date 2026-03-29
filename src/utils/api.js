@@ -183,6 +183,10 @@ export const aiAPI = {
   chatWithMedia: (message, conversationHistory, media) => 
     api.post('/ai/chat', { message, context: conversationHistory, media }),
   getTips: (subject, difficulty) => api.get(`/ai/tips?subject=${subject}&difficulty=${difficulty}`),
+  
+  // AI Capabilities
+  getCapabilities: () => api.get('/ai/capabilities'),
+  quickAction: (action, context = {}) => api.post('/ai/quick-action', { action, context }),
 };
 
 // Exercise Generator API

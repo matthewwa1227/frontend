@@ -1,5 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
-
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -10,58 +9,234 @@
   image-rendering: crisp-edges;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   margin: 0;
+  font-family: 'Inter', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #1a063b;
+  color: #ebddff;
+}
+
+/* Pixel font for specific elements */
+.font-pixel {
   font-family: 'Press Start 2P', cursive;
   -webkit-font-smoothing: none;
-  -moz-osx-font-smoothing: grayscale;
-  background: #0f0f1e;
-  color: #ffffff;
+  -moz-osx-font-smoothing: unset;
 }
 
-/* Pixel borders */
-.pixel-border {
-  border: 4px solid;
-  border-image-slice: 2;
-  border-image-width: 2;
-  border-image-outset: 0;
-  border-image-source: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="6" height="6"><rect width="6" height="6" fill="white"/><rect x="1" y="1" width="4" height="4" fill="transparent"/></svg>');
-  border-image-repeat: repeat;
+/* Material Symbols font settings */
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Retro button style */
-.pixel-btn {
-  @apply px-6 py-3 font-pixel text-xs uppercase tracking-wider border-4 border-white bg-pixel-accent text-white shadow-pixel transition-all duration-100;
+.material-symbols-outlined.fill {
+  font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
 
-.pixel-btn:hover {
-  @apply bg-pixel-highlight shadow-pixel-sm translate-x-1 translate-y-1;
-}
-
-.pixel-btn:active {
-  @apply shadow-none translate-x-2 translate-y-2;
-}
-
-/* Pixel card */
-.pixel-card {
-  @apply bg-pixel-dark border-4 border-pixel-accent shadow-pixel p-6;
-}
-
-/* Scrollbar styling */
+/* Scrollbar Styling */
 ::-webkit-scrollbar {
-  width: 12px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #1a1a2e;
-  border: 2px solid #533483;
+  background: #1a063b;
+  border: 2px solid #271448;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #533483;
-  border: 2px solid #1a1a2e;
+  background: #ff4a8d;
+  border: 2px solid #1a063b;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #e94560;
+  background: #ffb1c4;
+}
+
+/* Firefox scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #ff4a8d #1a063b;
+}
+
+/* Selection styling */
+::selection {
+  background-color: #ff4a8d;
+  color: #590028;
+}
+
+/* Focus outline for accessibility */
+:focus-visible {
+  outline: 2px solid #ff4a8d;
+  outline-offset: 2px;
+}
+
+/* Button reset */
+button {
+  font-family: inherit;
+}
+
+/* Input reset */
+input, textarea, select {
+  font-family: inherit;
+  background-color: #271448;
+  color: #ebddff;
+  border: 2px solid #5c3f46;
+}
+
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: #ff4a8d;
+}
+
+input::placeholder, textarea::placeholder {
+  color: #ac878f;
+  opacity: 0.6;
+}
+
+/* Link reset */
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Animation reduction for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+.reduce-animations * {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
+
+/* Pixel mode specific styles */
+.pixel-mode {
+  --pixel-border-size: 4px;
+}
+
+/* Custom utility classes */
+@layer utilities {
+  .text-shadow-pixel {
+    text-shadow: 2px 2px 0px rgba(0, 0, 0, 0.5);
+  }
+  
+  .text-shadow-pixel-lg {
+    text-shadow: 4px 4px 0px rgba(0, 0, 0, 0.5);
+  }
+  
+  .image-pixelated {
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: crisp-edges;
+  }
+  
+  .pixel-border {
+    box-shadow: 
+      0 -4px 0 0 #271448,
+      0 4px 0 0 #271448,
+      -4px 0 0 0 #271448,
+      4px 0 0 0 #271448;
+  }
+  
+  .pixel-border-primary {
+    box-shadow: 
+      0 -4px 0 0 #ff4a8d,
+      0 4px 0 0 #ff4a8d,
+      -4px 0 0 0 #ff4a8d,
+      4px 0 0 0 #ff4a8d;
+  }
+  
+  .pixel-border-secondary {
+    box-shadow: 
+      0 -4px 0 0 #00f1fe,
+      0 4px 0 0 #00f1fe,
+      -4px 0 0 0 #00f1fe,
+      4px 0 0 0 #00f1fe;
+  }
+  
+  .pixel-segmented {
+    background-image: linear-gradient(90deg, transparent 0%, transparent 75%, rgba(0,0,0,0.3) 75%, rgba(0,0,0,0.3) 100%);
+    background-size: 8px 100%;
+  }
+  
+  .pixel-grid-bg {
+    background-image: radial-gradient(#271448 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+  
+  .glass-panel {
+    background: rgba(61, 43, 94, 0.6);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+  
+  .step-easing {
+    transition-timing-function: steps(4, end);
+  }
+  
+  .scrollbar-pixel {
+    scrollbar-width: thin;
+    scrollbar-color: #ff4a8d #1a063b;
+  }
+  
+  .scrollbar-pixel::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  .scrollbar-pixel::-webkit-scrollbar-track {
+    background: #1a063b;
+    border: 2px solid #271448;
+  }
+  
+  .scrollbar-pixel::-webkit-scrollbar-thumb {
+    background: #ff4a8d;
+    border: 2px solid #1a063b;
+  }
+}
+
+/* Legacy compatibility classes */
+.pixel-btn {
+  @apply px-6 py-3 font-pixel text-xs uppercase tracking-wider border-b-4 border-on-primary-fixed-variant bg-primary-container text-on-primary shadow-pixel-primary transition-all duration-100 active:translate-y-1 active:shadow-none hover:brightness-110;
+}
+
+.pixel-card {
+  @apply bg-surface-container border-2 border-outline-variant shadow-pixel p-6;
+}
+
+/* Prevent text selection on interactive elements */
+button, a {
+  user-select: none;
+}
+
+/* Mobile tap highlight */
+@media (hover: none) {
+  button:active, a:active {
+    opacity: 0.8;
+  }
 }
