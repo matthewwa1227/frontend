@@ -17,6 +17,7 @@ import Avatar from '../components/ui/Avatar';
 /**
  * Hero's Hub Dashboard - Main student landing page
  * 6 Sections: Hero Status, Guild Stats, Quest Map, Daily Quests, Recent Victories
+ * Matches Stitch Pixel-Art Design exactly
  */
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -31,13 +32,13 @@ const Dashboard = () => {
   const [error, setError] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Navigation items
+  // Navigation items with proper Material Symbols icons
   const navItems = [
-    { id: 'study', label: 'Study', icon: 'menu_book', href: '/dashboard', active: true },
-    { id: 'tasks', label: 'Tasks', icon: 'checklist', href: '/tasks', badge: '3' },
-    { id: 'ai-tutor', label: 'AI Tutor', icon: 'psychology', href: '/study-buddy' },
-    { id: 'social', label: 'Social', icon: 'groups', href: '/social' },
-    { id: 'progress', label: 'Progress', icon: 'trending_up', href: '/progress' },
+    { id: 'study', label: 'STUDY', icon: 'menu_book', href: '/dashboard', active: true },
+    { id: 'tasks', label: 'TASKS', icon: 'checklist', href: '/tasks', badge: '3' },
+    { id: 'ai-tutor', label: 'AI TUTOR', icon: 'smart_toy', href: '/study-buddy' },
+    { id: 'social', label: 'SOCIAL', icon: 'groups', href: '/social' },
+    { id: 'progress', label: 'PROGRESS', icon: 'trending_up', href: '/progress' },
   ];
 
   // Fetch dashboard data
@@ -141,9 +142,9 @@ const Dashboard = () => {
           isOpen={mobileMenuOpen}
           onClose={() => setMobileMenuOpen(false)}
         />
-        <main className="lg:ml-64 pt-20 px-4 pb-24">
+        <main className="md:ml-64 pt-24 px-6 pb-24">
           <div className="max-w-7xl mx-auto">
-            <div className="grid grid-cols-12 gap-4">
+            <div className="grid grid-cols-12 gap-6">
               <div className="col-span-12 lg:col-span-8">
                 <PixelCard className="h-64 animate-pulse" />
               </div>
@@ -172,9 +173,11 @@ const Dashboard = () => {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <PixelCard variant="elevated" className="max-w-md w-full text-center">
-          <div className="text-6xl mb-4">💀</div>
-          <h2 className="font-pixel text-lg text-error mb-4">{error}</h2>
-          <p className="font-pixel text-[10px] text-on-surface-variant mb-6">
+          <div className="text-6xl mb-4">
+            <span className="material-symbols-outlined text-6xl text-error">skull</span>
+          </div>
+          <h2 className="font-['Press_Start_2P'] text-lg text-error mb-4">{error}</h2>
+          <p className="font-['Press_Start_2P'] text-[10px] text-on-surface-variant mb-6">
             THE SHADOW HAS SEVERED YOUR CONNECTION
           </p>
           <PixelButton onClick={fetchDashboardData} variant="tertiary">
@@ -202,52 +205,50 @@ const Dashboard = () => {
         onClose={() => setMobileMenuOpen(false)}
       />
 
-      {/* Main Content */}
-      <main className="lg:ml-64 pt-20 px-4 pb-24 lg:pb-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-12 gap-4 lg:gap-6">
-            
-            {/* Row 1: Hero Status HUD */}
-            <div className="col-span-12 lg:col-span-8">
-              <HeroStatusCard 
-                user={user}
-                title={getUserTitle()}
-                xpPercentage={getXPPercentage()}
-                shadowPercentage={getShadowPercentage()}
-              />
-            </div>
+      {/* Main Content - Match Stitch HTML: grid-cols-12 gap-6, max-w-7xl */}
+      <main className="md:ml-64 pt-24 px-6 pb-12 min-h-screen">
+        <div className="max-w-7xl mx-auto grid grid-cols-12 gap-6">
+          
+          {/* Row 1: Hero Status HUD - col-span-12 lg:col-span-8 */}
+          <section className="col-span-12 lg:col-span-8">
+            <HeroStatusCard 
+              user={user}
+              title={getUserTitle()}
+              xpPercentage={getXPPercentage()}
+              shadowPercentage={getShadowPercentage()}
+            />
+          </section>
 
-            {/* Row 1: Guild Stats Card */}
-            <div className="col-span-12 lg:col-span-4">
-              <GuildStatsCard 
-                rank={guildRank?.rank || 12}
-                onViewLeaderboard={() => navigate('/leaderboard')}
-              />
-            </div>
+          {/* Row 1: Guild Stats Card - col-span-12 lg:col-span-4 */}
+          <section className="col-span-12 lg:col-span-4">
+            <GuildStatsCard 
+              rank={guildRank?.rank || 12}
+              onViewLeaderboard={() => navigate('/leaderboard')}
+            />
+          </section>
 
-            {/* Row 2: Quest Map */}
-            <div className="col-span-12">
-              <QuestMap 
-                progress={64}
-                onNodeClick={handleNodeClick}
-              />
-            </div>
+          {/* Row 2: Quest Map - col-span-12, aspect-[21/9] */}
+          <section className="col-span-12">
+            <QuestMap 
+              progress={64}
+              onNodeClick={handleNodeClick}
+            />
+          </section>
 
-            {/* Row 3: Daily Quests */}
-            <div className="col-span-12 lg:col-span-7">
-              <DailyQuests 
-                quests={dailyQuests}
-                onQuestClick={handleQuestClick}
-              />
-            </div>
+          {/* Row 3: Daily Quests - col-span-12 lg:col-span-7 */}
+          <section className="col-span-12 lg:col-span-7">
+            <DailyQuests 
+              quests={dailyQuests}
+              onQuestClick={handleQuestClick}
+            />
+          </section>
 
-            {/* Row 3: Recent Victories */}
-            <div className="col-span-12 lg:col-span-5">
-              <RecentVictories 
-                sessions={recentSessions}
-              />
-            </div>
-          </div>
+          {/* Row 3: Recent Victories - col-span-12 lg:col-span-5 */}
+          <section className="col-span-12 lg:col-span-5">
+            <RecentVictories 
+              sessions={recentSessions}
+            />
+          </section>
         </div>
       </main>
 
@@ -265,170 +266,143 @@ const Dashboard = () => {
 };
 
 /**
- * Hero Status HUD Component
+ * Hero Status HUD Component - Matches Stitch HTML exactly
  * Shows avatar, XP bar, Shadow of Doom bar, and rank badges
  */
 const HeroStatusCard = ({ user, title, xpPercentage, shadowPercentage }) => {
-  const level = user?.level || 9;
+  const level = user?.level || 42;
   const xp = user?.xp || 9000;
   const nextLevelXP = level * 1250;
 
   return (
-    <PixelCard variant="primary" className="h-full">
-      <div className="flex flex-col lg:flex-row gap-6">
-        {/* Left: Avatar & Level */}
-        <div className="flex flex-col items-center lg:items-start gap-2">
-          <Avatar 
-            src={user?.avatar}
-            alt={user?.username}
-            size="2xl"
-            variant="tertiary"
-            rpgClass="mage"
-            level={level}
-            glow
-          />
-          <div className="text-center lg:text-left">
-            <div className="font-pixel text-[10px] text-tertiary">LEVEL {level}</div>
+    <div className="bg-surface-container-high border-2 border-outline-variant p-6 shadow-[4px_4px_0px_0px_#150136] relative overflow-hidden h-full">
+      {/* Background Shadow Pattern */}
+      <div className="absolute inset-0 opacity-5 pointer-events-none flex items-center justify-center">
+        <span className="material-symbols-outlined text-[200px]" style={{fontVariationSettings: "'FILL' 1"}}>skull</span>
+      </div>
+      
+      <div className="relative z-10">
+        {/* Header: Avatar + Title + Reward */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
+          <div className="flex items-center gap-6">
+            {/* Avatar Placeholder with Shield Icon */}
+            <div className="w-20 h-20 border-4 border-tertiary bg-surface-container shadow-[4px_4px_0px_0px_#4c3f00] flex items-center justify-center">
+              <span className="material-symbols-outlined text-4xl text-tertiary" style={{fontVariationSettings: "'FILL' 1"}}>
+                shield_with_heart
+              </span>
+            </div>
+            <div>
+              <h1 className="font-['Press_Start_2P'] text-xl text-primary mb-2">{title}</h1>
+              <div className="flex gap-4">
+                <span className="px-2 py-1 bg-surface-container-lowest text-secondary font-['Press_Start_2P'] text-[10px]">RANK: ELITE</span>
+                <span className="px-2 py-1 bg-surface-container-lowest text-tertiary font-['Press_Start_2P'] text-[10px]">WIN STREAK: 7</span>
+              </div>
+            </div>
+          </div>
+          <div className="text-right">
+            <span className="font-['Press_Start_2P'] text-[10px] text-secondary opacity-60">NEXT REWARD: VOID POTION</span>
+            <div className="flex justify-end gap-1 mt-2">
+              <div className="w-3 h-3 bg-tertiary"></div>
+              <div className="w-3 h-3 bg-tertiary"></div>
+              <div className="w-3 h-3 bg-tertiary"></div>
+              <div className="w-3 h-3 bg-surface-container"></div>
+              <div className="w-3 h-3 bg-surface-container"></div>
+            </div>
           </div>
         </div>
 
-        {/* Right: Stats */}
-        <div className="flex-1 space-y-4">
-          {/* Title */}
-          <div>
-            <h2 className="font-headline text-xl lg:text-2xl font-black text-primary uppercase tracking-tight">
-              {title}
-            </h2>
-            <p className="font-pixel text-[10px] text-on-surface-variant mt-1">
-              {user?.username || 'HERO'}
-            </p>
-          </div>
-
+        {/* Progress Bars */}
+        <div className="space-y-6">
           {/* XP Bar */}
-          <div className="space-y-1">
-            <div className="flex justify-between items-center">
-              <span className="font-pixel text-[10px] text-secondary uppercase tracking-wider">
-                Experience
-              </span>
-              <span className="font-pixel text-[10px] text-secondary">
-                {xp.toLocaleString()} / {nextLevelXP.toLocaleString()}
-              </span>
+          <div>
+            <div className="flex justify-between mb-2 font-['Press_Start_2P'] text-[10px]">
+              <span className="text-secondary">EXPERIENCE POINTS (XP)</span>
+              <span className="text-secondary">{Math.round(xpPercentage)}% [{xp.toLocaleString()} / {nextLevelXP.toLocaleString()}]</span>
             </div>
-            <ProgressBar 
-              value={xpPercentage}
-              variant="xp"
-              size="lg"
-              segmented
-              showLabel={false}
-            />
+            <div className="h-6 bg-surface-container-lowest border-2 border-outline-variant overflow-hidden relative">
+              <div 
+                className="h-full bg-gradient-to-r from-secondary to-secondary-container pixel-segmented shadow-[0px_0px_10px_rgba(0,241,254,0.3)]"
+                style={{ width: `${xpPercentage}%` }}
+              ></div>
+            </div>
           </div>
 
           {/* Shadow of Doom Bar */}
-          <div className="space-y-1">
-            <div className="flex justify-between items-center">
-              <span className="font-pixel text-[10px] text-error uppercase tracking-wider flex items-center gap-1">
-                <span className="material-symbols-outlined text-[12px]">warning</span>
-                Shadow of Doom
+          <div>
+            <div className="flex justify-between mb-2 font-['Press_Start_2P'] text-[10px]">
+              <span className="text-error flex items-center gap-2">
+                <span className="material-symbols-outlined text-sm">warning</span>
+                SHADOW OF DOOM (PROCRASTINATION)
               </span>
-              <span className="font-pixel text-[10px] text-error">
-                {shadowPercentage}%
-              </span>
+              <span className="text-error">{shadowPercentage}%</span>
             </div>
-            <ProgressBar 
-              value={shadowPercentage}
-              variant="shadow"
-              size="md"
-              segmented
-              showLabel={false}
-            />
-          </div>
-
-          {/* Rank Badges */}
-          <div className="flex flex-wrap gap-2 pt-2">
-            <RankBadge label="RANK: ELITE" color="tertiary" />
-            <RankBadge label="WIN STREAK: 7" color="secondary" />
+            <div className="h-4 bg-surface-container-lowest border-2 border-outline-variant overflow-hidden">
+              <div 
+                className="h-full bg-error pixel-segmented"
+                style={{ width: `${shadowPercentage}%` }}
+              ></div>
+            </div>
           </div>
         </div>
       </div>
-    </PixelCard>
+    </div>
   );
 };
 
 /**
- * Rank Badge Component
- */
-const RankBadge = ({ label, color }) => {
-  const colorClasses = {
-    primary: 'bg-primary/20 text-primary border-primary',
-    secondary: 'bg-secondary/20 text-secondary border-secondary',
-    tertiary: 'bg-tertiary/20 text-tertiary border-tertiary',
-  };
-
-  return (
-    <span className={cn(
-      "px-3 py-1 font-pixel text-[8px] uppercase border",
-      colorClasses[color]
-    )}>
-      {label}
-    </span>
-  );
-};
-
-/**
- * Guild Stats Card Component
+ * Guild Stats Card Component - Matches Stitch HTML
  */
 const GuildStatsCard = ({ rank, onViewLeaderboard }) => {
   return (
-    <PixelCard variant="tertiary" className="h-full flex flex-col">
-      <PixelCardHeader icon={<span className="material-symbols-outlined text-tertiary">military_tech</span>}>
-        Guild Rankings
-      </PixelCardHeader>
-      
-      <div className="flex-1 flex flex-col justify-center py-4">
-        <div className="text-center">
-          <div className="font-pixel text-4xl lg:text-5xl text-tertiary mb-2">
-            #{rank}
+    <div className="h-full bg-surface-container border-2 border-outline-variant p-6 shadow-[4px_4px_0px_0px_#150136] flex flex-col justify-between">
+      <div>
+        <div className="flex items-center gap-3 mb-6">
+          <span className="material-symbols-outlined text-tertiary">military_tech</span>
+          <h3 className="font-['Press_Start_2P'] text-[12px] text-on-surface">GUILD RANKINGS</h3>
+        </div>
+        <div className="space-y-4">
+          <div className="bg-surface-container-low p-4 flex justify-between items-center border-l-4 border-tertiary">
+            <div>
+              <p className="font-['Press_Start_2P'] text-[10px] text-on-surface-variant">S4 LEAGUE (HK)</p>
+              <p className="font-headline font-bold text-xl text-tertiary">RANK #{rank}</p>
+            </div>
+            <div className="text-right">
+              <p className="font-['Press_Start_2P'] text-[8px] text-secondary">TOP 5%</p>
+            </div>
           </div>
-          <div className="font-label text-sm text-on-surface mb-4">
-            S4 LEAGUE (HK)
+          <div className="font-body text-sm text-on-surface-variant leading-relaxed">
+            Your guild &quot;NEON SCHOLARS&quot; is 450 XP away from Rank #{rank - 1}. Complete a group study session to boost ranking!
           </div>
-          <span className="inline-block px-3 py-1 bg-tertiary text-on-tertiary font-pixel text-[10px]">
-            TOP 5%
-          </span>
         </div>
       </div>
-
-      <PixelButton 
-        variant="secondary" 
-        fullWidth 
+      <button 
         onClick={onViewLeaderboard}
-        icon={<span className="material-symbols-outlined">emoji_events</span>}
+        className="w-full mt-6 bg-secondary-container text-on-secondary-container font-['Press_Start_2P'] text-[10px] py-3 shadow-[3px_3px_0px_0px_#006a70] active:translate-y-1 transition-transform"
       >
-        View Leaderboard
-      </PixelButton>
-    </PixelCard>
+        VIEW LEADERBOARD
+      </button>
+    </div>
   );
 };
 
 /**
- * Quest Map Component
- * RPG-style map with progression nodes
+ * Quest Map Component - RPG-style map with progression nodes
+ * Matches Stitch HTML: aspect-[21/9], gradient overlays, quest nodes
  */
 const QuestMap = ({ progress, onNodeClick }) => {
   const nodes = [
-    { id: 1, status: 'completed', label: 'The Basics', icon: 'check' },
-    { id: 2, status: 'completed', label: 'Equations', icon: 'check' },
-    { id: 3, status: 'current', label: 'Boss Battle', icon: 'swords' },
-    { id: 4, status: 'locked', label: 'Advanced', icon: 'lock' },
+    { id: 1, status: 'completed', label: 'LIMITS', icon: 'check' },
+    { id: 2, status: 'completed', label: 'CONTINUITY', icon: 'check' },
+    { id: 3, status: 'current', label: 'BOSS: DERIVATIVES', icon: 'swords' },
+    { id: 4, status: 'locked', label: 'INTEGRALS', icon: 'lock' },
   ];
 
   return (
-    <PixelCard variant="elevated" className="relative overflow-hidden">
-      {/* Map Container */}
-      <div className="relative aspect-[21/9] bg-surface-container-high overflow-hidden">
-        {/* Background Pattern */}
+    <div className="bg-surface-container-high border-2 border-outline-variant relative overflow-hidden aspect-[21/9]">
+      {/* Background Pattern */}
+      <div className="absolute inset-0 z-0">
         <div 
-          className="absolute inset-0 opacity-30"
+          className="absolute inset-0 opacity-40"
           style={{
             backgroundImage: `
               radial-gradient(circle at 20% 50%, #3d2b5e 0%, transparent 50%),
@@ -437,42 +411,26 @@ const QuestMap = ({ progress, onNodeClick }) => {
             `
           }}
         />
-        
-        {/* Grid Pattern */}
-        <div className="absolute inset-0 bg-pixel-grid-bg opacity-20" />
-
-        {/* Gradient Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
-
-        {/* Header Overlay */}
-        <div className="absolute top-4 left-4 right-4 flex justify-between items-start">
+      </div>
+      
+      {/* Gradient Overlay */}
+      <div className="absolute inset-0 z-10 bg-gradient-to-t from-background via-transparent to-transparent"></div>
+      
+      {/* Content */}
+      <div className="relative z-20 p-8 h-full flex flex-col justify-between">
+        {/* Header */}
+        <div className="flex justify-between items-start">
           <div>
-            <h3 className="font-pixel text-[10px] lg:text-xs text-primary uppercase tracking-wider mb-1">
-              Kingdom of Calculus
-            </h3>
-            <p className="font-label text-xs lg:text-sm text-on-surface-variant">
-              Chapter 4: The Derivative Wasteland
-            </p>
+            <h2 className="font-['Press_Start_2P'] text-2xl text-secondary mb-2 drop-shadow-[0_4px_0_rgba(0,0,0,0.5)]">KINGDOM OF CALCULUS</h2>
+            <p className="font-headline text-on-surface-variant font-bold tracking-widest">CHAPTER 4: THE DERIVATIVE WASTELAND</p>
           </div>
-          <div className="px-3 py-1 bg-surface-container border border-outline-variant">
-            <span className="font-pixel text-[8px] text-tertiary">
-              MAP: {progress}%
-            </span>
+          <div className="bg-background/80 p-4 border-2 border-primary backdrop-blur-md">
+            <span className="font-['Press_Start_2P'] text-[10px] text-primary">MAP COMPLETION: {progress}%</span>
           </div>
         </div>
-
-        {/* Connection Line */}
-        <div className="absolute bottom-16 lg:bottom-20 left-1/2 transform -translate-x-1/2 w-3/4 lg:w-1/2">
-          <div className="h-1 bg-surface-container-highest relative">
-            <div 
-              className="absolute inset-y-0 left-0 bg-tertiary transition-all duration-1000"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-        </div>
-
-        {/* Quest Nodes */}
-        <div className="absolute bottom-8 lg:bottom-12 left-1/2 transform -translate-x-1/2 flex items-end gap-8 lg:gap-16">
+        
+        {/* Interactive Nodes */}
+        <div className="flex gap-12 justify-center mb-12">
           {nodes.map((node, index) => (
             <QuestNode 
               key={node.id}
@@ -483,26 +441,29 @@ const QuestMap = ({ progress, onNodeClick }) => {
           ))}
         </div>
       </div>
-    </PixelCard>
+    </div>
   );
 };
 
 /**
- * Quest Node Component
+ * Quest Node Component - Individual map node
  */
 const QuestNode = ({ node, index, onClick }) => {
   const styles = {
     completed: {
-      container: 'w-10 h-10 lg:w-12 lg:h-12 bg-tertiary shadow-[0_0_20px_#e9c400]',
+      container: 'w-12 h-12 bg-tertiary shadow-[0_0_20px_#e9c400] border-4 border-on-tertiary',
       icon: 'text-on-tertiary',
+      size: 'text-xl',
     },
     current: {
-      container: 'w-12 h-12 lg:w-16 lg:h-16 bg-primary-container shadow-[0_0_30px_#ff4a8d] animate-pulse',
-      icon: 'text-on-primary',
+      container: 'w-16 h-16 bg-primary-container shadow-[0_0_30px_#ff4a8d] border-4 border-on-primary-container -translate-y-2 animate-pulse',
+      icon: 'text-white',
+      size: 'text-2xl',
     },
     locked: {
-      container: 'w-10 h-10 lg:w-12 lg:h-12 bg-surface-container grayscale opacity-60',
+      container: 'w-12 h-12 bg-surface-container border-4 border-outline-variant opacity-30 grayscale',
       icon: 'text-on-surface-variant',
+      size: 'text-xl',
     },
   };
 
@@ -519,11 +480,14 @@ const QuestNode = ({ node, index, onClick }) => {
           node.status !== 'locked' && 'cursor-pointer'
         )}
       >
-        <span className={cn("material-symbols-outlined lg:text-2xl", style.icon)}>
+        <span className={cn("material-symbols-outlined", style.size, style.icon)}>
           {node.icon}
         </span>
       </button>
-      <span className="font-pixel text-[7px] lg:text-[8px] text-on-surface-variant uppercase whitespace-nowrap">
+      <span className={cn(
+        "font-['Press_Start_2P'] whitespace-nowrap",
+        node.status === 'current' ? 'text-[10px] text-primary' : 'text-[8px] text-on-surface-variant'
+      )}>
         {node.label}
       </span>
     </div>
@@ -531,7 +495,7 @@ const QuestNode = ({ node, index, onClick }) => {
 };
 
 /**
- * Daily Quests Component
+ * Daily Quests Component - Matches Stitch HTML
  */
 const DailyQuests = ({ quests, onQuestClick }) => {
   // Format quests data
@@ -555,17 +519,16 @@ const DailyQuests = ({ quests, onQuestClick }) => {
   }
 
   return (
-    <PixelCard variant="default">
-      <div className="flex items-center justify-between mb-4">
-        <PixelCardHeader icon={<span className="material-symbols-outlined text-primary">scroll</span>}>
-          Daily Bounties
-        </PixelCardHeader>
-        <span className="font-pixel text-[8px] text-on-surface-variant">
-          RESET IN 14H 22M
-        </span>
+    <div className="bg-surface-container border-2 border-outline-variant p-6 shadow-[4px_4px_0px_0px_#150136]">
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center gap-3">
+          <span className="material-symbols-outlined text-secondary">checklist</span>
+          <h3 className="font-['Press_Start_2P'] text-[12px] text-on-surface">DAILY BOUNTIES</h3>
+        </div>
+        <span className="font-['Press_Start_2P'] text-[10px] text-on-surface-variant opacity-50">RESET IN 14H 22M</span>
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-4">
         {formattedQuests.map((quest) => (
           <QuestItem 
             key={quest.id}
@@ -574,12 +537,12 @@ const DailyQuests = ({ quests, onQuestClick }) => {
           />
         ))}
       </div>
-    </PixelCard>
+    </div>
   );
 };
 
 /**
- * Quest Item Component
+ * Quest Item Component - Individual quest row
  */
 const QuestItem = ({ quest, onClick }) => {
   const borderColors = {
@@ -588,54 +551,61 @@ const QuestItem = ({ quest, onClick }) => {
     tertiary: 'border-l-4 border-tertiary',
   };
 
+  const iconBgColors = {
+    primary: 'bg-primary/20 group-hover:border-primary',
+    secondary: 'bg-secondary/20 group-hover:border-secondary',
+    tertiary: 'bg-tertiary/20 group-hover:border-tertiary',
+  };
+
   return (
     <button
       onClick={onClick}
       disabled={quest.completed}
       className={cn(
-        "w-full flex items-center gap-3 p-3 bg-surface-container-high hover:bg-surface-container transition-colors",
+        "w-full flex items-center gap-4 p-4 bg-surface-container-low group hover:bg-surface-container-high transition-colors",
         borderColors[quest.color],
         quest.completed && 'opacity-60'
       )}
     >
       {/* Icon Box */}
       <div className={cn(
-        "w-10 h-10 flex items-center justify-center flex-shrink-0",
-        quest.completed ? 'bg-tertiary/20' : `bg-${quest.color}/20`
+        "w-10 h-10 flex items-center justify-center flex-shrink-0 border-2 border-outline-variant bg-background group-hover:bg-surface-container",
+        quest.completed && 'bg-tertiary/20 border-tertiary'
       )}>
         <span className={cn(
           "material-symbols-outlined",
-          quest.completed ? 'text-tertiary' : `text-${quest.color}`
-        )}>
+          quest.completed ? 'text-tertiary' : 'text-outline group-hover:text-' + quest.color
+        )} style={quest.completed ? {fontVariationSettings: "'FILL' 1"} : {}}>
           {quest.completed ? 'check' : quest.icon}
         </span>
       </div>
 
       {/* Content */}
       <div className="flex-1 text-left">
-        <h4 className="font-label text-sm text-on-surface truncate">
+        <h4 className={cn(
+          "font-headline font-bold text-on-surface",
+          quest.completed && 'line-through'
+        )}>
           {quest.title}
         </h4>
-        <div className="flex items-center gap-2 mt-1">
-          <span className="font-pixel text-[8px] text-tertiary">
-            +{quest.xp} XP
-          </span>
-          {!quest.completed && (
-            <span className="font-pixel text-[8px] text-on-surface-variant">
-              {quest.progress}/{quest.total}
-            </span>
-          )}
-        </div>
+        <p className="text-xs text-on-surface-variant mt-1">
+          {quest.completed ? 'Daily vocab set (30 cards)' : 
+           quest.type === 'math' ? 'Focus area: Logarithmic Functions' : 
+           'Uninterrupted deep work session'}
+        </p>
       </div>
 
       {/* Status */}
-      <div className="flex-shrink-0">
-        {quest.completed ? (
-          <span className="font-pixel text-[8px] text-tertiary uppercase">Claimed</span>
-        ) : quest.progress >= quest.total ? (
-          <span className="font-pixel text-[8px] text-primary uppercase">Ready</span>
-        ) : (
-          <span className="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+      <div className="text-right font-['Press_Start_2P'] text-[10px]">
+        <span className="text-tertiary">+{quest.xp} XP</span>
+        {!quest.completed && (
+          <div className="mt-1 text-on-surface-variant">{quest.progress}/{quest.total}</div>
+        )}
+        {quest.completed && (
+          <div className="mt-1 text-tertiary">CLAIMED</div>
+        )}
+        {!quest.completed && quest.progress >= quest.total && (
+          <div className="mt-1 text-secondary">READY</div>
         )}
       </div>
     </button>
@@ -643,13 +613,13 @@ const QuestItem = ({ quest, onClick }) => {
 };
 
 /**
- * Recent Victories Component
+ * Recent Victories Component - Matches Stitch HTML
  */
 const RecentVictories = ({ sessions }) => {
   const badges = [
-    { type: 'bronze', icon: 'bolt', color: '#cd7f32' },
-    { type: 'silver', icon: 'local_fire_department', color: '#c0c0c0' },
-    { type: 'gold', icon: 'auto_awesome', color: '#e9c400' },
+    { type: 'BRONZE FOCUS', icon: 'bolt', color: '#cd7f32' },
+    { type: 'SILVER STREAK', icon: 'local_fire_department', color: '#c0c0c0' },
+    { type: 'GOLD SCHOLAR', icon: 'auto_awesome', color: '#e9c400' },
   ];
 
   const formattedSessions = sessions.length > 0 ? sessions.map(s => ({
@@ -664,29 +634,35 @@ const RecentVictories = ({ sessions }) => {
   ];
 
   return (
-    <PixelCard variant="default">
-      <PixelCardHeader icon={<span className="material-symbols-outlined text-tertiary">emoji_events</span>}>
-        Recent Victories
-      </PixelCardHeader>
+    <div className="bg-surface-container border-2 border-outline-variant p-6 shadow-[4px_4px_0px_0px_#150136] h-full">
+      <div className="flex items-center gap-3 mb-8">
+        <span className="material-symbols-outlined text-tertiary">trophy</span>
+        <h3 className="font-['Press_Start_2P'] text-[12px] text-on-surface">RECENT VICTORIES</h3>
+      </div>
 
       {/* Badge Grid */}
-      <div className="grid grid-cols-3 gap-2 mb-4 mt-4">
+      <div className="grid grid-cols-3 gap-4 mb-8">
         {badges.map((badge) => (
           <div 
             key={badge.type}
-            className="flex flex-col items-center p-3 border-2"
+            className="flex flex-col items-center p-3 bg-surface-container-low border border-outline-variant"
             style={{ 
               backgroundColor: `${badge.color}20`,
               borderColor: badge.color 
             }}
           >
-            <span 
-              className="material-symbols-outlined text-2xl"
-              style={{ color: badge.color }}
+            <div 
+              className="w-12 h-12 flex items-center justify-center mb-2"
+              style={{ backgroundColor: `${badge.color}20`, border: `2px solid ${badge.color}` }}
             >
-              {badge.icon}
-            </span>
-            <span className="font-pixel text-[7px] uppercase mt-1" style={{ color: badge.color }}>
+              <span 
+                className="material-symbols-outlined text-2xl"
+                style={{ color: badge.color, fontVariationSettings: "'FILL' 1" }}
+              >
+                {badge.icon}
+              </span>
+            </div>
+            <span className="font-['Press_Start_2P'] text-[8px] text-center text-on-surface-variant">
               {badge.type}
             </span>
           </div>
@@ -694,32 +670,21 @@ const RecentVictories = ({ sessions }) => {
       </div>
 
       {/* Recent Sessions List */}
-      <div className="space-y-3">
+      <div className="space-y-4">
         {formattedSessions.map((session) => (
           <div 
             key={session.id}
-            className="p-3 border-l-2 border-outline-variant hover:bg-surface-container-high transition-colors cursor-pointer"
+            className="p-3 border-l-2 border-outline-variant font-body text-sm hover:bg-surface-container-high transition-colors cursor-pointer"
           >
-            <div className="flex justify-between items-start">
-              <h4 className="font-label text-sm text-on-surface truncate pr-2">
-                {session.title}
-              </h4>
-              <span className="font-pixel text-[7px] text-on-surface-variant whitespace-nowrap">
-                {formatTimeAgo(session.time)}
-              </span>
+            <div className="flex justify-between mb-1">
+              <span className="font-bold text-on-surface">{session.title}</span>
+              <span className="text-xs text-on-surface-variant">{formatTimeAgo(session.time)}</span>
             </div>
-            <div className="flex items-center gap-3 mt-1">
-              <span className="font-pixel text-[8px] text-tertiary">
-                +{session.xp} XP
-              </span>
-              <span className="font-pixel text-[8px] text-on-surface-variant">
-                {session.duration}m Focused
-              </span>
-            </div>
+            <div className="text-xs text-on-surface-variant">+{session.xp} XP • {session.duration}m Focused</div>
           </div>
         ))}
       </div>
-    </PixelCard>
+    </div>
   );
 };
 

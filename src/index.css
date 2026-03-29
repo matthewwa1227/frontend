@@ -1,8 +1,8 @@
-@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* Ensure pixelated image rendering */
 * {
   image-rendering: pixelated;
   image-rendering: -moz-crisp-edges;
@@ -15,23 +15,45 @@ html {
 
 body {
   margin: 0;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Inter', 'Space Grotesk', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: #1a063b;
   color: #ebddff;
 }
 
-/* Pixel font for specific elements */
-.font-pixel {
-  font-family: 'Press Start 2P', cursive;
+/* ============================================================================
+   FONTS - Press Start 2P, Space Grotesk, Inter
+   ============================================================================ */
+
+/* Pixel font for RPG/UI elements */
+.font-pixel,
+[class*="font-['Press_Start_2P']"] {
+  font-family: 'Press Start 2P', cursive, monospace;
   -webkit-font-smoothing: none;
   -moz-osx-font-smoothing: unset;
 }
 
-/* Material Symbols font settings */
+/* Headline font */
+.font-headline {
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+/* Body font */
+.font-body {
+  font-family: 'Inter', sans-serif;
+}
+
+/* Label font */
+.font-label {
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+/* ============================================================================
+   MATERIAL SYMBOLS - Icon font configuration
+   ============================================================================ */
+
 .material-symbols-outlined {
-  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
   font-family: 'Material Symbols Outlined';
   font-weight: normal;
   font-style: normal;
@@ -45,13 +67,38 @@ body {
   direction: ltr;
   -webkit-font-feature-settings: 'liga';
   -webkit-font-smoothing: antialiased;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
 
 .material-symbols-outlined.fill {
   font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
 
-/* Scrollbar Styling */
+/* Icon sizes */
+.material-symbols-outlined.text-sm {
+  font-size: 18px;
+}
+
+.material-symbols-outlined.text-lg {
+  font-size: 32px;
+}
+
+.material-symbols-outlined.text-xl {
+  font-size: 40px;
+}
+
+.material-symbols-outlined.text-2xl {
+  font-size: 48px;
+}
+
+.material-symbols-outlined.text-4xl {
+  font-size: 64px;
+}
+
+/* ============================================================================
+   SCROLLBAR - Pixel art styled
+   ============================================================================ */
+
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -77,29 +124,35 @@ body {
   scrollbar-color: #ff4a8d #1a063b;
 }
 
-/* Selection styling */
+/* ============================================================================
+   SELECTION & FOCUS
+   ============================================================================ */
+
 ::selection {
   background-color: #ff4a8d;
   color: #590028;
 }
 
-/* Focus outline for accessibility */
 :focus-visible {
   outline: 2px solid #ff4a8d;
   outline-offset: 2px;
 }
 
-/* Button reset */
+/* ============================================================================
+   FORM ELEMENTS
+   ============================================================================ */
+
 button {
   font-family: inherit;
+  cursor: pointer;
 }
 
-/* Input reset */
 input, textarea, select {
   font-family: inherit;
   background-color: #271448;
   color: #ebddff;
   border: 2px solid #5c3f46;
+  border-radius: 0;
 }
 
 input:focus, textarea:focus, select:focus {
@@ -112,13 +165,19 @@ input::placeholder, textarea::placeholder {
   opacity: 0.6;
 }
 
-/* Link reset */
+/* ============================================================================
+   LINKS
+   ============================================================================ */
+
 a {
   color: inherit;
   text-decoration: none;
 }
 
-/* Animation reduction for accessibility */
+/* ============================================================================
+   ACCESSIBILITY - Reduced motion
+   ============================================================================ */
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -135,13 +194,12 @@ a {
   transition-duration: 0.01ms !important;
 }
 
-/* Pixel mode specific styles */
-.pixel-mode {
-  --pixel-border-size: 4px;
-}
+/* ============================================================================
+   TAILWIND UTILITIES - Custom pixel art utilities
+   ============================================================================ */
 
-/* Custom utility classes */
 @layer utilities {
+  /* Text shadows for pixel text */
   .text-shadow-pixel {
     text-shadow: 2px 2px 0px rgba(0, 0, 0, 0.5);
   }
@@ -150,12 +208,14 @@ a {
     text-shadow: 4px 4px 0px rgba(0, 0, 0, 0.5);
   }
   
+  /* Pixelated images */
   .image-pixelated {
     image-rendering: pixelated;
     image-rendering: -moz-crisp-edges;
     image-rendering: crisp-edges;
   }
   
+  /* Pixel border effect (4px on all sides) */
   .pixel-border {
     box-shadow: 
       0 -4px 0 0 #271448,
@@ -164,6 +224,7 @@ a {
       4px 0 0 0 #271448;
   }
   
+  /* Pixel border with primary color */
   .pixel-border-primary {
     box-shadow: 
       0 -4px 0 0 #ff4a8d,
@@ -172,6 +233,7 @@ a {
       4px 0 0 0 #ff4a8d;
   }
   
+  /* Pixel border with secondary color */
   .pixel-border-secondary {
     box-shadow: 
       0 -4px 0 0 #00f1fe,
@@ -180,26 +242,41 @@ a {
       4px 0 0 0 #00f1fe;
   }
   
+  /* PIXEL SEGMENTED - The crucial progress bar pattern */
   .pixel-segmented {
-    background-image: linear-gradient(90deg, transparent 0%, transparent 75%, rgba(0,0,0,0.3) 75%, rgba(0,0,0,0.3) 100%);
+    background-image: linear-gradient(
+      90deg, 
+      transparent 0%, 
+      transparent 75%, 
+      rgba(0,0,0,0.3) 75%, 
+      rgba(0,0,0,0.3) 100%
+    );
     background-size: 8px 100%;
   }
   
+  /* Pixel grid background pattern */
   .pixel-grid-bg {
     background-image: radial-gradient(#271448 1px, transparent 1px);
     background-size: 20px 20px;
   }
   
+  /* Glass panel effect */
   .glass-panel {
     background: rgba(61, 43, 94, 0.6);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
   }
   
+  /* Step easing for pixel animations */
   .step-easing {
     transition-timing-function: steps(4, end);
   }
   
+  .steps-5 {
+    transition-timing-function: steps(5);
+  }
+  
+  /* Custom scrollbar utility */
   .scrollbar-pixel {
     scrollbar-width: thin;
     scrollbar-color: #ff4a8d #1a063b;
@@ -220,14 +297,23 @@ a {
   }
 }
 
-/* Legacy compatibility classes */
+/* ============================================================================
+   COMPONENT STYLES - Legacy compatibility
+   ============================================================================ */
+
+/* Pixel button base style */
 .pixel-btn {
   @apply px-6 py-3 font-pixel text-xs uppercase tracking-wider border-b-4 border-on-primary-fixed-variant bg-primary-container text-on-primary shadow-pixel-primary transition-all duration-100 active:translate-y-1 active:shadow-none hover:brightness-110;
 }
 
+/* Pixel card base style */
 .pixel-card {
   @apply bg-surface-container border-2 border-outline-variant shadow-pixel p-6;
 }
+
+/* ============================================================================
+   INTERACTION STATES
+   ============================================================================ */
 
 /* Prevent text selection on interactive elements */
 button, a {
@@ -239,4 +325,40 @@ button, a {
   button:active, a:active {
     opacity: 0.8;
   }
+}
+
+/* ============================================================================
+   QUEST MAP SPECIFIC STYLES
+   ============================================================================ */
+
+/* Quest node animations */
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 20px #ff4a8d;
+  }
+  50% {
+    box-shadow: 0 0 40px #ff4a8d, 0 0 60px #ff4a8d;
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* Gold glow for completed nodes */
+.shadow-glow-gold {
+  box-shadow: 0 0 20px #e9c400;
+}
+
+/* ============================================================================
+   AVATAR PLACEHOLDER
+   ============================================================================ */
+
+.avatar-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #271448;
+  border: 4px solid #e9c400;
+  box-shadow: 4px 4px 0px 0px #4c3f00;
 }

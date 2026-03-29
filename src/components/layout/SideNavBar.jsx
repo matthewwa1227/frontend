@@ -6,7 +6,7 @@ import Avatar from '../ui/Avatar';
  * Navigation item configuration
  * @typedef {Object} NavItem
  * @property {string} id - Unique identifier
- * @property {string} label - Display label
+ * @property {string} label - Display label (uppercase)
  * @property {string} icon - Material Symbols icon name
  * @property {string} href - Navigation href
  * @property {boolean} active - Whether item is active
@@ -16,6 +16,7 @@ import Avatar from '../ui/Avatar';
 
 /**
  * SideNavBar - Fixed side navigation for StudyQuest
+ * Matches Stitch Pixel-Art Design exactly
  * @param {Object} props
  * @param {NavItem[]} props.items - Navigation items
  * @param {Object} props.user - Current user info
@@ -37,52 +38,30 @@ const SideNavBar = ({
       {/* Mobile Overlay */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black/60 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/60 z-40 md:hidden"
           onClick={onClose}
         />
       )}
       
-      {/* Sidebar */}
+      {/* Sidebar - Matches Stitch HTML */}
       <aside
         className={cn(
-          "fixed left-0 top-0 h-full z-50",
-          "bg-surface-container border-r-4 border-surface",
-          "shadow-[6px_0px_0px_0px_rgba(21,1,54,1)]",
-          "flex flex-col",
-          "transition-transform duration-300 ease-in-out",
-          "w-64",
-          // Mobile positioning
-          isOpen ? "translate-x-0" : "-translate-x-full",
-          // Desktop positioning
-          "lg:translate-x-0 lg:pt-20",
+          "fixed left-0 top-0 h-full w-64 bg-[#271448] border-r-4 border-[#1a063b]",
+          "shadow-[6px_0px_0px_0px_rgba(26,6,59,1)]",
+          "z-40 hidden md:flex flex-col pt-24",
           className
         )}
       >
-        {/* User Section (Desktop) */}
+        {/* User Section - Level & Hero Power */}
         {user && (
-          <div className="hidden lg:block p-6 border-b-4 border-surface mb-4">
-            <div className="flex items-center gap-3">
-              <Avatar
-                src={user.avatar}
-                alt={user.username}
-                size="md"
-                variant="primary"
-                rpgClass={user.rpgClass || 'scholar'}
-              />
-              <div>
-                <div className="font-pixel text-[10px] text-tertiary">
-                  LEVEL {user.level || 42}
-                </div>
-                <div className="font-pixel text-[8px] text-primary mt-1">
-                  HERO POWER: {user.heroPower || '9000'}
-                </div>
-              </div>
-            </div>
+          <div className="px-6 mb-8">
+            <h2 className="font-['Press_Start_2P'] text-sm text-tertiary mb-1">LEVEL {user.level || 42}</h2>
+            <p className="font-['Press_Start_2P'] text-[10px] text-primary opacity-80">HERO POWER: {user.heroPower || '9000'}</p>
           </div>
         )}
         
         {/* Navigation Items */}
-        <nav className="flex-1 px-3 py-4 space-y-2 overflow-y-auto">
+        <nav className="flex-1 px-3">
           {items.map((item) => (
             <NavItem
               key={item.id}
@@ -91,29 +70,19 @@ const SideNavBar = ({
           ))}
         </nav>
         
-        {/* Shadow Warning (if applicable) */}
-        {user?.shadowLevel > 0 && (
-          <div className="px-4 py-3 mt-auto border-t-4 border-surface bg-surface-container-low">
-            <div className="flex items-center gap-3 p-3 text-error font-pixel text-[10px]">
-              <span className="material-symbols-outlined">warning</span>
-              SHADOW: {user.shadowLevel}%
-            </div>
-          </div>
-        )}
-        
-        {/* Footer */}
-        {footer && (
-          <div className="p-4 border-t-4 border-surface">
-            {footer}
-          </div>
-        )}
-        
-        {/* Settings Link */}
-        <div className="p-4 border-t-2 border-surface-container-high">
-          <button className="flex items-center gap-3 p-3 text-secondary/80 hover:text-primary transition-colors font-pixel text-[10px] uppercase w-full">
+        {/* Footer with Settings and Shadow Warning */}
+        <div className="p-4 mt-auto border-t-4 border-[#1a063b]">
+          {/* Settings */}
+          <button className="flex items-center gap-3 p-4 mb-2 text-[#ddfcff] opacity-80 hover:text-primary transition-colors font-['Press_Start_2P'] text-[10px] uppercase w-full text-left">
             <span className="material-symbols-outlined">settings</span>
-            Settings
+            SETTINGS
           </button>
+          
+          {/* Shadow Warning */}
+          <div className="flex items-center gap-3 p-4 text-error font-['Press_Start_2P'] text-[10px]">
+            <span className="material-symbols-outlined">warning</span>
+            SHADOW: {user?.shadowLevel || 15}%
+          </div>
         </div>
       </aside>
     </>
@@ -122,6 +91,7 @@ const SideNavBar = ({
 
 /**
  * NavItem - Individual navigation item
+ * Matches Stitch HTML styling exactly
  */
 const NavItem = ({ 
   id, 
@@ -131,34 +101,16 @@ const NavItem = ({
   active = false, 
   badge, 
   onClick,
-  variant = 'default'
 }) => {
-  const baseStyles = "flex items-center gap-3 p-4 font-pixel text-[10px] uppercase transition-all duration-75";
-  
-  const variants = {
-    default: {
-      active: "bg-primary text-on-primary shadow-pixel-primary",
-      inactive: "text-secondary/80 hover:bg-surface-container-high hover:text-primary",
-    },
-    secondary: {
-      active: "bg-secondary-container text-on-secondary shadow-pixel-secondary",
-      inactive: "text-secondary/80 hover:bg-surface-container-high hover:text-secondary",
-    },
-    ghost: {
-      active: "border-l-4 border-primary text-primary bg-surface-container-high",
-      inactive: "text-secondary/80 hover:translate-x-1 hover:text-primary",
-    },
-  };
-  
-  const selectedVariant = variants[variant];
-  
   return (
     <a
       href={href}
       onClick={onClick}
       className={cn(
-        baseStyles,
-        active ? selectedVariant.active : selectedVariant.inactive
+        "flex items-center gap-3 p-4 mb-2 font-['Press_Start_2P'] text-[10px] uppercase transition-all duration-75",
+        active 
+          ? "bg-[#ffb1c4] text-[#1a063b] shadow-[4px_4px_0px_0px_#ff4a8d]" 
+          : "text-[#ddfcff] opacity-80 hover:bg-[#ddfcff] hover:text-[#1a063b] hover:opacity-100"
       )}
     >
       <span className="material-symbols-outlined">{icon}</span>
@@ -166,7 +118,7 @@ const NavItem = ({
       {badge && (
         <span className={cn(
           "px-1.5 py-0.5 text-[6px]",
-          active ? "bg-on-primary/20" : "bg-primary/20 text-primary"
+          active ? "bg-[#1a063b]/20" : "bg-primary/20 text-primary"
         )}>
           {badge}
         </span>
@@ -177,18 +129,18 @@ const NavItem = ({
 
 /**
  * Default navigation items for StudyQuest
+ * Using Material Symbols icon names
  */
 export const defaultNavItems = [
-  { id: 'study', label: 'Study', icon: 'menu_book', href: '#', active: true },
-  { id: 'ai-tutor', label: 'AI Tutor', icon: 'psychology', href: '#' },
-  { id: 'social', label: 'Social', icon: 'groups', href: '#' },
-  { id: 'tasks', label: 'Tasks', icon: 'checklist', href: '#', badge: '3' },
-  { id: 'progress', label: 'Progress', icon: 'trending_up', href: '#' },
-  { id: 'inventory', label: 'Inventory', icon: 'inventory_2', href: '#' },
+  { id: 'study', label: 'STUDY', icon: 'menu_book', href: '#', active: true },
+  { id: 'ai-tutor', label: 'AI TUTOR', icon: 'smart_toy', href: '#' },
+  { id: 'social', label: 'SOCIAL', icon: 'groups', href: '#' },
+  { id: 'tasks', label: 'TASKS', icon: 'checklist', href: '#', badge: '3' },
 ];
 
 /**
  * BottomNavBar - Mobile bottom navigation
+ * Matches Stitch HTML exactly
  * @param {Object} props
  * @param {NavItem[]} props.items - Navigation items (max 5)
  * @param {string} props.activeItem - Currently active item ID
@@ -203,9 +155,8 @@ export const BottomNavBar = ({
   return (
     <nav className={cn(
       "md:hidden fixed bottom-0 left-0 right-0",
-      "bg-surface border-t-4 border-surface-container",
-      "h-16 px-6 z-50",
-      "flex justify-between items-center",
+      "bg-[#1a063b] border-t-4 border-[#271448]",
+      "px-6 py-2 flex justify-between items-center z-50",
       className
     )}>
       {items.map((item) => {
@@ -216,17 +167,11 @@ export const BottomNavBar = ({
             onClick={() => onItemClick?.(item.id)}
             className={cn(
               "flex flex-col items-center gap-1",
-              "transition-colors duration-75",
-              isActive ? "text-primary" : "text-secondary/70 hover:text-primary"
+              isActive ? "text-[#ffb1c4]" : "text-[#ddfcff] opacity-70"
             )}
           >
-            <span className={cn(
-              "material-symbols-outlined",
-              isActive && "fill"
-            )}>
-              {item.icon}
-            </span>
-            <span className="font-pixel text-[8px]">
+            <span className="material-symbols-outlined">{item.icon}</span>
+            <span className="font-['Press_Start_2P'] text-[8px]">
               {item.label.split(' ')[0].toUpperCase()}
             </span>
           </button>
