@@ -8,9 +8,9 @@ import TopAppBar from '../components/layout/TopAppBar';
 import SideNavBar, { BottomNavBar } from '../components/layout/SideNavBar';
 
 // Study Timer Components
-import BattleBuffs from '../components/studytimer/BattleBuffs';
-import BossArena from '../components/studytimer/BossArena';
-import CombatLog, { generateInitialLog, generateCombatEvents } from '../components/studytimer/CombatLog';
+import BattleBuffs from '../components/StudyTimer/BattleBuffs';
+import BossArena from '../components/StudyTimer/BossArena';
+import CombatLog, { generateInitialLog, generateCombatEvents } from '../components/StudyTimer/CombatLog';
 
 // Custom Hooks
 import { useStudySession } from '../hooks/useStudySession';
