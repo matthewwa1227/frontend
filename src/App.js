@@ -8,11 +8,11 @@ import Register from './components/auth/Register';
 
 // --- Student Components ---
 import Dashboard from './pages/Dashboard';
-import StudyTimer from './components/StudyTimer/StudyTimer';
+import StudyTimer from './pages/StudyTimer';
 import Achievements from './components/Achievements/Achievements';
 import Profile from './components/profile/Profile';
 import Leaderboard from './components/leaderboard/Leaderboard';
-import Tasks from './components/Tasks/Tasks'; // ADD THIS
+import QuestLog from './pages/QuestLog';
 
 // --- Parent/Guardian Components ---
 import ParentDashboard from './components/parent/ParentDashboard';
@@ -22,6 +22,9 @@ import GuardianManagement from './components/GuardianManagement';
 // --- Shared Components ---
 import Navbar from './components/shared/Navbar';
 import TestAnimation from './TestAnimation';
+
+// --- Settings ---
+import Settings from './components/settings/Settings';
 
 import ScheduleGenerator from './components/ScheduleGenerator/ScheduleGenerator';
 import ExerciseGenerator from './components/ExerciseGenerator/ExerciseGenerator';
@@ -34,7 +37,7 @@ import RevisionMode from './components/AITutor/RevisionMode';
 import ProgressDashboard from './components/Progress/ProgressDashboard';
 import TeacherDashboard from './components/Teacher/TeacherDashboard';
 import TeacherLayout from './components/Teacher/TeacherLayout';
-import SocialHub from './components/Social/SocialHub';
+import SocialHub from './pages/SocialHub';
 
 /**
  * ProtectedRoute Wrapper - For Students
@@ -122,18 +125,22 @@ function App() {
           <Route 
             path="/dashboard" 
             element={
-              <ProtectedRoute>
+              isAuthenticated() ? (
                 <Dashboard />
-              </ProtectedRoute>
+              ) : (
+                <Navigate to="/login" replace />
+              )
             } 
           />
 
           <Route 
             path="/timer" 
             element={
-              <ProtectedRoute>
+              isAuthenticated() ? (
                 <StudyTimer />
-              </ProtectedRoute>
+              ) : (
+                <Navigate to="/login" replace />
+              )
             } 
           />
 
@@ -164,13 +171,15 @@ function App() {
             } 
           />
 
-          {/* ADD THIS TASKS ROUTE */}
+          {/* Quest Log / Tasks */}
           <Route 
             path="/tasks" 
             element={
-              <ProtectedRoute>
-                <Tasks />
-              </ProtectedRoute>
+              isAuthenticated() ? (
+                <QuestLog />
+              ) : (
+                <Navigate to="/login" replace />
+              )
             } 
           />
 
@@ -269,9 +278,11 @@ function App() {
           <Route 
             path="/social" 
             element={
-              <ProtectedRoute>
+              isAuthenticated() ? (
                 <SocialHub />
-              </ProtectedRoute>
+              ) : (
+                <Navigate to="/login" replace />
+              )
             } 
           />
 
@@ -282,6 +293,18 @@ function App() {
               <ProtectedRoute>
                 <ExerciseGenerator />
               </ProtectedRoute>
+            } 
+          />
+
+          {/* --- Settings --- */}
+          <Route 
+            path="/settings" 
+            element={
+              isAuthenticated() ? (
+                <Settings />
+              ) : (
+                <Navigate to="/login" replace />
+              )
             } 
           />
           

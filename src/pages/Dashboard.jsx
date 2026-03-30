@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '../utils/cn';
 import { getUser } from '../utils/auth';
@@ -18,64 +18,197 @@ import Avatar from '../components/ui/Avatar';
  * Hero's Hub Dashboard - Main student landing page
  * 6 Sections: Hero Status, Guild Stats, Quest Map, Daily Quests, Recent Victories
  * Matches Stitch Pixel-Art Design exactly
+ * 
+ * PERFORMANCE OPTIMIZED: Progressive loading with timeouts and caching
  */
 const Dashboard = () => {
   const navigate = useNavigate();
   const currentUser = getUser();
   
-  // State
-  const [user, setUser] = useState(null);
+  // State - separate loading states for progressive rendering
+  const [user, setUser] = useState(currentUser || null);
   const [guildRank, setGuildRank] = useState(null);
   const [dailyQuests, setDailyQuests] = useState([]);
   const [recentSessions, setRecentSessions] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [heroStatus, setHeroStatus] = useState(null);
+  
+  // Individual loading states for progressive UI
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [userLoading, setUserLoading] = useState(true);
+  const [rankLoading, setRankLoading] = useState(true);
+  const [tasksLoading, setTasksLoading] = useState(true);
+  const [sessionsLoading, setSessionsLoading] = useState(true);
+  
   const [error, setError] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState(Date.now());
+
+  // Cache duration: 5 minutes for non-critical data
+  const CACHE_DURATION = 5 * 60 * 1000;
 
   // Navigation items with proper Material Symbols icons
   const navItems = [
     { id: 'study', label: 'STUDY', icon: 'menu_book', href: '/dashboard', active: true },
-    { id: 'tasks', label: 'TASKS', icon: 'checklist', href: '/tasks', badge: '3' },
+    { id: 'tasks', label: 'TASKS', icon: 'checklist', href: '/tasks', badge: dailyQuests.filter(q => !q.completed).length.toString() },
     { id: 'ai-tutor', label: 'AI TUTOR', icon: 'smart_toy', href: '/study-buddy' },
     { id: 'social', label: 'SOCIAL', icon: 'groups', href: '/social' },
     { id: 'progress', label: 'PROGRESS', icon: 'trending_up', href: '/progress' },
   ];
 
-  // Fetch dashboard data
+  // Fetch with timeout helper
+  const fetchWithTimeout = async (promise, timeout = 5000) => {
+    return Promise.race([
+      promise,
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Request timeout')), timeout)
+      )
+    ]);
+  };
+
+  // Load cached data immediately
   useEffect(() => {
-    fetchDashboardData();
+    const loadCachedData = () => {
+      try {
+        const cachedRank = localStorage.getItem('sq_cached_rank');
+        const cachedTasks = localStorage.getItem('sq_cached_tasks');
+        const cachedSessions = localStorage.getItem('sq_cached_sessions');
+        const cachedTimestamp = localStorage.getItem('sq_cache_timestamp');
+        
+        if (cachedTimestamp && Date.now() - parseInt(cachedTimestamp) < CACHE_DURATION) {
+          if (cachedRank) {
+            setGuildRank(JSON.parse(cachedRank));
+            setRankLoading(false);
+          }
+          if (cachedTasks) {
+            setDailyQuests(JSON.parse(cachedTasks));
+            setTasksLoading(false);
+          }
+          if (cachedSessions) {
+            setRecentSessions(JSON.parse(cachedSessions));
+            setSessionsLoading(false);
+          }
+        }
+      } catch (e) {
+        console.log('Cache read error:', e);
+      }
+      setInitialLoading(false);
+    };
+    
+    loadCachedData();
   }, []);
 
-  const fetchDashboardData = async () => {
+  // Fetch dashboard data with progressive loading
+  const fetchDashboardData = useCallback(async () => {
     try {
-      setLoading(true);
       setError(null);
+      
+      // Use current user as fallback immediately
+      if (currentUser) {
+        setUser(currentUser);
+        setUserLoading(false);
+      }
 
-      // Fetch all data in parallel
-      const [userRes, rankRes, tasksRes, sessionsRes] = await Promise.all([
-        authAPI.getMe().catch(() => ({ data: currentUser })),
-        leaderboardAPI.getMyRank().catch(() => ({ data: { rank: 12, league: 'S4', percentile: 5 } })),
-        taskAPI.getAll().catch(() => ({ data: [] })),
-        sessionAPI.getSessions().catch(() => ({ data: [] })),
+      // Fetch all data in parallel with individual timeout handling
+      const fetchUser = async () => {
+        try {
+          const res = await fetchWithTimeout(authAPI.getMe(), 3000);
+          setUser(res.data);
+          localStorage.setItem('sq_user', JSON.stringify(res.data));
+        } catch (err) {
+          console.log('User fetch failed, using cached:', err);
+          const cached = localStorage.getItem('sq_user');
+          if (cached) setUser(JSON.parse(cached));
+        } finally {
+          setUserLoading(false);
+        }
+      };
+
+      const fetchRank = async () => {
+        try {
+          const res = await fetchWithTimeout(leaderboardAPI.getMyRank(), 3000);
+          const rankData = res.data?.rank || { rank: 12, league: 'S4', percentile: 5 };
+          setGuildRank(rankData);
+          localStorage.setItem('sq_cached_rank', JSON.stringify(rankData));
+        } catch (err) {
+          console.log('Rank fetch failed:', err);
+          if (!guildRank) {
+            setGuildRank({ rank: 12, league: 'S4', percentile: 5 });
+          }
+        } finally {
+          setRankLoading(false);
+        }
+      };
+
+      const fetchTasks = async () => {
+        try {
+          const res = await fetchWithTimeout(taskAPI.getAll(), 3000);
+          const tasks = res.data?.tasks?.slice(0, 3) || getDefaultQuests();
+          setDailyQuests(tasks);
+          localStorage.setItem('sq_cached_tasks', JSON.stringify(tasks));
+        } catch (err) {
+          console.log('Tasks fetch failed:', err);
+          if (dailyQuests.length === 0) {
+            setDailyQuests(getDefaultQuests());
+          }
+        } finally {
+          setTasksLoading(false);
+        }
+      };
+
+      const fetchSessions = async () => {
+        try {
+          const res = await fetchWithTimeout(sessionAPI.getSessions(), 3000);
+          const sessions = res.data?.sessions?.slice(0, 2) || getDefaultSessions();
+          setRecentSessions(sessions);
+          localStorage.setItem('sq_cached_sessions', JSON.stringify(sessions));
+        } catch (err) {
+          console.log('Sessions fetch failed:', err);
+          if (recentSessions.length === 0) {
+            setRecentSessions(getDefaultSessions());
+          }
+        } finally {
+          setSessionsLoading(false);
+        }
+      };
+
+      // Execute all fetches in parallel
+      await Promise.all([
+        fetchUser(),
+        fetchRank(),
+        fetchTasks(),
+        fetchSessions(),
       ]);
 
-      setUser(userRes.data);
-      setGuildRank(rankRes.data?.rank || { rank: 12, league: 'S4', percentile: 5 });
-      setDailyQuests(tasksRes.data?.tasks?.slice(0, 3) || getDefaultQuests());
-      setRecentSessions(sessionsRes.data?.sessions?.slice(0, 2) || []);
+      // Update cache timestamp
+      localStorage.setItem('sq_cache_timestamp', Date.now().toString());
+      setLastUpdated(Date.now());
+
     } catch (err) {
       console.error('Dashboard data fetch error:', err);
       setError('CONNECTION LOST TO SERVER');
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [currentUser, guildRank, dailyQuests.length, recentSessions.length]);
+
+  // Initial data fetch
+  useEffect(() => {
+    fetchDashboardData();
+    
+    // Set up refresh interval (every 2 minutes)
+    const interval = setInterval(fetchDashboardData, 2 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [fetchDashboardData]);
 
   // Default quests for demo/loading state
   const getDefaultQuests = () => [
     { id: 1, title: 'Master 5 Math Problems', xp: 200, progress: 3, total: 5, type: 'math', icon: 'swords', color: 'primary' },
     { id: 2, title: '15-min Pomodoro Focus', xp: 150, progress: 0, total: 1, type: 'focus', icon: 'timer', color: 'secondary' },
     { id: 3, title: 'Review Flashcards', xp: 100, progress: 1, total: 1, type: 'review', icon: 'school', color: 'tertiary', completed: true },
+  ];
+
+  // Default sessions
+  const getDefaultSessions = () => [
+    { id: 1, subject: 'Calculus Boss Battle', started_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), xp_earned: 450, duration: 45 },
+    { id: 2, subject: 'Ancient History Lab', started_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), xp_earned: 200, duration: 25 },
   ];
 
   // Calculate XP percentage for next level
@@ -92,7 +225,7 @@ const Dashboard = () => {
 
   // Get Shadow of Doom percentage
   const getShadowPercentage = () => {
-    return user?.shadowLevel || 15;
+    return user?.shadowLevel || user?.shadow_level || 15;
   };
 
   // Get user title based on level/subject
@@ -123,6 +256,7 @@ const Dashboard = () => {
 
   // Format time ago
   const formatTimeAgo = (dateString) => {
+    if (!dateString) return 'Unknown';
     const date = new Date(dateString);
     const now = new Date();
     const hours = Math.floor((now - date) / (1000 * 60 * 60));
@@ -131,45 +265,11 @@ const Dashboard = () => {
     return 'Yesterday';
   };
 
-  // Loading skeleton
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background">
-        <TopAppBar title="HERO'S HUB" user={currentUser} />
-        <SideNavBar 
-          items={navItems} 
-          user={currentUser}
-          isOpen={mobileMenuOpen}
-          onClose={() => setMobileMenuOpen(false)}
-        />
-        <main className="md:ml-64 pt-24 px-6 pb-24">
-          <div className="max-w-7xl mx-auto">
-            <div className="grid grid-cols-12 gap-6">
-              <div className="col-span-12 lg:col-span-8">
-                <PixelCard className="h-64 animate-pulse" />
-              </div>
-              <div className="col-span-12 lg:col-span-4">
-                <PixelCard className="h-64 animate-pulse" />
-              </div>
-              <div className="col-span-12">
-                <PixelCard className="h-48 animate-pulse" />
-              </div>
-              <div className="col-span-12 lg:col-span-7">
-                <PixelCard className="h-64 animate-pulse" />
-              </div>
-              <div className="col-span-12 lg:col-span-5">
-                <PixelCard className="h-64 animate-pulse" />
-              </div>
-            </div>
-          </div>
-        </main>
-        <BottomNavBar items={navItems.slice(0, 4)} activeItem="study" />
-      </div>
-    );
-  }
+  // Check if any data is still loading
+  const isLoading = userLoading || rankLoading || tasksLoading || sessionsLoading;
 
   // Error state
-  if (error) {
+  if (error && !user) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <PixelCard variant="elevated" className="max-w-md w-full text-center">
@@ -216,6 +316,7 @@ const Dashboard = () => {
               title={getUserTitle()}
               xpPercentage={getXPPercentage()}
               shadowPercentage={getShadowPercentage()}
+              loading={userLoading}
             />
           </section>
 
@@ -223,7 +324,10 @@ const Dashboard = () => {
           <section className="col-span-12 lg:col-span-4">
             <GuildStatsCard 
               rank={guildRank?.rank || 12}
+              league={guildRank?.league || 'S4'}
+              percentile={guildRank?.percentile || 5}
               onViewLeaderboard={() => navigate('/leaderboard')}
+              loading={rankLoading}
             />
           </section>
 
@@ -240,6 +344,7 @@ const Dashboard = () => {
             <DailyQuests 
               quests={dailyQuests}
               onQuestClick={handleQuestClick}
+              loading={tasksLoading}
             />
           </section>
 
@@ -247,9 +352,20 @@ const Dashboard = () => {
           <section className="col-span-12 lg:col-span-5">
             <RecentVictories 
               sessions={recentSessions}
+              loading={sessionsLoading}
             />
           </section>
         </div>
+        
+        {/* Refresh indicator */}
+        {isLoading && (
+          <div className="fixed bottom-4 right-4 bg-surface-container border-2 border-outline-variant px-4 py-2 shadow-lg z-50">
+            <span className="font-['Press_Start_2P'] text-[10px] text-secondary flex items-center gap-2">
+              <span className="material-symbols-outlined animate-spin text-sm">refresh</span>
+              SYNCING...
+            </span>
+          </div>
+        )}
       </main>
 
       {/* Bottom Navigation (Mobile) */}
@@ -269,10 +385,18 @@ const Dashboard = () => {
  * Hero Status HUD Component - Matches Stitch HTML exactly
  * Shows avatar, XP bar, Shadow of Doom bar, and rank badges
  */
-const HeroStatusCard = ({ user, title, xpPercentage, shadowPercentage }) => {
+const HeroStatusCard = ({ user, title, xpPercentage, shadowPercentage, loading }) => {
   const level = user?.level || 42;
   const xp = user?.xp || 9000;
   const nextLevelXP = level * 1250;
+
+  if (loading && !user) {
+    return (
+      <div className="bg-surface-container-high border-2 border-outline-variant p-6 shadow-[4px_4px_0px_0px_#150136] h-full animate-pulse">
+        <div className="h-32 bg-surface-container rounded"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-surface-container-high border-2 border-outline-variant p-6 shadow-[4px_4px_0px_0px_#150136] relative overflow-hidden h-full">
@@ -295,7 +419,7 @@ const HeroStatusCard = ({ user, title, xpPercentage, shadowPercentage }) => {
               <h1 className="font-['Press_Start_2P'] text-xl text-primary mb-2">{title}</h1>
               <div className="flex gap-4">
                 <span className="px-2 py-1 bg-surface-container-lowest text-secondary font-['Press_Start_2P'] text-[10px]">RANK: ELITE</span>
-                <span className="px-2 py-1 bg-surface-container-lowest text-tertiary font-['Press_Start_2P'] text-[10px]">WIN STREAK: 7</span>
+                <span className="px-2 py-1 bg-surface-container-lowest text-tertiary font-['Press_Start_2P'] text-[10px]">WIN STREAK: {user?.current_streak || user?.streak || 7}</span>
               </div>
             </div>
           </div>
@@ -321,7 +445,7 @@ const HeroStatusCard = ({ user, title, xpPercentage, shadowPercentage }) => {
             </div>
             <div className="h-6 bg-surface-container-lowest border-2 border-outline-variant overflow-hidden relative">
               <div 
-                className="h-full bg-gradient-to-r from-secondary to-secondary-container pixel-segmented shadow-[0px_0px_10px_rgba(0,241,254,0.3)]"
+                className="h-full bg-gradient-to-r from-secondary to-secondary-container pixel-segmented shadow-[0px_0px_10px_rgba(0,241,254,0.3)] transition-all duration-500"
                 style={{ width: `${xpPercentage}%` }}
               ></div>
             </div>
@@ -338,7 +462,7 @@ const HeroStatusCard = ({ user, title, xpPercentage, shadowPercentage }) => {
             </div>
             <div className="h-4 bg-surface-container-lowest border-2 border-outline-variant overflow-hidden">
               <div 
-                className="h-full bg-error pixel-segmented"
+                className="h-full bg-error pixel-segmented transition-all duration-500"
                 style={{ width: `${shadowPercentage}%` }}
               ></div>
             </div>
@@ -352,7 +476,15 @@ const HeroStatusCard = ({ user, title, xpPercentage, shadowPercentage }) => {
 /**
  * Guild Stats Card Component - Matches Stitch HTML
  */
-const GuildStatsCard = ({ rank, onViewLeaderboard }) => {
+const GuildStatsCard = ({ rank, league, percentile, onViewLeaderboard, loading }) => {
+  if (loading) {
+    return (
+      <div className="h-full bg-surface-container border-2 border-outline-variant p-6 shadow-[4px_4px_0px_0px_#150136] animate-pulse">
+        <div className="h-32 bg-surface-container-high rounded"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="h-full bg-surface-container border-2 border-outline-variant p-6 shadow-[4px_4px_0px_0px_#150136] flex flex-col justify-between">
       <div>
@@ -363,11 +495,11 @@ const GuildStatsCard = ({ rank, onViewLeaderboard }) => {
         <div className="space-y-4">
           <div className="bg-surface-container-low p-4 flex justify-between items-center border-l-4 border-tertiary">
             <div>
-              <p className="font-['Press_Start_2P'] text-[10px] text-on-surface-variant">S4 LEAGUE (HK)</p>
+              <p className="font-['Press_Start_2P'] text-[10px] text-on-surface-variant">{league} LEAGUE (HK)</p>
               <p className="font-headline font-bold text-xl text-tertiary">RANK #{rank}</p>
             </div>
             <div className="text-right">
-              <p className="font-['Press_Start_2P'] text-[8px] text-secondary">TOP 5%</p>
+              <p className="font-['Press_Start_2P'] text-[8px] text-secondary">TOP {percentile}%</p>
             </div>
           </div>
           <div className="font-body text-sm text-on-surface-variant leading-relaxed">
@@ -377,7 +509,7 @@ const GuildStatsCard = ({ rank, onViewLeaderboard }) => {
       </div>
       <button 
         onClick={onViewLeaderboard}
-        className="w-full mt-6 bg-secondary-container text-on-secondary-container font-['Press_Start_2P'] text-[10px] py-3 shadow-[3px_3px_0px_0px_#006a70] active:translate-y-1 transition-transform"
+        className="w-full mt-6 bg-secondary-container text-on-secondary-container font-['Press_Start_2P'] text-[10px] py-3 shadow-[3px_3px_0px_0px_#006a70] active:translate-y-1 transition-transform hover:brightness-110"
       >
         VIEW LEADERBOARD
       </button>
@@ -497,7 +629,7 @@ const QuestNode = ({ node, index, onClick }) => {
 /**
  * Daily Quests Component - Matches Stitch HTML
  */
-const DailyQuests = ({ quests, onQuestClick }) => {
+const DailyQuests = ({ quests, onQuestClick, loading }) => {
   // Format quests data
   const formattedQuests = quests.length > 0 ? quests.map(q => ({
     id: q.id,
@@ -508,6 +640,7 @@ const DailyQuests = ({ quests, onQuestClick }) => {
     icon: q.icon || (q.type === 'focus' ? 'timer' : q.type === 'review' ? 'school' : 'swords'),
     color: q.color || (q.completed ? 'tertiary' : q.type === 'focus' ? 'secondary' : 'primary'),
     completed: q.completed,
+    type: q.type,
   })) : getDefaultQuests();
 
   function getDefaultQuests() {
@@ -516,6 +649,14 @@ const DailyQuests = ({ quests, onQuestClick }) => {
       { id: 2, title: '15-min Pomodoro Focus', xp: 150, progress: 0, total: 1, icon: 'timer', color: 'secondary', completed: false },
       { id: 3, title: 'Review Flashcards', xp: 100, progress: 1, total: 1, icon: 'school', color: 'tertiary', completed: true },
     ];
+  }
+
+  if (loading && quests.length === 0) {
+    return (
+      <div className="bg-surface-container border-2 border-outline-variant p-6 shadow-[4px_4px_0px_0px_#150136] animate-pulse">
+        <div className="h-48 bg-surface-container-high rounded"></div>
+      </div>
+    );
   }
 
   return (
@@ -549,12 +690,6 @@ const QuestItem = ({ quest, onClick }) => {
     primary: 'border-l-4 border-primary',
     secondary: 'border-l-4 border-secondary',
     tertiary: 'border-l-4 border-tertiary',
-  };
-
-  const iconBgColors = {
-    primary: 'bg-primary/20 group-hover:border-primary',
-    secondary: 'bg-secondary/20 group-hover:border-secondary',
-    tertiary: 'bg-tertiary/20 group-hover:border-tertiary',
   };
 
   return (
@@ -615,7 +750,7 @@ const QuestItem = ({ quest, onClick }) => {
 /**
  * Recent Victories Component - Matches Stitch HTML
  */
-const RecentVictories = ({ sessions }) => {
+const RecentVictories = ({ sessions, loading }) => {
   const badges = [
     { type: 'BRONZE FOCUS', icon: 'bolt', color: '#cd7f32' },
     { type: 'SILVER STREAK', icon: 'local_fire_department', color: '#c0c0c0' },
@@ -625,13 +760,21 @@ const RecentVictories = ({ sessions }) => {
   const formattedSessions = sessions.length > 0 ? sessions.map(s => ({
     id: s.id,
     title: s.subject || 'Study Session',
-    time: s.started_at,
+    time: s.started_at || s.created_at,
     xp: s.xp_earned || 0,
     duration: s.duration || 0,
   })) : [
     { id: 1, title: 'Calculus Boss Battle', time: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), xp: 450, duration: 45 },
     { id: 2, title: 'Ancient History Lab', time: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), xp: 200, duration: 25 },
   ];
+
+  if (loading && sessions.length === 0) {
+    return (
+      <div className="bg-surface-container border-2 border-outline-variant p-6 shadow-[4px_4px_0px_0px_#150136] h-full animate-pulse">
+        <div className="h-48 bg-surface-container-high rounded"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-surface-container border-2 border-outline-variant p-6 shadow-[4px_4px_0px_0px_#150136] h-full">
@@ -690,6 +833,7 @@ const RecentVictories = ({ sessions }) => {
 
 // Helper function for time formatting
 const formatTimeAgo = (dateString) => {
+  if (!dateString) return 'Unknown';
   const date = new Date(dateString);
   const now = new Date();
   const hours = Math.floor((now - date) / (1000 * 60 * 60));

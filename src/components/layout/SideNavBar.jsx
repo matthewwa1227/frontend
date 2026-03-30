@@ -73,10 +73,13 @@ const SideNavBar = ({
         {/* Footer with Settings and Shadow Warning */}
         <div className="p-4 mt-auto border-t-4 border-[#1a063b]">
           {/* Settings */}
-          <button className="flex items-center gap-3 p-4 mb-2 text-[#ddfcff] opacity-80 hover:text-primary transition-colors font-['Press_Start_2P'] text-[10px] uppercase w-full text-left">
+          <a
+            href="/settings"
+            className="flex items-center gap-3 p-4 mb-2 text-[#ddfcff] opacity-80 hover:text-primary transition-colors font-['Press_Start_2P'] text-[10px] uppercase w-full text-left hover:bg-[#271448]"
+          >
             <span className="material-symbols-outlined">settings</span>
             SETTINGS
-          </button>
+          </a>
           
           {/* Shadow Warning */}
           <div className="flex items-center gap-3 p-4 text-error font-['Press_Start_2P'] text-[10px]">
