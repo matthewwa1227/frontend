@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { authAPI } from '../../utils/api';
 import { setAuth } from '../../utils/auth';
 import PixelButton from '../shared/PixelButton';
-import { User, Lock } from 'lucide-react';
+import { User, Lock, WifiOff, RefreshCw } from 'lucide-react';
+import api from '../../utils/api';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -13,6 +14,37 @@ export default function Login() {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [apiStatus, setApiStatus] = useState({ checking: true, online: false, url: '' });
+
+  // Check API connection on mount
+  useEffect(() => {
+    checkApiConnection();
+  }, []);
+
+  const checkApiConnection = async () => {
+    setApiStatus({ checking: true, online: false, url: '' });
+    try {
+      // Try to hit the health endpoint
+      const healthUrl = api.defaults.baseURL.replace('/api', '') + '/api/health';
+      console.log('Checking API health at:', healthUrl);
+      
+      const response = await fetch(healthUrl, { 
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+        // Short timeout for quick check
+        signal: AbortSignal.timeout(5000)
+      });
+      
+      if (response.ok) {
+        setApiStatus({ checking: false, online: true, url: api.defaults.baseURL });
+      } else {
+        setApiStatus({ checking: false, online: false, url: api.defaults.baseURL });
+      }
+    } catch (err) {
+      console.error('API health check failed:', err);
+      setApiStatus({ checking: false, online: false, url: api.defaults.baseURL });
+    }
+  };
 
   const handleChange = (e) => {
     setFormData({
@@ -34,26 +66,26 @@ export default function Login() {
       // Store token and user data
       setAuth(token, student);
       
-    // Route based on role
-    if (student.role === 'parent') {
-      navigate('/parent/dashboard');
-    } else {
-      navigate('/dashboard');
+      // Route based on role
+      if (student.role === 'parent') {
+        navigate('/parent/dashboard');
+      } else {
+        navigate('/dashboard');
+      }
+    } catch (err) {
+      console.error('Login error:', err);
+      if (err.code === 'ERR_NETWORK' || err.message?.includes('Network Error')) {
+        setError('Cannot connect to server. Please check your internet connection.');
+      } else if (err.response?.status === 401) {
+        setError('Invalid email or password. Please try again.');
+      } else if (err.response?.status === 0) {
+        setError('Connection blocked. The server may be down or CORS is not configured.');
+      } else {
+        setError(err.response?.data?.message || 'Login failed. Please try again.');
+      }
+    } finally {
+      setLoading(false);
     }
-  } catch (err) {
-    console.error('Login error:', err);
-    if (err.code === 'ERR_NETWORK') {
-      setError('Cannot connect to server. Please check your internet connection.');
-    } else if (err.response?.status === 401) {
-      setError('Invalid email or password. Please try again.');
-    } else if (err.response?.status === 0 || err.message?.includes('CORS')) {
-      setError('Connection blocked. Please try again later.');
-    } else {
-      setError(err.response?.data?.message || 'Login failed. Please try again.');
-    }
-  } finally {
-    setLoading(false);
-  }
   };
 
   return (
@@ -67,6 +99,34 @@ export default function Login() {
           <h1 className="text-3xl font-pixel text-white mb-2">StudyQuest</h1>
           <p className="text-sm font-pixel text-gray-400">Begin Your Learning Adventure</p>
         </div>
+
+        {/* API Status Banner */}
+        {!apiStatus.checking && !apiStatus.online && (
+          <div className="bg-red-900/80 border-2 border-red-500 text-white text-xs font-mono p-4 mb-6 flex items-start gap-3">
+            <WifiOff className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="font-bold text-red-300 mb-1">SERVER UNREACHABLE</p>
+              <p className="text-gray-300 mb-2">Cannot connect to: {apiStatus.url}</p>
+              <p className="text-gray-400 text-[10px]">
+                The backend server may be down or the API URL is incorrect.
+              </p>
+              <button 
+                onClick={checkApiConnection}
+                className="mt-3 flex items-center gap-2 text-red-300 hover:text-white transition-colors"
+              >
+                <RefreshCw className="w-3 h-3" />
+                <span className="text-[10px]">RETRY CONNECTION</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {!apiStatus.checking && apiStatus.online && (
+          <div className="bg-green-900/50 border-2 border-green-500 text-green-300 text-xs font-mono p-3 mb-6 flex items-center gap-2">
+            <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+            Server Online: {apiStatus.url}
+          </div>
+        )}
 
         {/* Login Form */}
         <div className="bg-pixel-primary border-4 border-pixel-accent shadow-pixel p-8">
@@ -120,11 +180,11 @@ export default function Login() {
             {/* Submit Button */}
             <PixelButton
               type="submit"
-              disabled={loading}
+              disabled={loading || !apiStatus.online}
               variant="gold"
               className="w-full"
             >
-              {loading ? 'Logging in...' : 'Enter Quest'}
+              {loading ? 'Logging in...' : apiStatus.online ? 'Enter Quest' : 'Server Offline'}
             </PixelButton>
           </form>
 
