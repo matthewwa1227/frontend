@@ -9,10 +9,10 @@ import TopAppBar from '../components/layout/TopAppBar';
 import SideNavBar, { BottomNavBar } from '../components/layout/SideNavBar';
 
 // Social Components
-import LeaderboardTable, { MVPSpotlight } from '../components/social/LeaderboardTable';
-import GuildPanel from '../components/social/GuildPanel';
-import FriendsList from '../components/social/FriendsList';
-import ChallengeCard, { CreateChallengeForm } from '../components/social/ChallengeCard';
+import LeaderboardTable, { MVPSpotlight } from '../components/Social/LeaderboardTable';
+import GuildPanel from '../components/Social/GuildPanel';
+import FriendsList from '../components/Social/FriendsList';
+import ChallengeCard, { CreateChallengeForm } from '../components/Social/ChallengeCard';
 
 /**
  * SocialHub - Social features hub with Leaderboard, Guild, Friends, and Challenges
