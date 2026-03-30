@@ -3,7 +3,8 @@
   "name": "studyquest-frontend",
   "build": {
     "env": {
-      "CI": "false"
+      "CI": "false",
+      "REACT_APP_API_URL": "https://fyp-gp20.onrender.com/api"
     }
   },
   "builds": [

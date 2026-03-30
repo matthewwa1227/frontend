@@ -1,13 +1,30 @@
 import axios from 'axios';
 
-// Environment-aware API URL
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+// Environment-aware API URL - with fallback for production
+const getApiUrl = () => {
+  // Priority 1: Environment variable (set in Vercel/Netlify/etc)
+  if (process.env.REACT_APP_API_URL) {
+    return process.env.REACT_APP_API_URL;
+  }
+  
+  // Priority 2: Production fallback (Render backend)
+  if (process.env.NODE_ENV === 'production') {
+    return 'https://fyp-gp20.onrender.com/api';
+  }
+  
+  // Priority 3: Local development
+  return 'http://localhost:5000/api';
+};
+
+const API_URL = getApiUrl();
+console.log('🔌 API URL:', API_URL);
 
 const api = axios.create({
   baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 10000, // 10 second timeout
 });
 
 // Add token to requests if available

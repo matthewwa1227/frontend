@@ -41,7 +41,16 @@ export default function Login() {
       navigate('/dashboard');
     }
   } catch (err) {
-    setError(err.response?.data?.message || 'Login failed. Please try again.');
+    console.error('Login error:', err);
+    if (err.code === 'ERR_NETWORK') {
+      setError('Cannot connect to server. Please check your internet connection.');
+    } else if (err.response?.status === 401) {
+      setError('Invalid email or password. Please try again.');
+    } else if (err.response?.status === 0 || err.message?.includes('CORS')) {
+      setError('Connection blocked. Please try again later.');
+    } else {
+      setError(err.response?.data?.message || 'Login failed. Please try again.');
+    }
   } finally {
     setLoading(false);
   }
