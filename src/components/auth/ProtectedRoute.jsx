@@ -32,10 +32,16 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
       try {
         // Validate token with backend
         const response = await authAPI.getMe();
-        const user = response.data;
+        console.log('🔐 ProtectedRoute - /auth/me response:', response.data);
+        
+        // Handle response format: { success: true, data: {...} }
+        const user = response.data.data || response.data;
+        
+        console.log('👤 ProtectedRoute - user:', user);
 
         // Check role restrictions
         if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
+          console.log('⛔ ProtectedRoute - role not allowed:', user.role, 'allowed:', allowedRoles);
           setAuthState({
             isChecking: false,
             isAuthenticated: false,
