@@ -15,6 +15,7 @@ export default function Login() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [apiStatus, setApiStatus] = useState({ checking: true, online: false, url: '' });
+  const [debugInfo, setDebugInfo] = useState(null);
 
   // Check API connection on mount
   useEffect(() => {
@@ -24,14 +25,12 @@ export default function Login() {
   const checkApiConnection = async () => {
     setApiStatus({ checking: true, online: false, url: '' });
     try {
-      // Try to hit the health endpoint
       const healthUrl = api.defaults.baseURL.replace('/api', '') + '/api/health';
       console.log('Checking API health at:', healthUrl);
       
       const response = await fetch(healthUrl, { 
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
-        // Short timeout for quick check
         signal: AbortSignal.timeout(5000)
       });
       
@@ -52,19 +51,46 @@ export default function Login() {
       [e.target.name]: e.target.value,
     });
     setError('');
+    setDebugInfo(null);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setDebugInfo({ status: 'attempting', message: 'Sending login request...' });
 
     try {
+      console.log('🔑 Attempting login with:', { email: formData.email });
+      console.log('📡 API URL:', api.defaults.baseURL);
+      
       const response = await authAPI.login(formData);
+      
+      console.log('✅ Login response:', response);
+      console.log('📦 Response data:', response.data);
+      
+      setDebugInfo({ 
+        status: 'success', 
+        message: 'Login API call succeeded!',
+        response: JSON.stringify(response.data, null, 2)
+      });
+      
       const { token, student } = response.data.data;
+      
+      console.log('🎫 Token:', token ? 'Received' : 'MISSING!');
+      console.log('👤 Student:', student ? 'Received' : 'MISSING!');
+      
+      if (!token || !student) {
+        setError('Login response missing required data. Check console.');
+        setLoading(false);
+        return;
+      }
       
       // Store token and user data
       setAuth(token, student);
+      
+      console.log('💾 Auth data saved to localStorage');
+      console.log('🚀 Navigating to dashboard...');
       
       // Route based on role
       if (student.role === 'parent') {
@@ -73,16 +99,31 @@ export default function Login() {
         navigate('/dashboard');
       }
     } catch (err) {
-      console.error('Login error:', err);
+      console.error('❌ Login error:', err);
+      
+      let errorDetails = {
+        status: 'error',
+        message: err.message,
+        code: err.code,
+        responseStatus: err.response?.status,
+        responseData: err.response?.data,
+      };
+      
       if (err.code === 'ERR_NETWORK' || err.message?.includes('Network Error')) {
         setError('Cannot connect to server. Please check your internet connection.');
       } else if (err.response?.status === 401) {
         setError('Invalid email or password. Please try again.');
       } else if (err.response?.status === 0) {
         setError('Connection blocked. The server may be down or CORS is not configured.');
+      } else if (err.response?.status === 404) {
+        setError('Login endpoint not found. Server may be misconfigured.');
+      } else if (err.response?.status >= 500) {
+        setError('Server error. Please try again later.');
       } else {
-        setError(err.response?.data?.message || 'Login failed. Please try again.');
+        setError(err.response?.data?.message || `Login failed: ${err.message}`);
       }
+      
+      setDebugInfo(errorDetails);
     } finally {
       setLoading(false);
     }
@@ -180,13 +221,23 @@ export default function Login() {
             {/* Submit Button */}
             <PixelButton
               type="submit"
-              disabled={loading || !apiStatus.online}
+              disabled={loading}
               variant="gold"
               className="w-full"
             >
-              {loading ? 'Logging in...' : apiStatus.online ? 'Enter Quest' : 'Server Offline'}
+              {loading ? 'Logging in...' : 'Enter Quest'}
             </PixelButton>
           </form>
+
+          {/* Debug Info Panel */}
+          {debugInfo && (
+            <div className="mt-6 p-4 bg-black/50 border-2 border-gray-600 text-xs font-mono">
+              <p className="text-gray-400 mb-2">Debug Info:</p>
+              <pre className="text-green-400 whitespace-pre-wrap overflow-x-auto">
+                {JSON.stringify(debugInfo, null, 2)}
+              </pre>
+            </div>
+          )}
 
           {/* Register Link */}
           <div className="mt-6 text-center">
