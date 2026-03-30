@@ -5,6 +5,7 @@ import { isAuthenticated, getUser } from './utils/auth';
 // --- Auth Components ---
 import Login from './components/auth/Login';
 import Register from './components/auth/Register';
+import ProtectedRoute from './components/auth/ProtectedRoute';
 
 // --- Student Components ---
 import Dashboard from './pages/Dashboard';
@@ -23,9 +24,6 @@ import GuardianManagement from './components/GuardianManagement';
 import Navbar from './components/shared/Navbar';
 import TestAnimation from './TestAnimation';
 
-// --- Settings ---
-import Settings from './components/settings/Settings';
-
 import ScheduleGenerator from './components/ScheduleGenerator/ScheduleGenerator';
 import ExerciseGenerator from './components/ExerciseGenerator/ExerciseGenerator';
 
@@ -39,46 +37,8 @@ import TeacherDashboard from './components/Teacher/TeacherDashboard';
 import TeacherLayout from './components/Teacher/TeacherLayout';
 import SocialHub from './pages/SocialHub';
 
-/**
- * ProtectedRoute Wrapper - For Students
- */
-function ProtectedRoute({ children }) {
-  const isAuth = isAuthenticated();
-  const user = getUser();
-  
-  if (!isAuth || !user) {
-    return <Navigate to="/login" replace />;
-  }
-  
-  return (
-    <>
-      <Navbar />
-      <div className="pt-4">
-        {children}
-      </div>
-    </>
-  );
-}
-
-/**
- * ParentProtectedRoute Wrapper - For Parents (no student navbar)
- */
-function ParentProtectedRoute({ children }) {
-  const isAuth = isAuthenticated();
-  const user = getUser();
-  
-  if (!isAuth || !user) {
-    return <Navigate to="/login" replace />;
-  }
-  
-  // Redirect students away from parent routes
-  if (user.role !== 'parent') {
-    return <Navigate to="/dashboard" replace />;
-  }
-  
-  // No Navbar for parents - ParentDashboard has its own header
-  return <>{children}</>;
-}
+// --- Settings ---
+import Settings from './components/settings/Settings';
 
 /**
  * Smart Home Route - redirects based on role
@@ -115,9 +75,9 @@ function App() {
           <Route 
             path="/parent/dashboard" 
             element={
-              <ParentProtectedRoute>
+              <ProtectedRoute allowedRoles={['parent']}>
                 <ParentDashboard />
-              </ParentProtectedRoute>
+              </ProtectedRoute>
             } 
           />
 
@@ -125,30 +85,31 @@ function App() {
           <Route 
             path="/dashboard" 
             element={
-              isAuthenticated() ? (
+              <ProtectedRoute allowedRoles={['student']}>
                 <Dashboard />
-              ) : (
-                <Navigate to="/login" replace />
-              )
+              </ProtectedRoute>
             } 
           />
 
           <Route 
             path="/timer" 
             element={
-              isAuthenticated() ? (
+              <ProtectedRoute allowedRoles={['student']}>
                 <StudyTimer />
-              ) : (
-                <Navigate to="/login" replace />
-              )
+              </ProtectedRoute>
             } 
           />
 
           <Route 
             path="/achievements" 
             element={
-              <ProtectedRoute>
-                <Achievements />
+              <ProtectedRoute allowedRoles={['student']}>
+                <>
+                  <Navbar />
+                  <div className="pt-4">
+                    <Achievements />
+                  </div>
+                </>
               </ProtectedRoute>
             } 
           />
@@ -156,8 +117,13 @@ function App() {
           <Route 
             path="/profile" 
             element={
-              <ProtectedRoute>
-                <Profile />
+              <ProtectedRoute allowedRoles={['student']}>
+                <>
+                  <Navbar />
+                  <div className="pt-4">
+                    <Profile />
+                  </div>
+                </>
               </ProtectedRoute>
             } 
           />
@@ -165,8 +131,13 @@ function App() {
           <Route 
             path="/leaderboard" 
             element={
-              <ProtectedRoute>
-                <Leaderboard />
+              <ProtectedRoute allowedRoles={['student']}>
+                <>
+                  <Navbar />
+                  <div className="pt-4">
+                    <Leaderboard />
+                  </div>
+                </>
               </ProtectedRoute>
             } 
           />
@@ -175,11 +146,9 @@ function App() {
           <Route 
             path="/tasks" 
             element={
-              isAuthenticated() ? (
+              <ProtectedRoute allowedRoles={['student']}>
                 <QuestLog />
-              ) : (
-                <Navigate to="/login" replace />
-              )
+              </ProtectedRoute>
             } 
           />
 
@@ -187,8 +156,13 @@ function App() {
           <Route 
             path="/portal" 
             element={
-              <ProtectedRoute>
-                <ParentPortal />
+              <ProtectedRoute allowedRoles={['student']}>
+                <>
+                  <Navbar />
+                  <div className="pt-4">
+                    <ParentPortal />
+                  </div>
+                </>
               </ProtectedRoute>
             } 
           />
@@ -196,8 +170,13 @@ function App() {
           <Route 
             path="/guardians" 
             element={
-              <ProtectedRoute>
-                <GuardianManagement />
+              <ProtectedRoute allowedRoles={['student']}>
+                <>
+                  <Navbar />
+                  <div className="pt-4">
+                    <GuardianManagement />
+                  </div>
+                </>
               </ProtectedRoute>
             } 
           />
@@ -206,8 +185,13 @@ function App() {
           <Route 
             path="/test-animation" 
             element={
-              <ProtectedRoute>
-                <TestAnimation />
+              <ProtectedRoute allowedRoles={['student']}>
+                <>
+                  <Navbar />
+                  <div className="pt-4">
+                    <TestAnimation />
+                  </div>
+                </>
               </ProtectedRoute>
             } 
           />
@@ -215,8 +199,13 @@ function App() {
           <Route 
             path="/schedule" 
             element={
-              <ProtectedRoute>
-                <ScheduleGenerator />
+              <ProtectedRoute allowedRoles={['student']}>
+                <>
+                  <Navbar />
+                  <div className="pt-4">
+                    <ScheduleGenerator />
+                  </div>
+                </>
               </ProtectedRoute>
             }            
           />
@@ -224,8 +213,13 @@ function App() {
           <Route 
             path="/study-buddy" 
             element={
-              <ProtectedRoute>
-                <StudyBuddy />
+              <ProtectedRoute allowedRoles={['student']}>
+                <>
+                  <Navbar />
+                  <div className="pt-4">
+                    <StudyBuddy />
+                  </div>
+                </>
               </ProtectedRoute>
             } 
           />
@@ -233,8 +227,13 @@ function App() {
           <Route 
             path="/story-quest" 
             element={
-              <ProtectedRoute>
-                <AITutor />
+              <ProtectedRoute allowedRoles={['student']}>
+                <>
+                  <Navbar />
+                  <div className="pt-4">
+                    <AITutor />
+                  </div>
+                </>
               </ProtectedRoute>
             } 
           />
@@ -247,8 +246,13 @@ function App() {
           <Route 
             path="/revision" 
             element={
-              <ProtectedRoute>
-                <RevisionMode />
+              <ProtectedRoute allowedRoles={['student']}>
+                <>
+                  <Navbar />
+                  <div className="pt-4">
+                    <RevisionMode />
+                  </div>
+                </>
               </ProtectedRoute>
             } 
           />
@@ -257,8 +261,13 @@ function App() {
           <Route 
             path="/progress" 
             element={
-              <ProtectedRoute>
-                <ProgressDashboard />
+              <ProtectedRoute allowedRoles={['student']}>
+                <>
+                  <Navbar />
+                  <div className="pt-4">
+                    <ProgressDashboard />
+                  </div>
+                </>
               </ProtectedRoute>
             } 
           />
@@ -267,22 +276,18 @@ function App() {
           <Route 
             path="/teacher" 
             element={
-              isAuthenticated() && getUser()?.role === 'teacher' ? (
+              <ProtectedRoute allowedRoles={['teacher']}>
                 <TeacherDashboard />
-              ) : (
-                <Navigate to="/login" replace />
-              )
+              </ProtectedRoute>
             } 
           />
 
           <Route 
             path="/social" 
             element={
-              isAuthenticated() ? (
+              <ProtectedRoute allowedRoles={['student']}>
                 <SocialHub />
-              ) : (
-                <Navigate to="/login" replace />
-              )
+              </ProtectedRoute>
             } 
           />
 
@@ -290,24 +295,26 @@ function App() {
           <Route 
             path="/exercise-generator" 
             element={
-              <ProtectedRoute>
-                <ExerciseGenerator />
+              <ProtectedRoute allowedRoles={['student']}>
+                <>
+                  <Navbar />
+                  <div className="pt-4">
+                    <ExerciseGenerator />
+                  </div>
+                </>
               </ProtectedRoute>
             } 
           />
-
+          
           {/* --- Settings --- */}
           <Route 
             path="/settings" 
             element={
-              isAuthenticated() ? (
+              <ProtectedRoute allowedRoles={['student', 'parent', 'teacher']}>
                 <Settings />
-              ) : (
-                <Navigate to="/login" replace />
-              )
+              </ProtectedRoute>
             } 
           />
-          
 
           {/* --- Smart Home Redirect (role-based) --- */}
           <Route path="/" element={<SmartHomeRedirect />} />
