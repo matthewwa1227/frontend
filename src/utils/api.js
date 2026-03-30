@@ -9,7 +9,7 @@ const getApiUrl = () => {
   
   // Priority 2: Production fallback (Render backend)
   if (process.env.NODE_ENV === 'production') {
-    return 'https://fyp-gp20.onrender.com/api';
+    return 'https://studyquest-api-mqt5.onrender.com/api';
   }
   
   // Priority 3: Local development

@@ -4,7 +4,7 @@
   "build": {
     "env": {
       "CI": "false",
-      "REACT_APP_API_URL": "https://fyp-gp20.onrender.com/api"
+      "REACT_APP_API_URL": "https://studyquest-api-mqt5.onrender.com/api"
     }
   },
   "builds": [
