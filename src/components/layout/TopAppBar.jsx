@@ -77,25 +77,27 @@ const TopAppBar = ({
       
       {/* Right Section */}
       <div className="flex items-center gap-4">
-        {/* XP/Coins Display */}
-        <div className="hidden sm:flex items-center gap-2 px-3 py-1 bg-surface-container border-2 border-outline-variant">
-          <span className="material-symbols-outlined text-tertiary" style={{fontVariationSettings: "'FILL' 1"}}>monetization_on</span>
-          <span className="font-['Press_Start_2P'] text-[10px] text-tertiary">
-            {user?.xp?.toLocaleString() || '2,450'}
-          </span>
-        </div>
+        {/* XP/Coins Display - Only show if we have real data */}
+        {user?.xp !== undefined && (
+          <div className="hidden sm:flex items-center gap-2 px-3 py-1 bg-surface-container border-2 border-outline-variant">
+            <span className="material-symbols-outlined text-tertiary" style={{fontVariationSettings: "'FILL' 1"}}>monetization_on</span>
+            <span className="font-['Press_Start_2P'] text-[10px] text-tertiary">
+              {user.xp.toLocaleString()}
+            </span>
+          </div>
+        )}
         
         {/* Quest Log Button */}
         <button className="hidden sm:block bg-primary-container text-on-primary-container font-['Press_Start_2P'] text-[10px] px-4 py-2 shadow-[3px_3px_0px_0px_#8f0044] active:translate-y-1 transition-transform">
           QUEST LOG
         </button>
         
-        {/* User Avatar */}
-        {user && (
+        {/* User Avatar - Only show if we have real data */}
+        {user?.id && (
           <div className="w-10 h-10 border-2 border-primary overflow-hidden">
             <Avatar
               src={user.avatar}
-              alt={user.username}
+              alt={user.username || 'User'}
               size="sm"
               variant="primary"
               rpgClass={user.rpgClass || 'scholar'}

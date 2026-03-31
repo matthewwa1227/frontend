@@ -52,11 +52,11 @@ const SideNavBar = ({
           className
         )}
       >
-        {/* User Section - Level & Hero Power */}
-        {user && (
+        {/* User Section - Level & Hero Power - Only show if we have real data */}
+        {user?.level && (
           <div className="px-6 mb-8">
-            <h2 className="font-['Press_Start_2P'] text-sm text-tertiary mb-1">LEVEL {user.level || 42}</h2>
-            <p className="font-['Press_Start_2P'] text-[10px] text-primary opacity-80">HERO POWER: {user.heroPower || '9000'}</p>
+            <h2 className="font-['Press_Start_2P'] text-sm text-tertiary mb-1">LEVEL {user.level}</h2>
+            <p className="font-['Press_Start_2P'] text-[10px] text-primary opacity-80">HERO POWER: {user.heroPower || user.xp || '...'}</p>
           </div>
         )}
         
@@ -84,7 +84,7 @@ const SideNavBar = ({
           {/* Shadow Warning */}
           <div className="flex items-center gap-3 p-4 text-error font-['Press_Start_2P'] text-[10px]">
             <span className="material-symbols-outlined">warning</span>
-            SHADOW: {user?.shadowLevel || 15}%
+            SHADOW: {user?.shadowLevel || user?.shadow_level || 0}%
           </div>
         </div>
       </aside>

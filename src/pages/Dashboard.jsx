@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '../utils/cn';
-import { getUser } from '../utils/auth';
+import { getUser, setAuth, getToken } from '../utils/auth';
 import { authAPI, leaderboardAPI, taskAPI, sessionAPI } from '../utils/api';
 
 // Layout Components
@@ -9,26 +9,30 @@ import TopAppBar from '../components/layout/TopAppBar';
 import SideNavBar, { BottomNavBar } from '../components/layout/SideNavBar';
 
 // UI Components
-import PixelCard, { PixelCardHeader, PixelCardTitle } from '../components/ui/PixelCard';
+import PixelCard from '../components/ui/PixelCard';
 import PixelButton from '../components/ui/PixelButton';
-import ProgressBar from '../components/ui/ProgressBar';
-import Avatar from '../components/ui/Avatar';
 
-// Default quests for demo/loading state - defined outside component to prevent recreation
-const getDefaultQuests = () => [
+// Default quests for demo/loading state
+const DEFAULT_QUESTS = [
   { id: 1, title: 'Master 5 Math Problems', xp: 200, progress: 3, total: 5, type: 'math', icon: 'swords', color: 'primary' },
   { id: 2, title: '15-min Pomodoro Focus', xp: 150, progress: 0, total: 1, type: 'focus', icon: 'timer', color: 'secondary' },
   { id: 3, title: 'Review Flashcards', xp: 100, progress: 1, total: 1, type: 'review', icon: 'school', color: 'tertiary', completed: true },
 ];
 
-// Default sessions - defined outside component to prevent recreation
-const getDefaultSessions = () => [
+// Default sessions
+const DEFAULT_SESSIONS = [
   { id: 1, subject: 'Calculus Boss Battle', started_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), xp_earned: 450, duration: 45 },
   { id: 2, subject: 'Ancient History Lab', started_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), xp_earned: 200, duration: 25 },
 ];
 
 // Cache duration: 5 minutes for non-critical data
 const CACHE_DURATION = 5 * 60 * 1000;
+const CACHE_KEYS = {
+  RANK: 'sq_cached_rank',
+  TASKS: 'sq_cached_tasks',
+  SESSIONS: 'sq_cached_sessions',
+  TIMESTAMP: 'sq_cache_timestamp',
+};
 
 // Fetch with timeout helper
 const fetchWithTimeout = async (promise, timeout = 5000) => {
@@ -42,26 +46,25 @@ const fetchWithTimeout = async (promise, timeout = 5000) => {
 
 /**
  * Hero's Hub Dashboard - Main student landing page
- * 6 Sections: Hero Status, Guild Stats, Quest Map, Daily Quests, Recent Victories
- * Matches Stitch Pixel-Art Design exactly
- * 
- * PERFORMANCE OPTIMIZED: Progressive loading with timeouts and caching
+ * FIXED: Single source of truth for user data - uses auth.js getUser/setAuth only
  */
 const Dashboard = () => {
   const navigate = useNavigate();
   
-  // Memoize currentUser to prevent it from being a new object on every render
-  const currentUser = useMemo(() => getUser(), []);
+  // SINGLE SOURCE OF TRUTH: Get user from auth utility only
+  // Use lazy initialization to prevent re-running getUser() on every render
+  const [user, setUser] = useState(() => {
+    const cachedUser = getUser();
+    // If no cached user, return null - don't show default/demo data
+    return cachedUser || null;
+  });
   
-  // State - separate loading states for progressive rendering
-  const [user, setUser] = useState(currentUser || null);
+  // Other state
   const [guildRank, setGuildRank] = useState(null);
   const [dailyQuests, setDailyQuests] = useState([]);
   const [recentSessions, setRecentSessions] = useState([]);
-  const [heroStatus, setHeroStatus] = useState(null);
   
-  // Individual loading states for progressive UI
-  const [initialLoading, setInitialLoading] = useState(true);
+  // Loading states
   const [userLoading, setUserLoading] = useState(true);
   const [rankLoading, setRankLoading] = useState(true);
   const [tasksLoading, setTasksLoading] = useState(true);
@@ -69,12 +72,13 @@ const Dashboard = () => {
   
   const [error, setError] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [lastUpdated, setLastUpdated] = useState(Date.now());
 
-  // Use ref to track if initial fetch has happened
-  const hasFetchedRef = useRef(false);
+  // Refs to prevent duplicate fetches and state updates
+  const isFetchingRef = useRef(false);
+  const hasInitialFetchRef = useRef(false);
+  const hasUserDataRef = useRef(false); // Track if we've successfully loaded user data
 
-  // Navigation items with proper Material Symbols icons
+  // Navigation items - memoized to prevent re-creation
   const navItems = useMemo(() => [
     { id: 'study', label: 'STUDY', icon: 'menu_book', href: '/dashboard', active: true },
     { id: 'tasks', label: 'TASKS', icon: 'checklist', href: '/tasks', badge: dailyQuests.filter(q => !q.completed).length.toString() },
@@ -83,17 +87,18 @@ const Dashboard = () => {
     { id: 'progress', label: 'PROGRESS', icon: 'trending_up', href: '/progress' },
   ], [dailyQuests]);
 
-  // Load cached data immediately
+  // Load cached data on mount (non-user data only)
   useEffect(() => {
     const loadCachedData = () => {
       try {
-        const cachedRank = localStorage.getItem('sq_cached_rank');
-        const cachedTasks = localStorage.getItem('sq_cached_tasks');
-        const cachedSessions = localStorage.getItem('sq_cached_sessions');
-        const cachedTimestamp = localStorage.getItem('sq_cache_timestamp');
-        const cachedUser = localStorage.getItem('sq_user');
+        const cachedTimestamp = localStorage.getItem(CACHE_KEYS.TIMESTAMP);
+        const isCacheValid = cachedTimestamp && (Date.now() - parseInt(cachedTimestamp) < CACHE_DURATION);
         
-        if (cachedTimestamp && Date.now() - parseInt(cachedTimestamp) < CACHE_DURATION) {
+        if (isCacheValid) {
+          const cachedRank = localStorage.getItem(CACHE_KEYS.RANK);
+          const cachedTasks = localStorage.getItem(CACHE_KEYS.TASKS);
+          const cachedSessions = localStorage.getItem(CACHE_KEYS.SESSIONS);
+          
           if (cachedRank) {
             setGuildRank(JSON.parse(cachedRank));
             setRankLoading(false);
@@ -106,89 +111,95 @@ const Dashboard = () => {
             setRecentSessions(JSON.parse(cachedSessions));
             setSessionsLoading(false);
           }
-          if (cachedUser) {
-            setUser(JSON.parse(cachedUser));
-            setUserLoading(false);
-          }
         }
       } catch (e) {
         console.log('Cache read error:', e);
       }
-      setInitialLoading(false);
     };
     
     loadCachedData();
   }, []);
 
-  // Fetch dashboard data with progressive loading
-  // FIXED: No dependencies - use refs for any values that might change
+  // Fetch dashboard data - runs once on mount and on interval
   const fetchDashboardData = useCallback(async () => {
-    // Prevent duplicate fetches
-    if (hasFetchedRef.current) {
-      return;
-    }
-    hasFetchedRef.current = true;
+    // Prevent concurrent fetches
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
     
     try {
       setError(null);
 
-      // Fetch all data in parallel with individual timeout handling
+      // Fetch user data from API
       const fetchUserData = async () => {
         try {
           const res = await fetchWithTimeout(authAPI.getMe(), 3000);
           const userData = res.data?.data || res.data;
-          if (userData) {
-            setUser(userData);
-            localStorage.setItem('sq_user', JSON.stringify(userData));
+          if (userData && userData.id) {
+            // Only update if data is different to prevent unnecessary re-renders
+            setUser(prevUser => {
+              // Check if data actually changed
+              if (prevUser?.id === userData.id && 
+                  prevUser?.level === userData.level &&
+                  prevUser?.xp === userData.xp) {
+                return prevUser; // Return same reference, no re-render
+              }
+              // Update auth cache
+              const token = getToken();
+              if (token) {
+                setAuth(token, userData);
+              }
+              return userData;
+            });
           }
         } catch (err) {
-          console.log('User fetch failed, using cached');
-          // Don't update state on error - keep existing cached data
+          console.log('User fetch failed, keeping existing data');
+          // Don't modify user state on error - keep what we have
         } finally {
           setUserLoading(false);
+          hasUserDataRef.current = true;
         }
       };
 
+      // Fetch rank
       const fetchRank = async () => {
         try {
           const res = await fetchWithTimeout(leaderboardAPI.getMyRank(), 3000);
           const rankData = res.data?.rank || { rank: 12, league: 'S4', percentile: 5 };
           setGuildRank(rankData);
-          localStorage.setItem('sq_cached_rank', JSON.stringify(rankData));
+          localStorage.setItem(CACHE_KEYS.RANK, JSON.stringify(rankData));
         } catch (err) {
           console.log('Rank fetch failed');
-          // Only set default if no data exists
           setGuildRank(prev => prev || { rank: 12, league: 'S4', percentile: 5 });
         } finally {
           setRankLoading(false);
         }
       };
 
+      // Fetch tasks
       const fetchTasks = async () => {
         try {
           const res = await fetchWithTimeout(taskAPI.getAll(), 3000);
-          const tasks = res.data?.tasks?.slice(0, 3) || getDefaultQuests();
+          const tasks = res.data?.tasks?.slice(0, 3) || DEFAULT_QUESTS;
           setDailyQuests(tasks);
-          localStorage.setItem('sq_cached_tasks', JSON.stringify(tasks));
+          localStorage.setItem(CACHE_KEYS.TASKS, JSON.stringify(tasks));
         } catch (err) {
           console.log('Tasks fetch failed');
-          // Only set default if no data exists
-          setDailyQuests(prev => prev?.length > 0 ? prev : getDefaultQuests());
+          setDailyQuests(prev => prev?.length > 0 ? prev : DEFAULT_QUESTS);
         } finally {
           setTasksLoading(false);
         }
       };
 
+      // Fetch sessions
       const fetchSessions = async () => {
         try {
           const res = await fetchWithTimeout(sessionAPI.getSessions(), 3000);
-          const sessions = res.data?.sessions?.slice(0, 2) || getDefaultSessions();
+          const sessions = res.data?.sessions?.slice(0, 2) || DEFAULT_SESSIONS;
           setRecentSessions(sessions);
-          localStorage.setItem('sq_cached_sessions', JSON.stringify(sessions));
+          localStorage.setItem(CACHE_KEYS.SESSIONS, JSON.stringify(sessions));
         } catch (err) {
           console.log('Sessions fetch failed');
-          // Only set default if no data exists
-          setRecentSessions(prev => prev?.length > 0 ? prev : getDefaultSessions());
+          setRecentSessions(prev => prev?.length > 0 ? prev : DEFAULT_SESSIONS);
         } finally {
           setSessionsLoading(false);
         }
@@ -203,73 +214,72 @@ const Dashboard = () => {
       ]);
 
       // Update cache timestamp
-      localStorage.setItem('sq_cache_timestamp', Date.now().toString());
-      setLastUpdated(Date.now());
+      localStorage.setItem(CACHE_KEYS.TIMESTAMP, Date.now().toString());
 
     } catch (err) {
       console.error('Dashboard data fetch error:', err);
       setError('CONNECTION LOST TO SERVER');
+    } finally {
+      isFetchingRef.current = false;
+      hasInitialFetchRef.current = true;
     }
-  }, []); // NO DEPENDENCIES - function never changes
+  }, []); // Empty deps - function never changes
 
-  // Initial data fetch - only run once on mount
+  // Initial data fetch and interval setup
   useEffect(() => {
+    // Initial fetch
     fetchDashboardData();
     
-    // Set up refresh interval (every 2 minutes)
-    const interval = setInterval(() => {
-      hasFetchedRef.current = false; // Allow fetch to run again
-      fetchDashboardData();
-    }, 2 * 60 * 1000);
+    // Refresh interval (every 2 minutes)
+    const interval = setInterval(fetchDashboardData, 2 * 60 * 1000);
     
     return () => clearInterval(interval);
   }, [fetchDashboardData]);
 
   // Calculate XP percentage for next level
-  const getXPPercentage = () => {
-    if (!user) return 80;
-    const currentXP = user.xp || 9000;
-    const level = user.level || 9;
+  const getXPPercentage = useCallback(() => {
+    if (!user) return 0;
+    const currentXP = user.xp || 0;
+    const level = user.level || 1;
+    // XP needed for next level = level * 1250
     const nextLevelXP = level * 1250;
     const currentLevelBaseXP = (level - 1) * 1250;
     const xpInLevel = currentXP - currentLevelBaseXP;
     const xpNeeded = nextLevelXP - currentLevelBaseXP;
+    if (xpNeeded <= 0) return 100;
     return Math.min(100, Math.max(0, (xpInLevel / xpNeeded) * 100));
-  };
+  }, [user]);
 
   // Get Shadow of Doom percentage
-  const getShadowPercentage = () => {
-    return user?.shadowLevel || user?.shadow_level || 15;
-  };
+  const getShadowPercentage = useCallback(() => {
+    return user?.shadowLevel || user?.shadow_level || 0;
+  }, [user]);
 
   // Get user title based on level/subject
-  const getUserTitle = () => {
+  const getUserTitle = useCallback(() => {
     const titles = ['NOVICE', 'APPRENTICE', 'SCHOLAR', 'ADEPT', 'MAGE', 'ARCHMAGE', 'SAGE'];
-    const level = user?.level || 9;
+    const level = user?.level || 1;
     const index = Math.min(Math.floor((level - 1) / 2), titles.length - 1);
     return `${titles[index]} OF ALGEBRA`;
-  };
+  }, [user?.level]);
 
   // Handle quest item click
-  const handleQuestClick = (quest) => {
-    if (quest.completed) {
-      console.log('Quest already claimed');
-      return;
-    }
+  const handleQuestClick = useCallback((quest) => {
+    if (quest.completed) return;
     if (quest.type === 'focus') {
       navigate('/timer');
     } else {
       navigate('/tasks');
     }
-  };
+  }, [navigate]);
 
   // Handle quest node click
-  const handleNodeClick = (nodeIndex) => {
+  const handleNodeClick = useCallback((nodeIndex) => {
     console.log(`Navigate to quest node ${nodeIndex}`);
-  };
+  }, []);
 
-  // Format time ago
-  const formatTimeAgo = (dateString) => {
+  // Format time ago helper
+  const formatTimeAgo = useCallback((dateString) => {
     if (!dateString) return 'Unknown';
     const date = new Date(dateString);
     const now = new Date();
@@ -277,10 +287,15 @@ const Dashboard = () => {
     if (hours < 1) return 'Just now';
     if (hours < 24) return `${hours}h ago`;
     return 'Yesterday';
-  };
+  }, []);
 
   // Check if any data is still loading
   const isLoading = userLoading || rankLoading || tasksLoading || sessionsLoading;
+
+  // Memoized derived values to prevent recalculation
+  const userTitle = useMemo(() => getUserTitle(), [getUserTitle]);
+  const xpPercentage = useMemo(() => getXPPercentage(), [getXPPercentage]);
+  const shadowPercentage = useMemo(() => getShadowPercentage(), [getShadowPercentage]);
 
   // Error state
   if (error && !user) {
@@ -294,7 +309,7 @@ const Dashboard = () => {
           <p className="font-['Press_Start_2P'] text-[10px] text-on-surface-variant mb-6">
             THE SHADOW HAS SEVERED YOUR CONNECTION
           </p>
-          <PixelButton onClick={() => { hasFetchedRef.current = false; fetchDashboardData(); }} variant="tertiary">
+          <PixelButton onClick={fetchDashboardData} variant="tertiary">
             RETRY CONNECTION
           </PixelButton>
         </PixelCard>
@@ -319,22 +334,22 @@ const Dashboard = () => {
         onClose={() => setMobileMenuOpen(false)}
       />
 
-      {/* Main Content - Match Stitch HTML: grid-cols-12 gap-6, max-w-7xl */}
+      {/* Main Content */}
       <main className="md:ml-64 pt-24 px-6 pb-12 min-h-screen">
         <div className="max-w-7xl mx-auto grid grid-cols-12 gap-6">
           
-          {/* Row 1: Hero Status HUD - col-span-12 lg:col-span-8 */}
+          {/* Row 1: Hero Status HUD */}
           <section className="col-span-12 lg:col-span-8">
             <HeroStatusCard 
               user={user}
-              title={getUserTitle()}
-              xpPercentage={getXPPercentage()}
-              shadowPercentage={getShadowPercentage()}
+              title={userTitle}
+              xpPercentage={xpPercentage}
+              shadowPercentage={shadowPercentage}
               loading={userLoading}
             />
           </section>
 
-          {/* Row 1: Guild Stats Card - col-span-12 lg:col-span-4 */}
+          {/* Row 1: Guild Stats Card */}
           <section className="col-span-12 lg:col-span-4">
             <GuildStatsCard 
               rank={guildRank?.rank || 12}
@@ -345,7 +360,7 @@ const Dashboard = () => {
             />
           </section>
 
-          {/* Row 2: Quest Map - col-span-12, aspect-[21/9] */}
+          {/* Row 2: Quest Map */}
           <section className="col-span-12">
             <QuestMap 
               progress={64}
@@ -353,7 +368,7 @@ const Dashboard = () => {
             />
           </section>
 
-          {/* Row 3: Daily Quests - col-span-12 lg:col-span-7 */}
+          {/* Row 3: Daily Quests */}
           <section className="col-span-12 lg:col-span-7">
             <DailyQuests 
               quests={dailyQuests}
@@ -362,10 +377,11 @@ const Dashboard = () => {
             />
           </section>
 
-          {/* Row 3: Recent Victories - col-span-12 lg:col-span-5 */}
+          {/* Row 3: Recent Victories */}
           <section className="col-span-12 lg:col-span-5">
             <RecentVictories 
               sessions={recentSessions}
+              formatTimeAgo={formatTimeAgo}
               loading={sessionsLoading}
             />
           </section>
@@ -396,15 +412,15 @@ const Dashboard = () => {
 };
 
 /**
- * Hero Status HUD Component - Matches Stitch HTML exactly
- * Shows avatar, XP bar, Shadow of Doom bar, and rank badges
+ * Hero Status HUD Component
  */
-const HeroStatusCard = ({ user, title, xpPercentage, shadowPercentage, loading }) => {
-  const level = user?.level || 42;
-  const xp = user?.xp || 9000;
-  const nextLevelXP = level * 1250;
+const HeroStatusCard = React.memo(({ user, title, xpPercentage, shadowPercentage, loading }) => {
+  // Use actual user data or show loading - NO DEFAULTS that would cause flashing
+  const level = user?.level ?? null;
+  const xp = user?.xp ?? null;
+  const nextLevelXP = level ? level * 1250 : null;
 
-  if (loading && !user) {
+  if (loading && !level) {
     return (
       <div className="bg-surface-container-high border-2 border-outline-variant p-6 shadow-[4px_4px_0px_0px_#150136] h-full animate-pulse">
         <div className="h-32 bg-surface-container rounded"></div>
@@ -430,10 +446,14 @@ const HeroStatusCard = ({ user, title, xpPercentage, shadowPercentage, loading }
               </span>
             </div>
             <div>
-              <h1 className="font-['Press_Start_2P'] text-xl text-primary mb-2">{title}</h1>
+              <h1 className="font-['Press_Start_2P'] text-xl text-primary mb-2">
+                {title || '...'}
+              </h1>
               <div className="flex gap-4">
                 <span className="px-2 py-1 bg-surface-container-lowest text-secondary font-['Press_Start_2P'] text-[10px]">RANK: ELITE</span>
-                <span className="px-2 py-1 bg-surface-container-lowest text-tertiary font-['Press_Start_2P'] text-[10px]">WIN STREAK: {user?.current_streak || user?.streak || 7}</span>
+                <span className="px-2 py-1 bg-surface-container-lowest text-tertiary font-['Press_Start_2P'] text-[10px]">
+                  WIN STREAK: {user?.current_streak || user?.streak || 0}
+                </span>
               </div>
             </div>
           </div>
@@ -455,7 +475,9 @@ const HeroStatusCard = ({ user, title, xpPercentage, shadowPercentage, loading }
           <div>
             <div className="flex justify-between mb-2 font-['Press_Start_2P'] text-[10px]">
               <span className="text-secondary">EXPERIENCE POINTS (XP)</span>
-              <span className="text-secondary">{Math.round(xpPercentage)}% [{xp.toLocaleString()} / {nextLevelXP.toLocaleString()}]</span>
+              <span className="text-secondary">
+                {xp !== null ? `${Math.round(xpPercentage)}% [${xp.toLocaleString()} / ${nextLevelXP?.toLocaleString()}]` : '...'}
+              </span>
             </div>
             <div className="h-6 bg-surface-container-lowest border-2 border-outline-variant overflow-hidden relative">
               <div 
@@ -485,13 +507,15 @@ const HeroStatusCard = ({ user, title, xpPercentage, shadowPercentage, loading }
       </div>
     </div>
   );
-};
+});
+
+HeroStatusCard.displayName = 'HeroStatusCard';
 
 /**
- * Guild Stats Card Component - Matches Stitch HTML
+ * Guild Stats Card Component
  */
-const GuildStatsCard = ({ rank, league, percentile, onViewLeaderboard, loading }) => {
-  if (loading) {
+const GuildStatsCard = React.memo(({ rank, league, percentile, onViewLeaderboard, loading }) => {
+  if (loading && !rank) {
     return (
       <div className="h-full bg-surface-container border-2 border-outline-variant p-6 shadow-[4px_4px_0px_0px_#150136] animate-pulse">
         <div className="h-32 bg-surface-container-high rounded"></div>
@@ -529,13 +553,14 @@ const GuildStatsCard = ({ rank, league, percentile, onViewLeaderboard, loading }
       </button>
     </div>
   );
-};
+});
+
+GuildStatsCard.displayName = 'GuildStatsCard';
 
 /**
- * Quest Map Component - RPG-style map with progression nodes
- * Matches Stitch HTML: aspect-[21/9], gradient overlays, quest nodes
+ * Quest Map Component
  */
-const QuestMap = ({ progress, onNodeClick }) => {
+const QuestMap = React.memo(({ progress, onNodeClick }) => {
   const nodes = [
     { id: 1, status: 'completed', label: 'LIMITS', icon: 'check' },
     { id: 2, status: 'completed', label: 'CONTINUITY', icon: 'check' },
@@ -589,12 +614,14 @@ const QuestMap = ({ progress, onNodeClick }) => {
       </div>
     </div>
   );
-};
+});
+
+QuestMap.displayName = 'QuestMap';
 
 /**
- * Quest Node Component - Individual map node
+ * Quest Node Component
  */
-const QuestNode = ({ node, index, onClick }) => {
+const QuestNode = React.memo(({ node, index, onClick }) => {
   const styles = {
     completed: {
       container: 'w-12 h-12 bg-tertiary shadow-[0_0_20px_#e9c400] border-4 border-on-tertiary',
@@ -638,12 +665,14 @@ const QuestNode = ({ node, index, onClick }) => {
       </span>
     </div>
   );
-};
+});
+
+QuestNode.displayName = 'QuestNode';
 
 /**
- * Daily Quests Component - Matches Stitch HTML
+ * Daily Quests Component
  */
-const DailyQuests = ({ quests, onQuestClick, loading }) => {
+const DailyQuests = React.memo(({ quests, onQuestClick, loading }) => {
   // Format quests data
   const formattedQuests = quests.length > 0 ? quests.map(q => ({
     id: q.id,
@@ -655,7 +684,7 @@ const DailyQuests = ({ quests, onQuestClick, loading }) => {
     color: q.color || (q.completed ? 'tertiary' : q.type === 'focus' ? 'secondary' : 'primary'),
     completed: q.completed,
     type: q.type,
-  })) : getDefaultQuests();
+  })) : DEFAULT_QUESTS;
 
   if (loading && quests.length === 0) {
     return (
@@ -686,12 +715,14 @@ const DailyQuests = ({ quests, onQuestClick, loading }) => {
       </div>
     </div>
   );
-};
+});
+
+DailyQuests.displayName = 'DailyQuests';
 
 /**
- * Quest Item Component - Individual quest row
+ * Quest Item Component
  */
-const QuestItem = ({ quest, onClick }) => {
+const QuestItem = React.memo(({ quest, onClick }) => {
   const borderColors = {
     primary: 'border-l-4 border-primary',
     secondary: 'border-l-4 border-secondary',
@@ -751,12 +782,14 @@ const QuestItem = ({ quest, onClick }) => {
       </div>
     </button>
   );
-};
+});
+
+QuestItem.displayName = 'QuestItem';
 
 /**
- * Recent Victories Component - Matches Stitch HTML
+ * Recent Victories Component
  */
-const RecentVictories = ({ sessions, loading }) => {
+const RecentVictories = React.memo(({ sessions, formatTimeAgo, loading }) => {
   const badges = [
     { type: 'BRONZE FOCUS', icon: 'bolt', color: '#cd7f32' },
     { type: 'SILVER STREAK', icon: 'local_fire_department', color: '#c0c0c0' },
@@ -769,10 +802,7 @@ const RecentVictories = ({ sessions, loading }) => {
     time: s.started_at || s.created_at,
     xp: s.xp_earned || 0,
     duration: s.duration || 0,
-  })) : [
-    { id: 1, title: 'Calculus Boss Battle', time: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), xp: 450, duration: 45 },
-    { id: 2, title: 'Ancient History Lab', time: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), xp: 200, duration: 25 },
-  ];
+  })) : DEFAULT_SESSIONS;
 
   if (loading && sessions.length === 0) {
     return (
@@ -835,17 +865,8 @@ const RecentVictories = ({ sessions, loading }) => {
       </div>
     </div>
   );
-};
+});
 
-// Helper function for time formatting
-const formatTimeAgo = (dateString) => {
-  if (!dateString) return 'Unknown';
-  const date = new Date(dateString);
-  const now = new Date();
-  const hours = Math.floor((now - date) / (1000 * 60 * 60));
-  if (hours < 1) return 'Just now';
-  if (hours < 24) return `${hours}h ago`;
-  return 'Yesterday';
-};
+RecentVictories.displayName = 'RecentVictories';
 
 export default Dashboard;
