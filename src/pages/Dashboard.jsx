@@ -78,13 +78,23 @@ const Dashboard = () => {
   const hasInitialFetchRef = useRef(false);
   const hasUserDataRef = useRef(false); // Track if we've successfully loaded user data
 
-  // Navigation items - memoized to prevent re-creation
+  // Navigation items - all buttons from old sidebar
   const navItems = useMemo(() => [
-    { id: 'study', label: 'STUDY', icon: 'menu_book', href: '/dashboard', active: true },
+    // Main Navigation
+    { id: 'dashboard', label: 'DASHBOARD', icon: 'target', href: '/dashboard' },
     { id: 'tasks', label: 'TASKS', icon: 'checklist', href: '/tasks', badge: dailyQuests.filter(q => !q.completed).length.toString() },
-    { id: 'ai-tutor', label: 'AI TUTOR', icon: 'smart_toy', href: '/study-buddy' },
-    { id: 'social', label: 'SOCIAL', icon: 'groups', href: '/social' },
+    { id: 'timer', label: 'TIMER', icon: 'timer', href: '/timer' },
     { id: 'progress', label: 'PROGRESS', icon: 'trending_up', href: '/progress' },
+    { id: 'social', label: 'SOCIAL', icon: 'groups', href: '/social' },
+    { id: 'leaderboard', label: 'LEADERBOARD', icon: 'trophy', href: '/leaderboard' },
+    // Study Tools (formerly AI Tools)
+    { id: 'study-buddy', label: 'STUDY BUDDY', icon: 'chat', href: '/study-buddy' },
+    { id: 'story-quest', label: 'STORY QUEST', icon: 'smart_toy', href: '/story-quest' },
+    { id: 'schedule', label: 'SCHEDULE', icon: 'calendar_month', href: '/schedule' },
+    { id: 'exercise-gen', label: 'EXERCISE GEN', icon: 'edit_document', href: '/exercise-generator' },
+    // More
+    { id: 'portal', label: 'PARENTS', icon: 'family_restroom', href: '/portal' },
+    { id: 'profile', label: 'PROFILE', icon: 'person', href: '/profile' },
   ], [dailyQuests]);
 
   // Load cached data on mount (non-user data only)
@@ -332,6 +342,11 @@ const Dashboard = () => {
         user={user}
         isOpen={mobileMenuOpen}
         onClose={() => setMobileMenuOpen(false)}
+        activeItem="dashboard"
+        onItemClick={(id) => {
+          const item = navItems.find(n => n.id === id);
+          if (item && item.href !== '#') navigate(item.href);
+        }}
       />
 
       {/* Main Content */}
@@ -400,8 +415,8 @@ const Dashboard = () => {
 
       {/* Bottom Navigation (Mobile) */}
       <BottomNavBar 
-        items={navItems.slice(0, 4)} 
-        activeItem="study"
+        items={navItems.filter(i => ['dashboard', 'tasks', 'study-buddy', 'social'].includes(i.id))} 
+        activeItem="dashboard"
         onItemClick={(id) => {
           const item = navItems.find(n => n.id === id);
           if (item) navigate(item.href);
