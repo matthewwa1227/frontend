@@ -15,7 +15,7 @@ import Avatar from '../ui/Avatar';
  * @param {string} props.className - Additional CSS classes
  */
 const TopAppBar = ({
-  title = "HERO'S HUB",
+  title = "STUDYQUEST",
   leftAction,
   rightActions,
   user,

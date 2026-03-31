@@ -321,7 +321,7 @@ const Dashboard = () => {
     <div className="min-h-screen bg-background">
       {/* Top Navigation */}
       <TopAppBar 
-        title="HERO'S HUB" 
+        title="STUDYQUEST" 
         user={user}
         onMenuClick={() => setMobileMenuOpen(true)}
       />

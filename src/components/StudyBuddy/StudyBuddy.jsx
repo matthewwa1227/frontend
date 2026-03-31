@@ -1,10 +1,13 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { aiAPI } from '../../utils/api';
 import { getUser } from '../../utils/auth';
 
-const pixelText = { fontFamily: 'monospace' };
+// Pixel font style
+const pixelFont = { fontFamily: "'Press Start 2P', monospace" };
 
-// Markdown Renderer Component
+// ============================================
+// MARKDOWN RENDERER COMPONENT
+// ============================================
 const MarkdownRenderer = ({ content }) => {
   const [copiedIndex, setCopiedIndex] = useState(null);
 
@@ -25,8 +28,8 @@ const MarkdownRenderer = ({ content }) => {
     const processInlineMarkdown = (str) => {
       return str
         .replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold text-white">$1</strong>')
-        .replace(/`([^`]+)`/g, '<code class="bg-gray-800 px-1.5 py-0.5 rounded text-pink-400 text-sm font-mono">$1</code>')
-        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-blue-400 hover:underline" target="_blank" rel="noopener noreferrer">$1</a>');
+        .replace(/`([^`]+)`/g, '<code class="bg-surface-container px-1.5 py-0.5 rounded text-secondary text-sm font-mono">$1</code>')
+        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-secondary hover:underline" target="_blank" rel="noopener noreferrer">$1</a>');
     };
 
     const processTextBlock = (textBlock) => {
@@ -38,7 +41,7 @@ const MarkdownRenderer = ({ content }) => {
       const flushList = () => {
         if (listItems.length > 0) {
           result.push(
-            <ul key={`list-${result.length}`} className={`${listType === 'ol' ? 'list-decimal' : 'list-disc'} list-inside space-y-1 my-2 text-gray-300`}>
+            <ul key={`list-${result.length}`} className={`${listType === 'ol' ? 'list-decimal' : 'list-disc'} list-inside space-y-1 my-2 text-on-surface-variant`}>
               {listItems.map((item, i) => (
                 <li key={i} dangerouslySetInnerHTML={{ __html: processInlineMarkdown(item) }} />
               ))}
@@ -52,13 +55,13 @@ const MarkdownRenderer = ({ content }) => {
         if (line.startsWith('### ')) {
           flushList();
           result.push(
-            <h3 key={`h3-${idx}`} className="text-lg font-bold text-purple-300 mt-3 mb-1" 
+            <h3 key={`h3-${idx}`} className="text-lg font-bold text-primary mt-3 mb-1" 
                 dangerouslySetInnerHTML={{ __html: processInlineMarkdown(line.slice(4)) }} />
           );
         } else if (line.startsWith('## ')) {
           flushList();
           result.push(
-            <h2 key={`h2-${idx}`} className="text-xl font-bold text-purple-200 mt-4 mb-2" 
+            <h2 key={`h2-${idx}`} className="text-xl font-bold text-tertiary mt-4 mb-2" 
                 dangerouslySetInnerHTML={{ __html: processInlineMarkdown(line.slice(3)) }} />
           );
         } else if (line.startsWith('# ')) {
@@ -76,7 +79,7 @@ const MarkdownRenderer = ({ content }) => {
         } else if (line.trim()) {
           flushList();
           result.push(
-            <p key={`p-${idx}`} className="text-gray-300 my-1" 
+            <p key={`p-${idx}`} className="text-on-surface-variant my-1" 
                dangerouslySetInnerHTML={{ __html: processInlineMarkdown(line) }} />
           );
         } else if (line === '') {
@@ -99,12 +102,13 @@ const MarkdownRenderer = ({ content }) => {
       const currentIndex = codeBlockIndex++;
       
       elements.push(
-        <div key={`code-${currentIndex}`} className="my-3 rounded-lg overflow-hidden border border-gray-600">
-          <div className="bg-gray-800 px-4 py-2 flex justify-between items-center">
-            <span className="text-xs text-gray-400 font-mono">{language}</span>
+        <div key={`code-${currentIndex}`} className="my-3 rounded-lg overflow-hidden border-2 border-outline-variant">
+          <div className="bg-surface-container-high px-4 py-2 flex justify-between items-center border-b-2 border-outline-variant">
+            <span className="text-xs text-on-surface-variant font-mono" style={pixelFont}>{language}</span>
             <button
               onClick={() => copyToClipboard(code, currentIndex)}
-              className="text-gray-400 hover:text-white transition-colors flex items-center gap-1 text-xs"
+              className="text-on-surface-variant hover:text-white transition-colors flex items-center gap-1 text-xs"
+              style={pixelFont}
             >
               {copiedIndex === currentIndex ? (
                 <span>✓ Copied!</span>
@@ -113,8 +117,8 @@ const MarkdownRenderer = ({ content }) => {
               )}
             </button>
           </div>
-          <pre className="bg-gray-900 p-4 overflow-x-auto">
-            <code className="text-sm font-mono text-green-300 whitespace-pre">{code}</code>
+          <pre className="bg-surface-container-lowest p-4 overflow-x-auto">
+            <code className="text-sm font-mono text-green-400 whitespace-pre">{code}</code>
           </pre>
         </div>
       );
@@ -132,7 +136,9 @@ const MarkdownRenderer = ({ content }) => {
   return <div className="markdown-content">{renderMarkdown(content)}</div>;
 };
 
-// Media Preview Component
+// ============================================
+// MEDIA PREVIEW COMPONENT
+// ============================================
 const MediaPreview = ({ file, onRemove }) => {
   const [preview, setPreview] = useState(null);
 
@@ -156,40 +162,43 @@ const MediaPreview = ({ file, onRemove }) => {
 
   return (
     <div className="relative inline-block">
-      <div className="relative w-24 h-24 rounded-lg overflow-hidden border-2 border-purple-500 bg-gray-800">
+      <div className="relative w-20 h-20 border-4 border-primary bg-surface-container overflow-hidden shadow-[4px_4px_0px_0px_#150136]">
         {isImage && preview && (
           <img src={preview} alt="Preview" className="w-full h-full object-cover" />
         )}
         {isVideo && preview && (
           <div className="relative w-full h-full">
             <video src={preview} className="w-full h-full object-cover" />
-            <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-40">
-              <span className="text-3xl">🎥</span>
+            <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+              <span className="text-2xl">🎥</span>
             </div>
           </div>
         )}
       </div>
       <button
         onClick={onRemove}
-        className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 hover:bg-red-400 rounded-full flex items-center justify-center text-white text-sm border-2 border-white shadow-lg transition-colors"
+        className="absolute -top-2 -right-2 w-6 h-6 bg-error hover:bg-red-400 flex items-center justify-center text-white text-sm border-2 border-white shadow-[2px_2px_0px_0px_#000] transition-colors"
+        style={pixelFont}
       >
         ✕
       </button>
-      <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-80 text-xs text-center py-1 text-gray-300">
+      <div className="absolute bottom-0 left-0 right-0 bg-black/80 text-[8px] text-center py-1 text-white" style={pixelFont}>
         <div className="truncate px-1">{isVideo ? '🎥' : '📷'} {formatFileSize(file.size)}</div>
       </div>
     </div>
   );
 };
 
-// Message Media Display Component
+// ============================================
+// MESSAGE MEDIA COMPONENT
+// ============================================
 const MessageMedia = ({ media }) => {
   if (!media || media.length === 0) return null;
 
   return (
     <div className="flex flex-wrap gap-2 mb-2">
       {media.map((item, index) => (
-        <div key={index} className="rounded-lg overflow-hidden border border-gray-600">
+        <div key={index} className="border-2 border-outline-variant overflow-hidden shadow-[4px_4px_0px_0px_#150136]">
           {item.type === 'image' && (
             <img 
               src={item.preview || item.url} 
@@ -210,10 +219,12 @@ const MessageMedia = ({ media }) => {
   );
 };
 
-// File Size Configuration
+// ============================================
+// FILE CONFIGURATION
+// ============================================
 const FILE_CONFIG = {
   image: {
-    maxSize: 50 * 1024 * 1024, // 50MB
+    maxSize: 50 * 1024 * 1024,
     maxSizeLabel: '50MB',
     acceptedTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp', 'image/tiff', 'image/svg+xml'],
     acceptString: 'image/jpeg,image/png,image/gif,image/webp,image/bmp,image/tiff,image/svg+xml',
@@ -221,7 +232,7 @@ const FILE_CONFIG = {
     label: 'Images'
   },
   video: {
-    maxSize: 200 * 1024 * 1024, // 200MB
+    maxSize: 200 * 1024 * 1024,
     maxSizeLabel: '200MB',
     acceptedTypes: ['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime', 'video/x-msvideo', 'video/x-matroska'],
     acceptString: 'video/mp4,video/webm,video/ogg,video/quicktime,video/x-msvideo,video/x-matroska',
@@ -229,9 +240,66 @@ const FILE_CONFIG = {
     label: 'Videos'
   },
   maxFiles: 10,
-  maxTotalSize: 500 * 1024 * 1024 // 500MB total
+  maxTotalSize: 500 * 1024 * 1024
 };
 
+// ============================================
+// CAPABILITY CATEGORIES
+// ============================================
+const CAPABILITY_CATEGORIES = [
+  {
+    id: 'knowledge',
+    title: '📚 Knowledge',
+    description: 'Science, History, Coding, Analysis, and more.',
+    examples: ['Explain photosynthesis', 'What caused WWII?', 'How do I write a good essay?']
+  },
+  {
+    id: 'images',
+    title: '🖼️ Image Analysis',
+    description: 'Worksheets, diagrams, charts, and problems.',
+    examples: ['Solve this math problem', 'Explain this diagram', 'Read the text in this photo']
+  },
+  {
+    id: 'coding',
+    title: '💻 Coding',
+    description: 'Python, JavaScript, HTML/CSS, and more.',
+    examples: ['Write a factorial function', 'Debug this code', 'Explain what this does']
+  },
+  {
+    id: 'writing',
+    title: '✍️ Writing',
+    description: 'Essays, reports, emails, creative writing.',
+    examples: ['Help me write an email', 'Feedback on my essay', 'Start a creative story']
+  },
+  {
+    id: 'language',
+    title: '🌐 Language',
+    description: 'Translation, grammar, vocabulary.',
+    examples: ['Translate to Chinese', 'affect vs effect?', 'Formal thank you in English']
+  },
+  {
+    id: 'study',
+    title: '🧠 Study Skills',
+    description: 'Memory tips, test prep, study plans.',
+    examples: ['Best way to memorize?', 'Create a study schedule', 'DSE prep tips']
+  }
+];
+
+// ============================================
+// QUICK PROMPTS
+// ============================================
+const QUICK_PROMPTS = [
+  { text: "Explain like I'm 12", emoji: "📚" },
+  { text: "Give me a hint", emoji: "💡" },
+  { text: "Step by step", emoji: "📝" },
+  { text: "Motivate me!", emoji: "🔥" },
+  { text: "Study tips", emoji: "🧠" },
+  { text: "Practice problem", emoji: "✏️" }
+];
+
+// ============================================
+// MAIN COMPONENT
+// ============================================
 const StudyBuddy = () => {
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState('');
@@ -239,150 +307,31 @@ const StudyBuddy = () => {
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const [showTips, setShowTips] = useState(false);
   const [tips, setTips] = useState([]);
-  const [tipsLoading, setTipsLoading] = useState(false);
   const [attachedFiles, setAttachedFiles] = useState([]);
   const [uploadProgress, setUploadProgress] = useState(null);
   const [showFileLimits, setShowFileLimits] = useState(false);
   const [showCapabilities, setShowCapabilities] = useState(true);
-  const [capabilities, setCapabilities] = useState([]);
   const [activeCategory, setActiveCategory] = useState(null);
+  const [activeTab, setActiveTab] = useState('chat'); // 'chat' | 'tips' | 'help'
+  
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
   const videoInputRef = useRef(null);
-  const user = getUser();
+  const user = useMemo(() => getUser(), []);
 
-  // Capability categories with icons and colors
-  const capabilityCategories = [
-    {
-      id: 'knowledge',
-      title: '📚 Knowledge & Research',
-      description: 'Ask me anything! Science, History, Coding, Creative Writing, Analysis, and more.',
-      color: 'from-blue-500 to-cyan-500',
-      bgColor: 'bg-blue-900/30',
-      borderColor: 'border-blue-500',
-      examples: [
-        'Explain photosynthesis like I\'m 12',
-        'What caused World War II?',
-        'How do I write a good essay introduction?',
-        'Help me understand Pythagorean theorem'
-      ]
-    },
-    {
-      id: 'images',
-      title: '🖼️ Image Analysis',
-      description: 'Upload images and I\'ll analyze them! Worksheets, diagrams, charts, problems, and more.',
-      color: 'from-purple-500 to-pink-500',
-      bgColor: 'bg-purple-900/30',
-      borderColor: 'border-purple-500',
-      examples: [
-        'Help me solve this math problem (upload image)',
-        'What does this diagram show?',
-        'Read the text in this photo',
-        'Explain this chart to me'
-      ]
-    },
-    {
-      id: 'coding',
-      title: '💻 Coding & Programming',
-      description: 'Write and debug code in Python, JavaScript, HTML/CSS, and more.',
-      color: 'from-green-500 to-emerald-500',
-      bgColor: 'bg-green-900/30',
-      borderColor: 'border-green-500',
-      examples: [
-        'Write a Python function to calculate factorial',
-        'Debug this JavaScript code',
-        'Explain what this code does',
-        'Help me create a simple calculator app'
-      ]
-    },
-    {
-      id: 'writing',
-      title: '✍️ Writing & Content',
-      description: 'Draft essays, reports, emails, creative writing, and get feedback.',
-      color: 'from-orange-500 to-amber-500',
-      bgColor: 'bg-orange-900/30',
-      borderColor: 'border-orange-500',
-      examples: [
-        'Help me write an email to my teacher',
-        'Give me feedback on this essay paragraph',
-        'Help me start a creative story',
-        'How do I structure a book report?'
-      ]
-    },
-    {
-      id: 'language',
-      title: '🌐 Translation & Language',
-      description: 'Translate between English and Chinese, explain grammar, build vocabulary.',
-      color: 'from-indigo-500 to-violet-500',
-      bgColor: 'bg-indigo-900/30',
-      borderColor: 'border-indigo-500',
-      examples: [
-        'Translate this to Chinese',
-        'Explain the difference between affect and effect',
-        'How do I say "thank you" formally in English?',
-        'Help me practice English conversation'
-      ]
-    },
-    {
-      id: 'study',
-      title: '🧠 Study Skills',
-      description: 'Study techniques, memory tips, test prep strategies, and study plans.',
-      color: 'from-teal-500 to-cyan-500',
-      bgColor: 'bg-teal-900/30',
-      borderColor: 'border-teal-500',
-      examples: [
-        'What\'s the best way to memorize vocabulary?',
-        'Help me create a study schedule',
-        'How do I prepare for a DSE exam?',
-        'Give me tips for staying focused'
-      ]
-    },
-    {
-      id: 'data',
-      title: '📊 Data & Analysis',
-      description: 'Analyze data, create charts, help with statistics and calculations.',
-      color: 'from-rose-500 to-pink-500',
-      bgColor: 'bg-rose-900/30',
-      borderColor: 'border-rose-500',
-      examples: [
-        'Help me understand this data',
-        'How do I calculate the average?',
-        'Explain what correlation means',
-        'Help me organize this information'
-      ]
-    },
-    {
-      id: 'homework',
-      title: '📝 Homework Help',
-      description: 'Get guidance on homework using the Socratic method - I\'ll guide you to the answer!',
-      color: 'from-yellow-500 to-amber-500',
-      bgColor: 'bg-yellow-900/30',
-      borderColor: 'border-yellow-500',
-      examples: [
-        'I\'m stuck on this problem, can you give me a hint?',
-        'How do I approach this question?',
-        'What formula should I use here?',
-        'Check my work on this problem'
-      ]
-    }
-  ];
-
-  const scrollToBottom = () => {
+  const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  }, []);
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, scrollToBottom]);
 
   useEffect(() => {
     loadHistory();
   }, []);
 
-  // Calculate total size of attached files
-  const getTotalFileSize = () => {
-    return attachedFiles.reduce((total, item) => total + item.file.size, 0);
-  };
+  const getTotalFileSize = () => attachedFiles.reduce((total, item) => total + item.file.size, 0);
 
   const formatFileSize = (bytes) => {
     if (bytes < 1024) return bytes + ' B';
@@ -401,14 +350,12 @@ const StudyBuddy = () => {
           { role: 'assistant', content: conv.ai_response, timestamp: conv.created_at }
         ]);
         setMessages(formattedMessages);
-        // If we have history, hide the capabilities panel
         if (formattedMessages.length > 0) {
           setShowCapabilities(false);
         }
       }
     } catch (error) {
       console.error('Failed to load history:', error);
-      // Keep capabilities visible for new users
     } finally {
       setIsLoadingHistory(false);
     }
@@ -417,27 +364,6 @@ const StudyBuddy = () => {
   const handleExampleClick = (example) => {
     setInputMessage(example);
     setActiveCategory(null);
-    // Optionally auto-send: sendMessage({ preventDefault: () => {} });
-  };
-
-  const handleQuickAction = async (actionType, context = {}) => {
-    try {
-      setIsLoading(true);
-      const response = await aiAPI.quickAction(actionType, context);
-      
-      if (response.data.success) {
-        const assistantMessage = {
-          role: 'assistant',
-          content: response.data.response,
-          timestamp: new Date().toISOString()
-        };
-        setMessages(prev => [...prev, assistantMessage]);
-      }
-    } catch (error) {
-      console.error('Quick action error:', error);
-    } finally {
-      setIsLoading(false);
-    }
   };
 
   const handleFileSelect = (e, type) => {
@@ -448,37 +374,29 @@ const StudyBuddy = () => {
     const currentTotalSize = getTotalFileSize();
 
     files.forEach(file => {
-      // Check individual file size
       if (file.size > config.maxSize) {
-        errors.push(`❌ "${file.name}" is too large (${formatFileSize(file.size)}). Max size for ${type}s: ${config.maxSizeLabel}`);
+        errors.push(`❌ "${file.name}" is too large (${formatFileSize(file.size)}). Max: ${config.maxSizeLabel}`);
         return;
       }
 
-      // Check if adding this file would exceed total limit
       const newTotalSize = currentTotalSize + validFiles.reduce((sum, f) => sum + f.file.size, 0) + file.size;
       if (newTotalSize > FILE_CONFIG.maxTotalSize) {
-        errors.push(`❌ Adding "${file.name}" would exceed total upload limit of ${formatFileSize(FILE_CONFIG.maxTotalSize)}`);
+        errors.push(`❌ Adding "${file.name}" would exceed total limit of ${formatFileSize(FILE_CONFIG.maxTotalSize)}`);
         return;
       }
 
-      // Validate file type
       const fileType = file.type.toLowerCase();
       if (!config.acceptedTypes.some(accepted => fileType.startsWith(accepted.split('/')[0]))) {
         errors.push(`❌ "${file.name}" is not a valid ${type} file`);
         return;
       }
 
-      // Check max files limit
       if (attachedFiles.length + validFiles.length >= FILE_CONFIG.maxFiles) {
         errors.push(`❌ Maximum ${FILE_CONFIG.maxFiles} files allowed`);
         return;
       }
 
-      validFiles.push({
-        file,
-        type,
-        id: Date.now() + Math.random()
-      });
+      validFiles.push({ file, type, id: Date.now() + Math.random() });
     });
 
     if (errors.length > 0) {
@@ -489,7 +407,6 @@ const StudyBuddy = () => {
       setAttachedFiles(prev => [...prev, ...validFiles]);
     }
     
-    // Reset input
     e.target.value = '';
   };
 
@@ -497,9 +414,7 @@ const StudyBuddy = () => {
     setAttachedFiles(prev => prev.filter(f => f.id !== id));
   };
 
-  const clearAllFiles = () => {
-    setAttachedFiles([]);
-  };
+  const clearAllFiles = () => setAttachedFiles([]);
 
   const fileToBase64 = (file) => {
     return new Promise((resolve, reject) => {
@@ -517,7 +432,6 @@ const StudyBuddy = () => {
     const userMessage = inputMessage.trim();
     setInputMessage('');
     
-    // Prepare media previews for display
     const mediaForDisplay = await Promise.all(
       attachedFiles.map(async (item) => ({
         type: item.type,
@@ -535,14 +449,12 @@ const StudyBuddy = () => {
     };
     setMessages(prev => [...prev, newUserMessage]);
     
-    // Store files before clearing
     const filesToSend = [...attachedFiles];
     setAttachedFiles([]);
     setIsLoading(true);
     setUploadProgress(0);
 
     try {
-      // Convert files to base64 with progress tracking
       const mediaContent = [];
       const totalFiles = filesToSend.length;
       
@@ -553,19 +465,9 @@ const StudyBuddy = () => {
         const base64Data = await fileToBase64(item.file);
         
         if (item.type === 'image') {
-          mediaContent.push({
-            type: 'image_url',
-            image_url: {
-              url: base64Data
-            }
-          });
+          mediaContent.push({ type: 'image_url', image_url: { url: base64Data } });
         } else if (item.type === 'video') {
-          mediaContent.push({
-            type: 'video_url',
-            video_url: {
-              url: base64Data
-            }
-          });
+          mediaContent.push({ type: 'video_url', video_url: { url: base64Data } });
         }
         
         setUploadProgress(Math.round(((i + 1) / totalFiles) * 60));
@@ -580,7 +482,6 @@ const StudyBuddy = () => {
 
       setUploadProgress(80);
 
-      // Call API with media content
       const response = await aiAPI.chatWithMedia(
         userMessage || 'Please analyze this content.',
         conversationHistory,
@@ -604,7 +505,7 @@ const StudyBuddy = () => {
       console.error('Chat error:', error);
       const errorMessage = {
         role: 'assistant',
-        content: "Sorry, I'm having trouble processing that. Please try again with smaller files or check your connection! 🙏",
+        content: "Sorry, I'm having trouble processing that. Please try again! 🙏",
         timestamp: new Date().toISOString(),
         isError: true
       };
@@ -615,510 +516,444 @@ const StudyBuddy = () => {
     }
   };
 
-  const loadTips = async (subject = null, difficulty = null) => {
-    try {
-      setTipsLoading(true);
-      setShowTips(true);
-      
-      // Default tips since backend endpoint may not exist yet
-      const defaultTips = {
-        Math: ['Practice daily', 'Show your work', 'Check your answers', 'Understand concepts not just memorize'],
-        Science: ['Do experiments', 'Take notes', 'Ask questions', 'Connect to real life'],
-        Language: ['Read daily', 'Practice speaking', 'Learn vocabulary', 'Write often'],
-        general: ['Take regular breaks', 'Stay hydrated', 'Review notes daily', 'Get enough sleep', 'Ask for help when needed']
-      };
-      
-      setTips(defaultTips[subject] || defaultTips.general);
-    } catch (error) {
-      console.error('Failed to load tips:', error);
-      setTips(['Take regular breaks', 'Stay hydrated', 'Review notes daily']);
-    } finally {
-      setTipsLoading(false);
-    }
+  const loadTips = (subject = null) => {
+    const defaultTips = {
+      Math: ['Practice daily', 'Show your work', 'Check your answers', 'Understand concepts deeply'],
+      Science: ['Do experiments', 'Take notes', 'Ask questions', 'Connect to real life'],
+      Language: ['Read daily', 'Practice speaking', 'Build vocabulary', 'Write often'],
+      general: ['Take regular breaks', 'Stay hydrated', 'Review notes daily', 'Get enough sleep', 'Ask for help when needed']
+    };
+    
+    setTips(defaultTips[subject] || defaultTips.general);
+    setShowTips(true);
   };
 
-  const clearChat = async () => {
-    try {
-      setMessages([]);
-      setAttachedFiles([]);
-      setShowCapabilities(true);
-    } catch (error) {
-      console.error('Failed to clear chat:', error);
-    }
+  const clearChat = () => {
+    setMessages([]);
+    setAttachedFiles([]);
+    setShowCapabilities(true);
   };
-
-  const quickPrompts = [
-    { text: "Explain like I'm 12", emoji: "📚" },
-    { text: "Give me a hint", emoji: "💡" },
-    { text: "Step by step", emoji: "📝" },
-    { text: "Motivate me!", emoji: "🔥" },
-    { text: "Study tips", emoji: "🧠" },
-    { text: "Practice problem", emoji: "✏️" }
-  ];
 
   const formatTime = (timestamp) => {
     const date = new Date(timestamp);
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
+  // Tab button component
+  const TabButton = ({ id, label, icon, isActive, onClick }) => (
+    <button
+      onClick={onClick}
+      className={`px-4 py-3 text-[10px] transition-all flex items-center gap-2 ${
+        isActive 
+          ? 'bg-primary text-on-primary shadow-[4px_4px_0px_0px_#ff4a8d]' 
+          : 'bg-surface-container text-on-surface hover:bg-surface-container-high'
+      }`}
+      style={pixelFont}
+    >
+      <span>{icon}</span>
+      <span className="hidden sm:inline">{label}</span>
+    </button>
+  );
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 p-4 md:p-6">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-purple-600 to-indigo-600 border-4 border-white p-4 mb-4 shadow-lg">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="text-4xl animate-bounce">🤖</div>
-              <div>
-                <h1 className="text-xl md:text-2xl font-bold text-white" style={pixelText}>Study Buddy</h1>
-                <p className="text-purple-200 text-sm">AI Study Assistant - Ask me anything!</p>
+    <div className="min-h-screen bg-background pt-20 pb-24 px-4 md:px-6">
+      <div className="max-w-5xl mx-auto">
+        
+        {/* Header Card */}
+        <div className="bg-surface-container-high border-4 border-primary shadow-[8px_8px_0px_0px_#ff4a8d] mb-6 overflow-hidden">
+          {/* Top bar with gradient */}
+          <div className="bg-gradient-to-r from-primary to-secondary p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-white border-4 border-on-primary flex items-center justify-center shadow-[4px_4px_0px_0px_#000]">
+                  <span className="text-2xl">🤖</span>
+                </div>
+                <div>
+                  <h1 className="text-lg md:text-xl font-bold text-on-primary" style={pixelFont}>
+                    STUDY BUDDY
+                  </h1>
+                  <p className="text-on-primary/80 text-xs" style={pixelFont}>
+                    AI Learning Companion
+                  </p>
+                </div>
+              </div>
+              
+              {/* Stats */}
+              <div className="hidden sm:flex items-center gap-4 text-on-primary">
+                <div className="text-center">
+                  <div className="text-xs opacity-80" style={pixelFont}>LEVEL</div>
+                  <div className="text-lg font-bold" style={pixelFont}>{user?.level || 1}</div>
+                </div>
+                <div className="w-px h-8 bg-on-primary/30" />
+                <div className="text-center">
+                  <div className="text-xs opacity-80" style={pixelFont}>CHATS</div>
+                  <div className="text-lg font-bold" style={pixelFont}>
+                    {messages.filter(m => m.role === 'user').length}
+                  </div>
+                </div>
               </div>
             </div>
-            <div className="flex gap-2">
-              {messages.length > 0 && (
-                <button
-                  onClick={() => setShowCapabilities(!showCapabilities)}
-                  className="bg-blue-500 hover:bg-blue-400 text-white px-3 py-2 text-sm border-2 border-white transition-all hover:scale-105 rounded"
-                  title={showCapabilities ? "Hide capabilities" : "Show what I can do"}
-                >
-                  {showCapabilities ? '💬 Chat' : '✨ Capabilities'}
-                </button>
-              )}
+          </div>
+          
+          {/* Tab Navigation */}
+          <div className="flex border-t-4 border-outline-variant">
+            <TabButton 
+              id="chat" 
+              label="CHAT" 
+              icon="💬" 
+              isActive={activeTab === 'chat'} 
+              onClick={() => setActiveTab('chat')}
+            />
+            <TabButton 
+              id="tips" 
+              label="STUDY TIPS" 
+              icon="💡" 
+              isActive={activeTab === 'tips'} 
+              onClick={() => { setActiveTab('tips'); loadTips(); }}
+            />
+            <TabButton 
+              id="help" 
+              label="HELP" 
+              icon="❓" 
+              isActive={activeTab === 'help'} 
+              onClick={() => setActiveTab('help')}
+            />
+            <div className="flex-1" />
+            {messages.length > 0 && (
               <button
                 onClick={clearChat}
-                className="bg-red-500 hover:bg-red-400 text-white px-3 py-2 text-sm border-2 border-white transition-all hover:scale-105 rounded"
-                title="Clear chat"
+                className="px-4 py-3 bg-error/10 hover:bg-error/20 text-error text-[10px] transition-colors"
+                style={pixelFont}
               >
-                🗑️
+                🗑️ CLEAR
               </button>
-              <button
-                onClick={() => loadTips()}
-                className="bg-yellow-400 hover:bg-yellow-300 text-black px-4 py-2 text-sm border-2 border-white transition-all hover:scale-105 rounded font-bold"
-              >
-                💡 Tips
-              </button>
-            </div>
+            )}
           </div>
         </div>
 
-        {/* Tips Panel */}
-        {showTips && (
-          <div className="bg-slate-800 border-4 border-amber-400 p-4 mb-4 shadow-lg">
-            <div className="flex justify-between items-center mb-3">
-              <h3 className="text-amber-400 font-bold" style={pixelText}>💡 Study Tips</h3>
-              <button 
-                onClick={() => setShowTips(false)}
-                className="text-gray-400 hover:text-white text-xl"
-              >
-                ✕
-              </button>
-            </div>
-            {tipsLoading ? (
-              <div className="text-center py-4">
-                <div className="animate-spin text-2xl">⏳</div>
-              </div>
-            ) : (
-              <>
-                <ul className="space-y-2">
-                  {tips.map((tip, index) => (
-                    <li key={index} className="flex items-start gap-2 text-gray-300 text-sm">
-                      <span className="text-green-400">▸</span>
-                      <span>{tip}</span>
-                    </li>
-                  ))}
-                </ul>
-                <div className="flex gap-2 mt-4 flex-wrap">
-                  <button 
-                    onClick={() => loadTips('Math')}
-                    className="bg-blue-600 hover:bg-blue-500 px-3 py-1 text-sm rounded border border-blue-400 text-white"
-                  >
-                    Math Tips
-                  </button>
-                  <button 
-                    onClick={() => loadTips('Science')}
-                    className="bg-green-600 hover:bg-green-500 px-3 py-1 text-sm rounded border border-green-400 text-white"
-                  >
-                    Science Tips
-                  </button>
-                  <button 
-                    onClick={() => loadTips('Language')}
-                    className="bg-purple-600 hover:bg-purple-500 px-3 py-1 text-sm rounded border border-purple-400 text-white"
-                  >
-                    Language Tips
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        )}
+        {/* Main Content Area */}
+        <div className="bg-surface-container border-4 border-outline-variant shadow-[8px_8px_0px_0px_#150136]">
+          
+          {/* CHAT TAB */}
+          {activeTab === 'chat' && (
+            <>
+              {/* Messages Area */}
+              <div className="h-[400px] md:h-[500px] overflow-y-auto p-4 space-y-4">
+                {isLoadingHistory ? (
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-center">
+                      <div className="animate-spin text-4xl mb-2">⏳</div>
+                      <p className="text-on-surface-variant" style={pixelFont}>Loading...</p>
+                    </div>
+                  </div>
+                ) : showCapabilities ? (
+                  <div className="space-y-6 py-4">
+                    {/* Welcome */}
+                    <div className="text-center">
+                      <div className="inline-block bg-tertiary/20 border-4 border-tertiary p-6 mb-4 shadow-[4px_4px_0px_0px_#e9c400]">
+                        <div className="text-5xl mb-2">🤖</div>
+                      </div>
+                      <h2 className="text-xl font-bold text-on-surface mb-2" style={pixelFont}>
+                        Welcome to Study Buddy!
+                      </h2>
+                      <p className="text-on-surface-variant text-sm max-w-md mx-auto">
+                        Your AI learning companion. Ask me anything about homework, coding, writing, or upload images for analysis!
+                      </p>
+                    </div>
 
-        {/* Chat Container */}
-        <div className="bg-slate-800 border-4 border-slate-600 shadow-lg">
-          {/* Messages Area */}
-          <div className="h-96 md:h-[500px] overflow-y-auto p-4 space-y-4">
-            {isLoadingHistory ? (
-              <div className="flex items-center justify-center h-full">
-                <div className="text-center">
-                  <div className="animate-spin text-4xl mb-2">⏳</div>
-                  <p className="text-gray-400">Loading conversation...</p>
-                </div>
-              </div>
-            ) : showCapabilities ? (
-              /* Capabilities Showcase */
-              <div className="space-y-4">
-                {/* Welcome Header */}
-                <div className="text-center py-4">
-                  <div className="text-5xl mb-3">🤖</div>
-                  <h2 className="text-xl font-bold text-white mb-2" style={pixelText}>Hello, I'm Study Buddy!</h2>
-                  <p className="text-gray-400 text-sm max-w-md mx-auto">
-                    Your AI learning companion! I can help with homework, explain concepts, 
-                    analyze images, write code, and much more. What would you like to explore?
-                  </p>
-                </div>
+                    {/* Capability Cards */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {CAPABILITY_CATEGORIES.map((category) => (
+                        <div
+                          key={category.id}
+                          className="bg-surface-container-high border-2 border-outline-variant p-4 cursor-pointer transition-all hover:border-primary hover:shadow-[4px_4px_0px_0px_#ff4a8d]"
+                          onClick={() => setActiveCategory(activeCategory === category.id ? null : category.id)}
+                        >
+                          <h3 className="font-bold text-on-surface text-xs mb-1" style={pixelFont}>
+                            {category.title}
+                          </h3>
+                          <p className="text-on-surface-variant text-xs mb-3">{category.description}</p>
+                          
+                          {activeCategory === category.id && (
+                            <div className="space-y-1 pt-2 border-t-2 border-outline-variant">
+                              <p className="text-[10px] text-secondary mb-2" style={pixelFont}>TRY ASKING:</p>
+                              {category.examples.map((example, idx) => (
+                                <button
+                                  key={idx}
+                                  onClick={(e) => { e.stopPropagation(); handleExampleClick(example); }}
+                                  className="block w-full text-left text-xs text-on-surface-variant hover:text-primary hover:bg-surface-container px-2 py-1 transition-colors"
+                                >
+                                  "{example}"
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                          
+                          {activeCategory !== category.id && (
+                            <div className="text-[10px] text-on-surface-variant flex items-center gap-1" style={pixelFont}>
+                              <span>Click to see examples</span>
+                              <span>▼</span>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
 
-                {/* Capability Categories Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {capabilityCategories.map((category) => (
+                    {/* Quick Prompts */}
+                    <div className="bg-surface-container-high border-2 border-outline-variant p-4">
+                      <h3 className="text-xs font-bold text-on-surface mb-3" style={pixelFont}>QUICK ACTIONS</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {QUICK_PROMPTS.map((prompt, index) => (
+                          <button
+                            key={index}
+                            onClick={() => handleExampleClick(prompt.text)}
+                            className="bg-surface-container hover:bg-surface-container-lowest border-2 border-outline-variant hover:border-primary px-3 py-2 text-xs transition-all hover:shadow-[2px_2px_0px_0px_#ff4a8d]"
+                          >
+                            <span>{prompt.emoji}</span> {prompt.text}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  messages.map((message, index) => (
                     <div
-                      key={category.id}
-                      className={`p-3 rounded-lg border-2 ${category.borderColor} ${category.bgColor} cursor-pointer transition-all hover:scale-[1.02]`}
-                      onClick={() => setActiveCategory(activeCategory === category.id ? null : category.id)}
+                      key={index}
+                      className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                     >
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xl">{category.title.split(' ')[0]}</span>
-                        <h3 className="font-bold text-white text-sm">{category.title.split(' ').slice(1).join(' ')}</h3>
+                      <div
+                        className={`max-w-[85%] md:max-w-[75%] p-4 border-4 ${
+                          message.role === 'user'
+                            ? 'bg-primary-container text-on-primary-container border-primary shadow-[4px_4px_0px_0px_#8f0044]'
+                            : message.isError
+                            ? 'bg-error/10 text-error border-error'
+                            : 'bg-surface-container-high text-on-surface border-outline-variant shadow-[4px_4px_0px_0px_#150136]'
+                        }`}
+                      >
+                        {message.role === 'assistant' && !message.isError && (
+                          <div className="flex items-center gap-2 mb-2 pb-2 border-b-2 border-outline-variant">
+                            <span className="w-6 h-6 bg-primary text-on-primary flex items-center justify-center text-xs">🤖</span>
+                            <span className="text-xs text-secondary" style={pixelFont}>STUDY BUDDY</span>
+                          </div>
+                        )}
+                        
+                        {message.media && message.media.length > 0 && (
+                          <MessageMedia media={message.media} />
+                        )}
+
+                        {message.role === 'assistant' ? (
+                          <MarkdownRenderer content={message.content} />
+                        ) : (
+                          <p className="whitespace-pre-wrap">{message.content}</p>
+                        )}
+                        
+                        <p className={`text-[10px] mt-2 ${message.role === 'user' ? 'text-on-primary-container/70' : 'text-on-surface-variant'}`} style={pixelFont}>
+                          {formatTime(message.timestamp)}
+                        </p>
                       </div>
-                      <p className="text-gray-300 text-xs mb-2">{category.description}</p>
-                      
-                      {/* Expanded Examples */}
-                      {activeCategory === category.id && (
-                        <div className="mt-2 pt-2 border-t border-gray-600/50 space-y-1">
-                          <p className="text-xs text-gray-400 mb-1">Try asking:</p>
-                          {category.examples.map((example, idx) => (
-                            <button
-                              key={idx}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleExampleClick(example);
-                              }}
-                              className="block w-full text-left text-xs text-gray-300 hover:text-white hover:bg-white/10 px-2 py-1 rounded transition-colors"
-                            >
-                              💬 "{example}"
-                            </button>
-                          ))}
+                    </div>
+                  ))
+                )}
+                
+                {/* Loading indicator */}
+                {isLoading && (
+                  <div className="flex justify-start">
+                    <div className="bg-surface-container-high text-on-surface p-4 border-4 border-outline-variant shadow-[4px_4px_0px_0px_#150136] min-w-64">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="w-6 h-6 bg-primary text-on-primary flex items-center justify-center text-xs">🤖</span>
+                        <span className="text-secondary text-xs" style={pixelFont}>
+                          {uploadProgress !== null && uploadProgress < 70 ? 'UPLOADING...' : 
+                           uploadProgress !== null && uploadProgress < 95 ? 'PROCESSING...' : 'THINKING...'}
+                        </span>
+                      </div>
+                      {uploadProgress !== null ? (
+                        <div className="space-y-1">
+                          <div className="w-full h-3 bg-surface-container border-2 border-outline-variant overflow-hidden">
+                            <div 
+                              className="h-full bg-gradient-to-r from-primary to-secondary transition-all duration-300"
+                              style={{ width: `${uploadProgress}%` }}
+                            />
+                          </div>
+                          <div className="text-[10px] text-on-surface-variant text-right" style={pixelFont}>{uploadProgress}%</div>
                         </div>
-                      )}
-                      
-                      {activeCategory !== category.id && (
-                        <div className="text-xs text-gray-500 flex items-center gap-1">
-                          <span>Click to see examples</span>
-                          <span>▼</span>
+                      ) : (
+                        <div className="flex gap-1">
+                          <span className="w-3 h-3 bg-primary animate-bounce"></span>
+                          <span className="w-3 h-3 bg-primary animate-bounce" style={{ animationDelay: '0.1s' }}></span>
+                          <span className="w-3 h-3 bg-primary animate-bounce" style={{ animationDelay: '0.2s' }}></span>
                         </div>
                       )}
                     </div>
-                  ))}
-                </div>
-
-                {/* Quick Actions */}
-                <div className="bg-slate-700/50 rounded-lg p-3 border border-slate-600">
-                  <h3 className="text-sm font-bold text-white mb-2 flex items-center gap-2">
-                    <span>⚡</span> Quick Actions
-                  </h3>
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      onClick={() => handleQuickAction('motivation')}
-                      className="px-3 py-1.5 bg-gradient-to-r from-pink-500 to-rose-500 text-white text-xs rounded-full hover:scale-105 transition-transform"
-                    >
-                      🌟 Get Motivated
-                    </button>
-                    <button
-                      onClick={() => handleQuickAction('study_tips', { subject: 'general' })}
-                      className="px-3 py-1.5 bg-gradient-to-r from-blue-500 to-cyan-500 text-white text-xs rounded-full hover:scale-105 transition-transform"
-                    >
-                      📚 Study Tips
-                    </button>
-                    <button
-                      onClick={() => handleQuickAction('memory_trick', { topic: 'vocabulary' })}
-                      className="px-3 py-1.5 bg-gradient-to-r from-green-500 to-emerald-500 text-white text-xs rounded-full hover:scale-105 transition-transform"
-                    >
-                      🧠 Memory Trick
-                    </button>
-                    <button
-                      onClick={() => handleQuickAction('practice_problem', { subject: 'math' })}
-                      className="px-3 py-1.5 bg-gradient-to-r from-purple-500 to-violet-500 text-white text-xs rounded-full hover:scale-105 transition-transform"
-                    >
-                      ✏️ Practice Problem
-                    </button>
                   </div>
-                </div>
-
-                {/* File Upload Hint */}
-                <div className="text-center py-2">
-                  <p className="text-xs text-gray-500">
-                    💡 <span className="text-purple-400">Pro tip:</span> You can upload images (📷) and videos (🎥) for me to analyze!
-                  </p>
-                </div>
+                )}
+                <div ref={messagesEndRef} />
               </div>
-            ) : (
-              messages.map((message, index) => (
-                <div
-                  key={index}
-                  className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div
-                    className={`max-w-[85%] md:max-w-[75%] p-4 rounded-lg ${
-                      message.role === 'user'
-                        ? 'bg-blue-600 text-white border-2 border-blue-400'
-                        : message.isError
-                        ? 'bg-red-900 text-red-200 border-2 border-red-600'
-                        : 'bg-gray-700 text-gray-100 border-2 border-gray-500'
-                    }`}
-                  >
-                    {message.role === 'assistant' && (
-                      <div className="flex items-center gap-2 mb-2 pb-2 border-b border-gray-600">
-                        <span className="text-sm">🤖</span>
-                        <span className="text-xs text-purple-400 font-medium">Study Buddy</span>
-                      </div>
-                    )}
-                    
-                    {/* Display attached media */}
-                    {message.media && message.media.length > 0 && (
-                      <MessageMedia media={message.media} />
-                    )}
 
-                    {/* Conditional rendering: Markdown for assistant, plain text for user */}
-                    {message.role === 'assistant' ? (
-                      <MarkdownRenderer content={message.content} />
-                    ) : (
-                      <p className="whitespace-pre-wrap">{message.content}</p>
-                    )}
-                    
-                    <p className={`text-xs mt-2 ${message.role === 'user' ? 'text-blue-200' : 'text-gray-500'}`}>
-                      {formatTime(message.timestamp)}
-                    </p>
-                  </div>
-                </div>
-              ))
-            )}
-            
-            {/* Loading indicator */}
-            {isLoading && (
-              <div className="flex justify-start">
-                <div className="bg-gray-700 text-gray-100 p-4 rounded-lg border-2 border-gray-500 min-w-64">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-sm">🤖</span>
-                    <span className="text-purple-400 text-sm">
-                      {uploadProgress !== null && uploadProgress < 70 
-                        ? 'Uploading files...' 
-                        : uploadProgress !== null && uploadProgress < 95
-                        ? 'Processing...'
-                        : 'Thinking...'}
+              {/* Attached Files */}
+              {attachedFiles.length > 0 && (
+                <div className="border-t-4 border-outline-variant p-4 bg-surface-container-lowest">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-xs text-on-surface-variant" style={pixelFont}>
+                      📎 {attachedFiles.length}/{FILE_CONFIG.maxFiles} files ({formatFileSize(getTotalFileSize())})
                     </span>
+                    <button
+                      onClick={clearAllFiles}
+                      className="text-xs text-error hover:text-red-400 transition-colors"
+                      style={pixelFont}
+                    >
+                      CLEAR ALL
+                    </button>
                   </div>
-                  {uploadProgress !== null && (
-                    <div className="space-y-1">
-                      <div className="w-full h-2 bg-gray-600 rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-300"
-                          style={{ width: `${uploadProgress}%` }}
-                        />
-                      </div>
-                      <div className="text-xs text-gray-400 text-right">{uploadProgress}%</div>
-                    </div>
-                  )}
-                  {uploadProgress === null && (
-                    <div className="flex gap-1">
-                      <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce"></span>
-                      <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></span>
-                      <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></span>
-                    </div>
-                  )}
+                  <div className="flex flex-wrap gap-3">
+                    {attachedFiles.map((item) => (
+                      <MediaPreview key={item.id} file={item.file} onRemove={() => removeFile(item.id)} />
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
-            <div ref={messagesEndRef} />
-          </div>
+              )}
 
-          {/* Attached Files Preview */}
-          {attachedFiles.length > 0 && (
-            <div className="border-t-2 border-gray-600 p-3 bg-gray-900">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-400">
-                    📎 {attachedFiles.length}/{FILE_CONFIG.maxFiles} files
-                  </span>
-                  <span className="text-xs text-gray-500">
-                    ({formatFileSize(getTotalFileSize())} / {formatFileSize(FILE_CONFIG.maxTotalSize)})
-                  </span>
+              {/* Input Area */}
+              <form onSubmit={sendMessage} className="border-t-4 border-outline-variant p-4 bg-surface-container">
+                <div className="flex gap-2 items-end">
+                  <input type="file" ref={fileInputRef} onChange={(e) => handleFileSelect(e, 'image')} 
+                    accept={FILE_CONFIG.image.acceptString} multiple className="hidden" />
+                  <input type="file" ref={videoInputRef} onChange={(e) => handleFileSelect(e, 'video')} 
+                    accept={FILE_CONFIG.video.acceptString} multiple className="hidden" />
+                  
+                  {/* Media buttons */}
+                  <div className="flex flex-col gap-1">
+                    <button type="button" onClick={() => fileInputRef.current?.click()}
+                      disabled={isLoading || attachedFiles.length >= FILE_CONFIG.maxFiles}
+                      className="w-10 h-10 bg-surface-container-high hover:bg-surface-container-lowest disabled:opacity-50 disabled:cursor-not-allowed border-2 border-outline-variant hover:border-primary transition-all flex items-center justify-center text-lg">
+                      📷
+                    </button>
+                    <button type="button" onClick={() => videoInputRef.current?.click()}
+                      disabled={isLoading || attachedFiles.length >= FILE_CONFIG.maxFiles}
+                      className="w-10 h-10 bg-surface-container-high hover:bg-surface-container-lowest disabled:opacity-50 disabled:cursor-not-allowed border-2 border-outline-variant hover:border-primary transition-all flex items-center justify-center text-lg">
+                      🎥
+                    </button>
+                  </div>
+
+                  <div className="flex-1">
+                    <input type="text" value={inputMessage} onChange={(e) => setInputMessage(e.target.value)}
+                      placeholder={attachedFiles.length > 0 ? "Add a message or send media..." : "Ask me anything..."}
+                      className="w-full bg-surface-container-lowest border-4 border-outline-variant px-4 py-3 text-on-surface placeholder-on-surface-variant focus:outline-none focus:border-primary transition-colors"
+                      style={pixelFont}
+                      disabled={isLoading}
+                    />
+                  </div>
+                  
+                  <button type="submit" disabled={isLoading || (!inputMessage.trim() && attachedFiles.length === 0)}
+                    className={`px-6 py-3 border-4 transition-all ${
+                      isLoading || (!inputMessage.trim() && attachedFiles.length === 0)
+                        ? 'bg-surface-container text-on-surface-variant border-outline-variant cursor-not-allowed'
+                        : 'bg-primary text-on-primary border-on-primary shadow-[4px_4px_0px_0px_#ff4a8d] hover:shadow-[2px_2px_0px_0px_#ff4a8d] hover:translate-x-[2px] hover:translate-y-[2px]'
+                    }`}
+                    style={pixelFont}
+                  >
+                    {isLoading ? '...' : 'SEND'}
+                  </button>
                 </div>
-                <button
-                  onClick={clearAllFiles}
-                  className="text-xs text-red-400 hover:text-red-300 transition-colors"
-                >
-                  Clear all
-                </button>
-              </div>
-              {/* Progress bar for total size */}
-              <div className="w-full h-1 bg-gray-700 rounded-full mb-3 overflow-hidden">
-                <div 
-                  className={`h-full transition-all duration-300 ${
-                    getTotalFileSize() / FILE_CONFIG.maxTotalSize > 0.8 
-                      ? 'bg-red-500' 
-                      : getTotalFileSize() / FILE_CONFIG.maxTotalSize > 0.5 
-                      ? 'bg-yellow-500' 
-                      : 'bg-green-500'
-                  }`}
-                  style={{ width: `${(getTotalFileSize() / FILE_CONFIG.maxTotalSize) * 100}%` }}
-                />
-              </div>
-              <div className="flex flex-wrap gap-3">
-                {attachedFiles.map((item) => (
-                  <MediaPreview 
-                    key={item.id} 
-                    file={item.file} 
-                    onRemove={() => removeFile(item.id)} 
-                  />
+                
+                {/* File limits toggle */}
+                <div className="mt-3">
+                  <button type="button" onClick={() => setShowFileLimits(!showFileLimits)}
+                    className="text-[10px] text-on-surface-variant hover:text-on-surface transition-colors flex items-center gap-1"
+                    style={pixelFont}
+                  >
+                    <span>ℹ️ FILE LIMITS</span>
+                    <span>{showFileLimits ? '▲' : '▼'}</span>
+                  </button>
+                  
+                  {showFileLimits && (
+                    <div className="mt-2 p-3 bg-surface-container-lowest border-2 border-outline-variant text-[10px] text-on-surface-variant" style={pixelFont}>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <div>📷 Images: {FILE_CONFIG.image.maxSizeLabel}</div>
+                        <div>🎥 Videos: {FILE_CONFIG.video.maxSizeLabel}</div>
+                        <div>📎 Max {FILE_CONFIG.maxFiles} files</div>
+                        <div>💾 Max {formatFileSize(FILE_CONFIG.maxTotalSize)} total</div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </form>
+            </>
+          )}
+
+          {/* STUDY TIPS TAB */}
+          {activeTab === 'tips' && (
+            <div className="p-6 min-h-[400px]">
+              <h2 className="text-lg font-bold text-on-surface mb-6" style={pixelFont}>💡 STUDY TIPS</h2>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                {['Math', 'Science', 'Language', 'General'].map((subject) => (
+                  <button
+                    key={subject}
+                    onClick={() => loadTips(subject === 'General' ? null : subject)}
+                    className="bg-surface-container-high border-2 border-outline-variant hover:border-tertiary p-4 text-left transition-all hover:shadow-[4px_4px_0px_0px_#e9c400]"
+                  >
+                    <span className="text-lg mb-2 block">
+                      {subject === 'Math' && '🔢'}
+                      {subject === 'Science' && '🔬'}
+                      {subject === 'Language' && '📖'}
+                      {subject === 'General' && '⭐'}
+                    </span>
+                    <span className="text-xs font-bold text-on-surface" style={pixelFont}>{subject} TIPS</span>
+                  </button>
                 ))}
               </div>
+
+              {showTips && tips.length > 0 && (
+                <div className="bg-surface-container-high border-4 border-tertiary p-6 shadow-[4px_4px_0px_0px_#e9c400]">
+                  <h3 className="text-tertiary text-sm mb-4" style={pixelFont}>QUICK TIPS</h3>
+                  <ul className="space-y-3">
+                    {tips.map((tip, index) => (
+                      <li key={index} className="flex items-start gap-3 text-on-surface">
+                        <span className="text-tertiary mt-1">▸</span>
+                        <span>{tip}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           )}
 
-          {/* Quick Prompts */}
-          <div className="border-t-2 border-gray-600 p-3 flex flex-wrap gap-2">
-            {quickPrompts.map((prompt, index) => (
-              <button
-                key={index}
-                onClick={() => setInputMessage(prompt.text)}
-                disabled={isLoading}
-                className="bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed px-3 py-1 text-sm rounded-full border border-gray-500 transition-colors flex items-center gap-1 text-gray-300"
-              >
-                <span>{prompt.emoji}</span>
-                <span>{prompt.text}</span>
-              </button>
-            ))}
-          </div>
-
-          {/* Input Area */}
-          <form onSubmit={sendMessage} className="border-t-4 border-slate-600 p-4">
-            <div className="flex gap-2 items-end">
-              {/* Hidden file inputs */}
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={(e) => handleFileSelect(e, 'image')}
-                accept={FILE_CONFIG.image.acceptString}
-                multiple
-                className="hidden"
-              />
-              <input
-                type="file"
-                ref={videoInputRef}
-                onChange={(e) => handleFileSelect(e, 'video')}
-                accept={FILE_CONFIG.video.acceptString}
-                multiple
-                className="hidden"
-              />
+          {/* HELP TAB */}
+          {activeTab === 'help' && (
+            <div className="p-6 min-h-[400px]">
+              <h2 className="text-lg font-bold text-on-surface mb-6" style={pixelFont}>❓ HOW TO USE</h2>
               
-              {/* Media buttons */}
-              <div className="flex flex-col gap-1">
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={isLoading || attachedFiles.length >= FILE_CONFIG.maxFiles}
-                  className="px-3 py-2 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg border border-gray-500 transition-colors text-lg"
-                  title={`Attach image (max ${FILE_CONFIG.image.maxSizeLabel})`}
-                >
-                  📷
-                </button>
-                <button
-                  type="button"
-                  onClick={() => videoInputRef.current?.click()}
-                  disabled={isLoading || attachedFiles.length >= FILE_CONFIG.maxFiles}
-                  className="px-3 py-2 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg border border-gray-500 transition-colors text-lg"
-                  title={`Attach video (max ${FILE_CONFIG.video.maxSizeLabel})`}
-                >
-                  🎥
-                </button>
-              </div>
-
-              <div className="flex-1 flex flex-col gap-1">
-                <input
-                  type="text"
-                  value={inputMessage}
-                  onChange={(e) => setInputMessage(e.target.value)}
-                  placeholder={attachedFiles.length > 0 ? "Add a message or send media..." : "Ask me anything..."}
-                  className="w-full bg-gray-800 border-2 border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-colors"
-                  disabled={isLoading}
-                />
-              </div>
-              
-              <button
-                type="submit"
-                disabled={isLoading || (!inputMessage.trim() && attachedFiles.length === 0)}
-                className={`px-6 py-3 text-sm rounded-lg border-2 transition-all font-bold ${
-                  isLoading || (!inputMessage.trim() && attachedFiles.length === 0)
-                    ? 'bg-gray-600 border-gray-500 text-gray-400 cursor-not-allowed'
-                    : 'bg-purple-600 border-purple-400 text-white hover:bg-purple-500 hover:scale-105'
-                }`}
-              >
-                {isLoading ? '⏳' : '📨 Send'}
-              </button>
-            </div>
-            
-            {/* File limits info */}
-            <div className="mt-3">
-              <button
-                type="button"
-                onClick={() => setShowFileLimits(!showFileLimits)}
-                className="text-xs text-gray-500 hover:text-gray-400 transition-colors flex items-center gap-1"
-              >
-                <span>ℹ️</span>
-                <span>File upload limits</span>
-                <span>{showFileLimits ? '▲' : '▼'}</span>
-              </button>
-              
-              {showFileLimits && (
-                <div className="mt-2 p-3 bg-gray-800 rounded-lg border border-gray-700 text-xs text-gray-400">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    <div className="space-y-1">
-                      <div className="font-medium text-gray-300">📷 Images</div>
-                      <div>Max size: {FILE_CONFIG.image.maxSizeLabel}</div>
-                      <div className="text-gray-500">JPG, PNG, GIF, WebP, BMP, TIFF, SVG</div>
-                    </div>
-                    <div className="space-y-1">
-                      <div className="font-medium text-gray-300">🎥 Videos</div>
-                      <div>Max size: {FILE_CONFIG.video.maxSizeLabel}</div>
-                      <div className="text-gray-500">MP4, WebM, OGG, MOV, AVI, MKV</div>
-                    </div>
-                    <div className="space-y-1">
-                      <div className="font-medium text-gray-300">📎 Total Files</div>
-                      <div>Max: {FILE_CONFIG.maxFiles} files</div>
-                      <div className="text-gray-500">Per message</div>
-                    </div>
-                    <div className="space-y-1">
-                      <div className="font-medium text-gray-300">💾 Total Size</div>
-                      <div>Max: {formatFileSize(FILE_CONFIG.maxTotalSize)}</div>
-                      <div className="text-gray-500">Combined upload</div>
-                    </div>
-                  </div>
+              <div className="space-y-4">
+                <div className="bg-surface-container-high border-2 border-outline-variant p-4">
+                  <h3 className="text-primary text-xs mb-2" style={pixelFont}>💬 ASKING QUESTIONS</h3>
+                  <p className="text-on-surface-variant text-sm">Type any question in the chat box and press SEND. I can help with homework, explain concepts, or give advice!</p>
                 </div>
-              )}
+                
+                <div className="bg-surface-container-high border-2 border-outline-variant p-4">
+                  <h3 className="text-primary text-xs mb-2" style={pixelFont}>📷 UPLOADING IMAGES</h3>
+                  <p className="text-on-surface-variant text-sm">Click the 📷 button to upload images of worksheets, diagrams, or problems. I can analyze them and help you solve them!</p>
+                </div>
+                
+                <div className="bg-surface-container-high border-2 border-outline-variant p-4">
+                  <h3 className="text-primary text-xs mb-2" style={pixelFont}>🎥 UPLOADING VIDEOS</h3>
+                  <p className="text-on-surface-variant text-sm">Click the 🎥 button to upload short videos (max 200MB). I can help analyze video content!</p>
+                </div>
+                
+                <div className="bg-surface-container-high border-2 border-outline-variant p-4">
+                  <h3 className="text-primary text-xs mb-2" style={pixelFont}>💡 QUICK PROMPTS</h3>
+                  <p className="text-on-surface-variant text-sm">Use the quick prompt buttons to get instant help with common requests like study tips or practice problems!</p>
+                </div>
+              </div>
             </div>
-          </form>
+          )}
         </div>
 
-        {/* User Stats Footer */}
-        <div className="mt-4 bg-slate-800 border-4 border-slate-600 p-4 shadow-lg">
-          <div className="flex items-center justify-between text-sm flex-wrap gap-2">
-            <div className="flex items-center gap-4 flex-wrap">
-              <span className="text-gray-400">👤 {user?.username || 'Student'}</span>
-              <span className="text-yellow-400">⭐ Level {user?.level || 1}</span>
-              <span className="text-green-400">💬 {messages.filter(m => m.role === 'user').length} messages</span>
-            </div>
-            <div className="text-gray-500">
-              Powered by Kimi K2.5 AI
-            </div>
-          </div>
+        {/* Footer */}
+        <div className="mt-4 text-center">
+          <p className="text-[10px] text-on-surface-variant" style={pixelFont}>
+            Powered by Kimi K2.5 AI • Made for StudyQuest
+          </p>
         </div>
       </div>
     </div>
