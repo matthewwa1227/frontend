@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '../utils/cn';
 import { getUser } from '../utils/auth';
@@ -14,6 +14,32 @@ import PixelButton from '../components/ui/PixelButton';
 import ProgressBar from '../components/ui/ProgressBar';
 import Avatar from '../components/ui/Avatar';
 
+// Default quests for demo/loading state - defined outside component to prevent recreation
+const getDefaultQuests = () => [
+  { id: 1, title: 'Master 5 Math Problems', xp: 200, progress: 3, total: 5, type: 'math', icon: 'swords', color: 'primary' },
+  { id: 2, title: '15-min Pomodoro Focus', xp: 150, progress: 0, total: 1, type: 'focus', icon: 'timer', color: 'secondary' },
+  { id: 3, title: 'Review Flashcards', xp: 100, progress: 1, total: 1, type: 'review', icon: 'school', color: 'tertiary', completed: true },
+];
+
+// Default sessions - defined outside component to prevent recreation
+const getDefaultSessions = () => [
+  { id: 1, subject: 'Calculus Boss Battle', started_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), xp_earned: 450, duration: 45 },
+  { id: 2, subject: 'Ancient History Lab', started_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), xp_earned: 200, duration: 25 },
+];
+
+// Cache duration: 5 minutes for non-critical data
+const CACHE_DURATION = 5 * 60 * 1000;
+
+// Fetch with timeout helper
+const fetchWithTimeout = async (promise, timeout = 5000) => {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Request timeout')), timeout)
+    )
+  ]);
+};
+
 /**
  * Hero's Hub Dashboard - Main student landing page
  * 6 Sections: Hero Status, Guild Stats, Quest Map, Daily Quests, Recent Victories
@@ -23,7 +49,9 @@ import Avatar from '../components/ui/Avatar';
  */
 const Dashboard = () => {
   const navigate = useNavigate();
-  const currentUser = getUser();
+  
+  // Memoize currentUser to prevent it from being a new object on every render
+  const currentUser = useMemo(() => getUser(), []);
   
   // State - separate loading states for progressive rendering
   const [user, setUser] = useState(currentUser || null);
@@ -43,27 +71,17 @@ const Dashboard = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(Date.now());
 
-  // Cache duration: 5 minutes for non-critical data
-  const CACHE_DURATION = 5 * 60 * 1000;
+  // Use ref to track if initial fetch has happened
+  const hasFetchedRef = useRef(false);
 
   // Navigation items with proper Material Symbols icons
-  const navItems = [
+  const navItems = useMemo(() => [
     { id: 'study', label: 'STUDY', icon: 'menu_book', href: '/dashboard', active: true },
     { id: 'tasks', label: 'TASKS', icon: 'checklist', href: '/tasks', badge: dailyQuests.filter(q => !q.completed).length.toString() },
     { id: 'ai-tutor', label: 'AI TUTOR', icon: 'smart_toy', href: '/study-buddy' },
     { id: 'social', label: 'SOCIAL', icon: 'groups', href: '/social' },
     { id: 'progress', label: 'PROGRESS', icon: 'trending_up', href: '/progress' },
-  ];
-
-  // Fetch with timeout helper
-  const fetchWithTimeout = async (promise, timeout = 5000) => {
-    return Promise.race([
-      promise,
-      new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Request timeout')), timeout)
-      )
-    ]);
-  };
+  ], [dailyQuests]);
 
   // Load cached data immediately
   useEffect(() => {
@@ -73,6 +91,7 @@ const Dashboard = () => {
         const cachedTasks = localStorage.getItem('sq_cached_tasks');
         const cachedSessions = localStorage.getItem('sq_cached_sessions');
         const cachedTimestamp = localStorage.getItem('sq_cache_timestamp');
+        const cachedUser = localStorage.getItem('sq_user');
         
         if (cachedTimestamp && Date.now() - parseInt(cachedTimestamp) < CACHE_DURATION) {
           if (cachedRank) {
@@ -87,6 +106,10 @@ const Dashboard = () => {
             setRecentSessions(JSON.parse(cachedSessions));
             setSessionsLoading(false);
           }
+          if (cachedUser) {
+            setUser(JSON.parse(cachedUser));
+            setUserLoading(false);
+          }
         }
       } catch (e) {
         console.log('Cache read error:', e);
@@ -98,27 +121,29 @@ const Dashboard = () => {
   }, []);
 
   // Fetch dashboard data with progressive loading
-  // FIXED: Removed state dependencies to prevent infinite re-render loop
+  // FIXED: No dependencies - use refs for any values that might change
   const fetchDashboardData = useCallback(async () => {
+    // Prevent duplicate fetches
+    if (hasFetchedRef.current) {
+      return;
+    }
+    hasFetchedRef.current = true;
+    
     try {
       setError(null);
-      
-      // Use current user as fallback immediately
-      if (currentUser) {
-        setUser(currentUser);
-        setUserLoading(false);
-      }
 
       // Fetch all data in parallel with individual timeout handling
-      const fetchUser = async () => {
+      const fetchUserData = async () => {
         try {
           const res = await fetchWithTimeout(authAPI.getMe(), 3000);
-          setUser(res.data);
-          localStorage.setItem('sq_user', JSON.stringify(res.data));
+          const userData = res.data?.data || res.data;
+          if (userData) {
+            setUser(userData);
+            localStorage.setItem('sq_user', JSON.stringify(userData));
+          }
         } catch (err) {
-          console.log('User fetch failed, using cached:', err);
-          const cached = localStorage.getItem('sq_user');
-          if (cached) setUser(JSON.parse(cached));
+          console.log('User fetch failed, using cached');
+          // Don't update state on error - keep existing cached data
         } finally {
           setUserLoading(false);
         }
@@ -131,14 +156,9 @@ const Dashboard = () => {
           setGuildRank(rankData);
           localStorage.setItem('sq_cached_rank', JSON.stringify(rankData));
         } catch (err) {
-          console.log('Rank fetch failed:', err);
-          // Use localStorage cache as fallback, then default
-          const cached = localStorage.getItem('sq_cached_rank');
-          if (cached) {
-            setGuildRank(JSON.parse(cached));
-          } else {
-            setGuildRank({ rank: 12, league: 'S4', percentile: 5 });
-          }
+          console.log('Rank fetch failed');
+          // Only set default if no data exists
+          setGuildRank(prev => prev || { rank: 12, league: 'S4', percentile: 5 });
         } finally {
           setRankLoading(false);
         }
@@ -151,13 +171,9 @@ const Dashboard = () => {
           setDailyQuests(tasks);
           localStorage.setItem('sq_cached_tasks', JSON.stringify(tasks));
         } catch (err) {
-          console.log('Tasks fetch failed:', err);
-          const cached = localStorage.getItem('sq_cached_tasks');
-          if (cached) {
-            setDailyQuests(JSON.parse(cached));
-          } else {
-            setDailyQuests(getDefaultQuests());
-          }
+          console.log('Tasks fetch failed');
+          // Only set default if no data exists
+          setDailyQuests(prev => prev?.length > 0 ? prev : getDefaultQuests());
         } finally {
           setTasksLoading(false);
         }
@@ -170,13 +186,9 @@ const Dashboard = () => {
           setRecentSessions(sessions);
           localStorage.setItem('sq_cached_sessions', JSON.stringify(sessions));
         } catch (err) {
-          console.log('Sessions fetch failed:', err);
-          const cached = localStorage.getItem('sq_cached_sessions');
-          if (cached) {
-            setRecentSessions(JSON.parse(cached));
-          } else {
-            setRecentSessions(getDefaultSessions());
-          }
+          console.log('Sessions fetch failed');
+          // Only set default if no data exists
+          setRecentSessions(prev => prev?.length > 0 ? prev : getDefaultSessions());
         } finally {
           setSessionsLoading(false);
         }
@@ -184,7 +196,7 @@ const Dashboard = () => {
 
       // Execute all fetches in parallel
       await Promise.all([
-        fetchUser(),
+        fetchUserData(),
         fetchRank(),
         fetchTasks(),
         fetchSessions(),
@@ -198,30 +210,20 @@ const Dashboard = () => {
       console.error('Dashboard data fetch error:', err);
       setError('CONNECTION LOST TO SERVER');
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser]); // Only depend on currentUser which is stable
+  }, []); // NO DEPENDENCIES - function never changes
 
-  // Initial data fetch
+  // Initial data fetch - only run once on mount
   useEffect(() => {
     fetchDashboardData();
     
     // Set up refresh interval (every 2 minutes)
-    const interval = setInterval(fetchDashboardData, 2 * 60 * 1000);
+    const interval = setInterval(() => {
+      hasFetchedRef.current = false; // Allow fetch to run again
+      fetchDashboardData();
+    }, 2 * 60 * 1000);
+    
     return () => clearInterval(interval);
   }, [fetchDashboardData]);
-
-  // Default quests for demo/loading state
-  const getDefaultQuests = () => [
-    { id: 1, title: 'Master 5 Math Problems', xp: 200, progress: 3, total: 5, type: 'math', icon: 'swords', color: 'primary' },
-    { id: 2, title: '15-min Pomodoro Focus', xp: 150, progress: 0, total: 1, type: 'focus', icon: 'timer', color: 'secondary' },
-    { id: 3, title: 'Review Flashcards', xp: 100, progress: 1, total: 1, type: 'review', icon: 'school', color: 'tertiary', completed: true },
-  ];
-
-  // Default sessions
-  const getDefaultSessions = () => [
-    { id: 1, subject: 'Calculus Boss Battle', started_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), xp_earned: 450, duration: 45 },
-    { id: 2, subject: 'Ancient History Lab', started_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), xp_earned: 200, duration: 25 },
-  ];
 
   // Calculate XP percentage for next level
   const getXPPercentage = () => {
@@ -292,7 +294,7 @@ const Dashboard = () => {
           <p className="font-['Press_Start_2P'] text-[10px] text-on-surface-variant mb-6">
             THE SHADOW HAS SEVERED YOUR CONNECTION
           </p>
-          <PixelButton onClick={fetchDashboardData} variant="tertiary">
+          <PixelButton onClick={() => { hasFetchedRef.current = false; fetchDashboardData(); }} variant="tertiary">
             RETRY CONNECTION
           </PixelButton>
         </PixelCard>
@@ -654,14 +656,6 @@ const DailyQuests = ({ quests, onQuestClick, loading }) => {
     completed: q.completed,
     type: q.type,
   })) : getDefaultQuests();
-
-  function getDefaultQuests() {
-    return [
-      { id: 1, title: 'Master 5 Math Problems', xp: 200, progress: 3, total: 5, icon: 'swords', color: 'primary', completed: false },
-      { id: 2, title: '15-min Pomodoro Focus', xp: 150, progress: 0, total: 1, icon: 'timer', color: 'secondary', completed: false },
-      { id: 3, title: 'Review Flashcards', xp: 100, progress: 1, total: 1, icon: 'school', color: 'tertiary', completed: true },
-    ];
-  }
 
   if (loading && quests.length === 0) {
     return (
