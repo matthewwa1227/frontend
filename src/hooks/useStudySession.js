@@ -222,9 +222,9 @@ export const useStudySession = (initialDuration = 1500) => {
           // Send heartbeat to backend
           // Note: Using PATCH method if available, otherwise skip
           // await api.patch(`/sessions/${sessionId}/heartbeat`);
-          console.log('Heartbeat sent for session:', sessionId);
+          // Heartbeat kept for future backend integration
         } catch (error) {
-          console.error('Heartbeat failed:', error);
+          // Silently fail - heartbeat is non-critical
         }
       }, 30000); // Every 30 seconds
     }

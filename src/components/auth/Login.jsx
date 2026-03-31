@@ -58,7 +58,7 @@ export default function Login() {
     e.preventDefault();
     setLoading(true);
     setError('');
-    setDebugInfo({ status: 'attempting', message: 'Sending login request...' });
+    setDebugInfo(null); // Clear any previous debug info
 
     try {
       console.log('🔑 Attempting login with:', { email: formData.email });
@@ -69,11 +69,8 @@ export default function Login() {
       console.log('✅ Login response:', response);
       console.log('📦 Response data:', response.data);
       
-      setDebugInfo({ 
-        status: 'success', 
-        message: 'Login API call succeeded!',
-        response: JSON.stringify(response.data, null, 2)
-      });
+      // Clear debug info on success (don't show in UI)
+      setDebugInfo(null);
       
       const { token, student } = response.data.data;
       
@@ -229,11 +226,11 @@ export default function Login() {
             </PixelButton>
           </form>
 
-          {/* Debug Info Panel */}
-          {debugInfo && (
-            <div className="mt-6 p-4 bg-black/50 border-2 border-gray-600 text-xs font-mono">
-              <p className="text-gray-400 mb-2">Debug Info:</p>
-              <pre className="text-green-400 whitespace-pre-wrap overflow-x-auto">
+          {/* Debug Info Panel - Only show in development or when there's an error */}
+          {debugInfo && debugInfo.status === 'error' && (
+            <div className="mt-6 p-4 bg-black/50 border-2 border-red-600 text-xs font-mono">
+              <p className="text-red-400 mb-2">Error Details:</p>
+              <pre className="text-red-300 whitespace-pre-wrap overflow-x-auto">
                 {JSON.stringify(debugInfo, null, 2)}
               </pre>
             </div>

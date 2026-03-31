@@ -98,6 +98,7 @@ const Dashboard = () => {
   }, []);
 
   // Fetch dashboard data with progressive loading
+  // FIXED: Removed state dependencies to prevent infinite re-render loop
   const fetchDashboardData = useCallback(async () => {
     try {
       setError(null);
@@ -131,7 +132,11 @@ const Dashboard = () => {
           localStorage.setItem('sq_cached_rank', JSON.stringify(rankData));
         } catch (err) {
           console.log('Rank fetch failed:', err);
-          if (!guildRank) {
+          // Use localStorage cache as fallback, then default
+          const cached = localStorage.getItem('sq_cached_rank');
+          if (cached) {
+            setGuildRank(JSON.parse(cached));
+          } else {
             setGuildRank({ rank: 12, league: 'S4', percentile: 5 });
           }
         } finally {
@@ -147,7 +152,10 @@ const Dashboard = () => {
           localStorage.setItem('sq_cached_tasks', JSON.stringify(tasks));
         } catch (err) {
           console.log('Tasks fetch failed:', err);
-          if (dailyQuests.length === 0) {
+          const cached = localStorage.getItem('sq_cached_tasks');
+          if (cached) {
+            setDailyQuests(JSON.parse(cached));
+          } else {
             setDailyQuests(getDefaultQuests());
           }
         } finally {
@@ -163,7 +171,10 @@ const Dashboard = () => {
           localStorage.setItem('sq_cached_sessions', JSON.stringify(sessions));
         } catch (err) {
           console.log('Sessions fetch failed:', err);
-          if (recentSessions.length === 0) {
+          const cached = localStorage.getItem('sq_cached_sessions');
+          if (cached) {
+            setRecentSessions(JSON.parse(cached));
+          } else {
             setRecentSessions(getDefaultSessions());
           }
         } finally {
@@ -187,7 +198,8 @@ const Dashboard = () => {
       console.error('Dashboard data fetch error:', err);
       setError('CONNECTION LOST TO SERVER');
     }
-  }, [currentUser, guildRank, dailyQuests.length, recentSessions.length]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser]); // Only depend on currentUser which is stable
 
   // Initial data fetch
   useEffect(() => {
