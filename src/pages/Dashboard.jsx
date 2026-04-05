@@ -336,7 +336,7 @@ const Dashboard = () => {
         onMenuClick={() => setMobileMenuOpen(true)}
       />
       
-      {/* Side Navigation (Desktop) */}
+      {/* Side Navigation (Desktop & Mobile) */}
       <SideNavBar 
         items={navItems} 
         user={user}
@@ -345,12 +345,15 @@ const Dashboard = () => {
         activeItem="dashboard"
         onItemClick={(id) => {
           const item = navItems.find(n => n.id === id);
-          if (item && item.href !== '#') navigate(item.href);
+          if (item && item.href !== '#') {
+            setMobileMenuOpen(false);
+            navigate(item.href);
+          }
         }}
       />
 
-      {/* Main Content */}
-      <main className="md:ml-64 pt-24 px-6 pb-12 min-h-screen">
+      {/* Main Content - Adjusted for sidebar */}
+      <main className="lg:ml-64 pt-20 px-4 sm:px-6 pb-24 lg:pb-12 min-h-screen">
         <div className="max-w-7xl mx-auto grid grid-cols-12 gap-6">
           
           {/* Row 1: Hero Status HUD */}
@@ -413,9 +416,9 @@ const Dashboard = () => {
         )}
       </main>
 
-      {/* Bottom Navigation (Mobile) */}
+      {/* Bottom Navigation (Mobile Only) */}
       <BottomNavBar 
-        items={navItems.filter(i => ['dashboard', 'tasks', 'study-buddy', 'social'].includes(i.id))} 
+        items={navItems.filter(i => ['dashboard', 'tasks', 'timer', 'social'].includes(i.id))} 
         activeItem="dashboard"
         onItemClick={(id) => {
           const item = navItems.find(n => n.id === id);

@@ -27,7 +27,7 @@ export default function Navbar() {
   const location = useLocation();
   const user = getUser();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [aiDropdownOpen, setAiDropdownOpen] = useState(false);
+  const [studyToolsDropdownOpen, setStudyToolsDropdownOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
@@ -52,8 +52,8 @@ export default function Navbar() {
     { path: '/leaderboard', label: 'Leaderboard', icon: Trophy },
   ];
 
-  // AI Tools dropdown items
-  const aiTools = [
+  // Study Tools dropdown items
+  const studyTools = [
     { path: '/study-buddy', label: 'Study Buddy', icon: MessageCircle, description: 'Chat with AI tutor' },
     { path: '/story-quest', label: 'Story Quest', icon: Bot, description: 'RPG Learning Adventure' },
     { path: '/schedule', label: 'Schedule Generator', icon: CalendarDays, description: 'Plan your study time' },
@@ -105,26 +105,26 @@ export default function Navbar() {
               );
             })}
 
-            {/* AI Tools Dropdown */}
+            {/* Study Tools Dropdown */}
             <div className="relative">
               <button
-                onClick={() => setAiDropdownOpen(!aiDropdownOpen)}
-                onBlur={() => setTimeout(() => setAiDropdownOpen(false), 200)}
+                onClick={() => setStudyToolsDropdownOpen(!studyToolsDropdownOpen)}
+                onBlur={() => setTimeout(() => setStudyToolsDropdownOpen(false), 200)}
                 className={`px-3 py-2 text-xs font-pixel transition-all flex items-center gap-2 border-b-4 ${
-                  aiTools.some(tool => isActive(tool.path))
+                  studyTools.some(tool => isActive(tool.path))
                     ? 'text-pixel-gold border-pixel-gold bg-pixel-primary'
                     : 'text-white border-transparent hover:text-pixel-gold hover:border-pixel-gold/50'
                 }`}
               >
                 <Sparkles className="w-4 h-4" />
-                <span>AI Tools</span>
-                <ChevronDown className={`w-3 h-3 transition-transform ${aiDropdownOpen ? 'rotate-180' : ''}`} />
+                <span>Study Tools</span>
+                <ChevronDown className={`w-3 h-3 transition-transform ${studyToolsDropdownOpen ? 'rotate-180' : ''}`} />
               </button>
 
               {/* Dropdown Menu */}
-              {aiDropdownOpen && (
+              {studyToolsDropdownOpen && (
                 <div className="absolute top-full left-0 mt-1 w-56 bg-pixel-primary border-4 border-pixel-accent shadow-pixel z-50">
-                  {aiTools.map((tool) => {
+                  {studyTools.map((tool) => {
                     const Icon = tool.icon;
                     return (
                       <Link
@@ -226,9 +226,9 @@ export default function Navbar() {
               );
             })}
 
-            {/* AI Tools */}
-            <p className="text-xs text-gray-500 font-pixel px-3 py-2 pt-4">AI TOOLS</p>
-            {aiTools.map((tool) => {
+            {/* Study Tools */}
+            <p className="text-xs text-gray-500 font-pixel px-3 py-2 pt-4">STUDY TOOLS</p>
+            {studyTools.map((tool) => {
               const Icon = tool.icon;
               return (
                 <Link

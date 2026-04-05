@@ -1,6 +1,6 @@
 import React from 'react';
 import { cn } from '../../utils/cn';
-import Avatar from '../ui/Avatar';
+import { Menu, User, Coins } from 'lucide-react';
 
 /**
  * TopAppBar - Fixed header navigation for StudyQuest
@@ -34,78 +34,52 @@ const TopAppBar = ({
       )}
     >
       {/* Left Section */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3 sm:gap-4">
         {onMenuClick && (
           <button
             onClick={onMenuClick}
-            className="lg:hidden p-2 hover:bg-[#271448] transition-colors"
+            className="lg:hidden p-2 hover:bg-surface-container transition-colors rounded"
             aria-label="Open menu"
           >
-            <span className="material-symbols-outlined text-primary">menu</span>
+            <Menu className="w-5 h-5 text-primary" />
           </button>
         )}
         
         {leftAction}
         
         {/* Title with Press Start 2P font */}
-        <span className="font-['Press_Start_2P'] text-lg text-[#ffb1c4]">
+        <span className="font-['Press_Start_2P'] text-sm sm:text-lg text-primary truncate">
           {title}
         </span>
-        
-        {/* Desktop Navigation */}
-        <nav className="hidden md:flex gap-8 font-['Space_Grotesk'] tracking-tighter uppercase font-bold ml-8">
-          <a 
-            href="#" 
-            className="text-[#ffb1c4] border-b-2 border-[#ffb1c4] py-1 transition-all steps-5 hover:bg-[#271448]"
-          >
-            DASHBOARD
-          </a>
-          <a 
-            href="#" 
-            className="text-[#ddfcff] opacity-70 py-1 transition-all steps-5 hover:bg-[#271448] hover:text-[#ffb1c4] hover:opacity-100"
-          >
-            INVENTORY
-          </a>
-          <a 
-            href="#" 
-            className="text-[#ddfcff] opacity-70 py-1 transition-all steps-5 hover:bg-[#271448] hover:text-[#ffb1c4] hover:opacity-100"
-          >
-            GUILDS
-          </a>
-        </nav>
       </div>
       
       {/* Right Section */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2 sm:gap-4">
         {/* XP/Coins Display - Only show if we have real data */}
         {user?.xp !== undefined && (
-          <div className="hidden sm:flex items-center gap-2 px-3 py-1 bg-surface-container border-2 border-outline-variant">
-            <span className="material-symbols-outlined text-tertiary" style={{fontVariationSettings: "'FILL' 1"}}>monetization_on</span>
+          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-surface-container border-2 border-outline-variant">
+            <Coins className="w-4 h-4 text-tertiary" />
             <span className="font-['Press_Start_2P'] text-[10px] text-tertiary">
               {user.xp.toLocaleString()}
             </span>
           </div>
         )}
         
-        {/* Quest Log Button */}
-        <button className="hidden sm:block bg-primary-container text-on-primary-container font-['Press_Start_2P'] text-[10px] px-4 py-2 shadow-[3px_3px_0px_0px_#8f0044] active:translate-y-1 transition-transform">
-          QUEST LOG
-        </button>
-        
-        {/* User Avatar - Only show if we have real data */}
-        {user?.id && (
-          <div className="w-10 h-10 border-2 border-primary overflow-hidden">
-            <Avatar
-              src={user.avatar}
-              alt={user.username || 'User'}
-              size="sm"
-              variant="primary"
-              rpgClass={user.rpgClass || 'scholar'}
-              level={user.level}
-              onClick={() => {}}
-              className="cursor-pointer w-full h-full"
-            />
-          </div>
+        {/* User Avatar / Profile Button */}
+        {user?.id ? (
+          <button 
+            onClick={() => window.location.href = '/profile'}
+            className="w-9 h-9 sm:w-10 sm:h-10 border-2 border-primary bg-surface-container flex items-center justify-center hover:bg-surface-container-high transition-colors"
+          >
+            <User className="w-5 h-5 text-primary" />
+          </button>
+        ) : (
+          <button 
+            onClick={() => window.location.href = '/profile'}
+            className="w-9 h-9 sm:w-10 sm:h-10 border-2 border-primary bg-surface-container flex items-center justify-center hover:bg-surface-container-high transition-colors"
+          >
+            <User className="w-5 h-5 text-primary" />
+          </button>
         )}
         
         {rightActions}
@@ -128,9 +102,10 @@ export const TopAppBarTitle = ({ children, className }) => (
 
 /**
  * TopAppBarAction - Action button for TopAppBar
+ * Using Lucide icons
  */
 export const TopAppBarAction = ({ 
-  icon, 
+  icon: Icon,
   onClick, 
   badge,
   className,
@@ -139,14 +114,14 @@ export const TopAppBarAction = ({
   <button
     onClick={onClick}
     className={cn(
-      "p-2 hover:bg-surface-container transition-colors relative",
+      "p-2 hover:bg-surface-container transition-colors relative rounded",
       className
     )}
     aria-label={ariaLabel}
   >
-    <span className="material-symbols-outlined text-primary">{icon}</span>
+    {Icon && <Icon className="w-5 h-5 text-primary" />}
     {badge && (
-      <span className="absolute top-1 right-1 w-2 h-2 bg-error animate-pulse" />
+      <span className="absolute top-1 right-1 w-2 h-2 bg-error rounded-full animate-pulse" />
     )}
   </button>
 );
