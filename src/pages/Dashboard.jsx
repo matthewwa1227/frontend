@@ -78,23 +78,12 @@ const Dashboard = () => {
   const hasInitialFetchRef = useRef(false);
   const hasUserDataRef = useRef(false); // Track if we've successfully loaded user data
 
-  // Navigation items - all buttons from old sidebar
+  // Navigation items - simplified to 3 main links
   const navItems = useMemo(() => [
     // Main Navigation
     { id: 'dashboard', label: 'DASHBOARD', icon: 'target', href: '/dashboard' },
     { id: 'tasks', label: 'TASKS', icon: 'checklist', href: '/tasks', badge: dailyQuests.filter(q => !q.completed).length.toString() },
     { id: 'timer', label: 'TIMER', icon: 'timer', href: '/timer' },
-    { id: 'progress', label: 'PROGRESS', icon: 'trending_up', href: '/progress' },
-    { id: 'social', label: 'SOCIAL', icon: 'groups', href: '/social' },
-    { id: 'leaderboard', label: 'LEADERBOARD', icon: 'trophy', href: '/leaderboard' },
-    // Study Tools (formerly AI Tools)
-    { id: 'study-buddy', label: 'STUDY BUDDY', icon: 'chat', href: '/study-buddy' },
-    { id: 'story-quest', label: 'STORY QUEST', icon: 'smart_toy', href: '/story-quest' },
-    { id: 'schedule', label: 'SCHEDULE', icon: 'calendar_month', href: '/schedule' },
-    { id: 'exercise-gen', label: 'EXERCISE GEN', icon: 'edit_document', href: '/exercise-generator' },
-    // More
-    { id: 'portal', label: 'PARENTS', icon: 'family_restroom', href: '/portal' },
-    { id: 'profile', label: 'PROFILE', icon: 'person', href: '/profile' },
   ], [dailyQuests]);
 
   // Load cached data on mount (non-user data only)
@@ -418,7 +407,7 @@ const Dashboard = () => {
 
       {/* Bottom Navigation (Mobile Only) */}
       <BottomNavBar 
-        items={navItems.filter(i => ['dashboard', 'tasks', 'timer', 'social'].includes(i.id))} 
+        items={navItems}
         activeItem="dashboard"
         onItemClick={(id) => {
           const item = navItems.find(n => n.id === id);
@@ -588,18 +577,71 @@ const QuestMap = React.memo(({ progress, onNodeClick }) => {
 
   return (
     <div className="bg-surface-container-high border-2 border-outline-variant relative overflow-hidden aspect-[21/9]">
-      {/* Background Pattern */}
+      {/* Enhanced Background Pattern */}
       <div className="absolute inset-0 z-0">
+        {/* Base gradient */}
         <div 
-          className="absolute inset-0 opacity-40"
+          className="absolute inset-0"
+          style={{
+            background: 'linear-gradient(135deg, #1a0f2e 0%, #2d1b4e 25%, #1a0f2e 50%, #2d1b4e 75%, #1a0f2e 100%)'
+          }}
+        />
+        {/* Grid pattern */}
+        <div 
+          className="absolute inset-0 opacity-20"
           style={{
             backgroundImage: `
-              radial-gradient(circle at 20% 50%, #3d2b5e 0%, transparent 50%),
-              radial-gradient(circle at 80% 30%, #412f63 0%, transparent 40%),
-              radial-gradient(circle at 50% 80%, #271448 0%, transparent 60%)
+              linear-gradient(rgba(139, 92, 246, 0.3) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(139, 92, 246, 0.3) 1px, transparent 1px)
+            `,
+            backgroundSize: '40px 40px'
+          }}
+        />
+        {/* Radial glows */}
+        <div 
+          className="absolute inset-0"
+          style={{
+            backgroundImage: `
+              radial-gradient(circle at 15% 60%, rgba(139, 92, 246, 0.4) 0%, transparent 40%),
+              radial-gradient(circle at 85% 40%, rgba(236, 72, 153, 0.3) 0%, transparent 35%),
+              radial-gradient(circle at 50% 85%, rgba(99, 102, 241, 0.35) 0%, transparent 45%),
+              radial-gradient(circle at 35% 25%, rgba(168, 85, 247, 0.25) 0%, transparent 30%),
+              radial-gradient(circle at 70% 70%, rgba(59, 130, 246, 0.2) 0%, transparent 35%)
             `
           }}
         />
+        {/* Stars/particles */}
+        <div className="absolute inset-0">
+          {[...Array(20)].map((_, i) => (
+            <div
+              key={i}
+              className="absolute w-1 h-1 bg-white rounded-full animate-pulse"
+              style={{
+                left: `${Math.random() * 100}%`,
+                top: `${Math.random() * 100}%`,
+                opacity: Math.random() * 0.5 + 0.2,
+                animationDelay: `${Math.random() * 2}s`
+              }}
+            />
+          ))}
+        </div>
+        {/* Path line between nodes */}
+        <svg className="absolute inset-0 w-full h-full" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="pathGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#10b981" stopOpacity="0.6" />
+              <stop offset="50%" stopColor="#f59e0b" stopOpacity="0.8" />
+              <stop offset="100%" stopColor="#6b7280" stopOpacity="0.4" />
+            </linearGradient>
+          </defs>
+          <path
+            d="M 15% 65% Q 35% 55%, 42% 50% T 70% 45%"
+            fill="none"
+            stroke="url(#pathGradient)"
+            strokeWidth="3"
+            strokeDasharray="8,4"
+          />
+        </svg>
       </div>
       
       {/* Gradient Overlay */}
