@@ -78,12 +78,25 @@ const Dashboard = () => {
   const hasInitialFetchRef = useRef(false);
   const hasUserDataRef = useRef(false); // Track if we've successfully loaded user data
 
-  // Navigation items - simplified to 3 main links (all in 'main' category)
+  // Navigation items - all links from Navbar.jsx
   const navItems = useMemo(() => [
-    // Main Navigation only
+    // Main Navigation
     { id: 'dashboard', label: 'DASHBOARD', icon: 'target', href: '/dashboard', category: 'main' },
-    { id: 'tasks', label: 'TASKS', icon: 'checklist', href: '/tasks', category: 'main', badge: dailyQuests.filter(q => !q.completed).length.toString() },
-    { id: 'timer', label: 'TIMER', icon: 'timer', href: '/timer', category: 'main' },
+    { id: 'tasks', label: 'QUEST LOG', icon: 'tasks', href: '/tasks', category: 'main', badge: dailyQuests.filter(q => !q.completed).length.toString() },
+    { id: 'timer', label: 'CHAMBER OF FOCUS', icon: 'timer', href: '/timer', category: 'main' },
+    { id: 'progress', label: 'PROGRESS', icon: 'trending_up', href: '/progress', category: 'main' },
+    { id: 'social', label: 'SOCIAL', icon: 'groups', href: '/social', category: 'main' },
+    { id: 'leaderboard', label: 'LEADERBOARD', icon: 'trophy', href: '/leaderboard', category: 'main' },
+    
+    // Study Tools
+    { id: 'study-buddy', label: 'STUDY BUDDY', icon: 'chat', href: '/study-buddy', category: 'study' },
+    { id: 'story-quest', label: 'STORY QUEST', icon: 'smart_toy', href: '/story-quest', category: 'study' },
+    { id: 'schedule', label: 'SCHEDULE', icon: 'calendar_month', href: '/schedule', category: 'study' },
+    { id: 'exercise-gen', label: 'EXERCISE GEN', icon: 'edit_document', href: '/exercise-generator', category: 'study' },
+    
+    // More
+    { id: 'portal', label: 'PARENTS', icon: 'family_restroom', href: '/portal', category: 'more' },
+    { id: 'profile', label: 'PROFILE', icon: 'person', href: '/profile', category: 'more' },
   ], [dailyQuests]);
 
   // Load cached data on mount (non-user data only)

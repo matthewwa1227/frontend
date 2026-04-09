@@ -8,7 +8,7 @@ import {
   Users, 
   Trophy,
   MessageCircle,
-  Gamepad2,
+  Bot,
   Calendar,
   FileText,
   Users2,
@@ -16,7 +16,9 @@ import {
   Settings,
   AlertTriangle,
   Menu,
-  X
+  X,
+  Sparkles,
+  GraduationCap
 } from 'lucide-react';
 
 /**
@@ -41,12 +43,25 @@ const navIcons = {
   social: Users,
   leaderboard: Trophy,
   'study-buddy': MessageCircle,
-  'story-quest': Gamepad2,
+  'story-quest': Bot,
   schedule: Calendar,
   'exercise-gen': FileText,
   portal: Users2,
   profile: User,
   settings: Settings,
+  teacher: GraduationCap,
+  sparkles: Sparkles,
+  // Additional icons from Dashboard.jsx
+  target: Target,
+  checklist: CheckSquare,
+  groups: Users,
+  trending_up: TrendingUp,
+  chat: MessageCircle,
+  smart_toy: Bot,
+  calendar_month: Calendar,
+  edit_document: FileText,
+  family_restroom: Users2,
+  person: User,
 };
 
 /**
@@ -56,23 +71,22 @@ const navIcons = {
 export const defaultNavItems = [
   // Main Navigation
   { id: 'dashboard', label: 'DASHBOARD', icon: 'dashboard', href: '/dashboard', category: 'main' },
-  { id: 'tasks', label: 'TASKS', icon: 'tasks', href: '/tasks', category: 'main', badge: '3' },
-  { id: 'timer', label: 'TIMER', icon: 'timer', href: '/timer', category: 'main' },
+  { id: 'tasks', label: 'QUEST LOG', icon: 'tasks', href: '/tasks', category: 'main' },
+  { id: 'timer', label: 'CHAMBER OF FOCUS', icon: 'timer', href: '/timer', category: 'main' },
   { id: 'progress', label: 'PROGRESS', icon: 'progress', href: '/progress', category: 'main' },
   { id: 'social', label: 'SOCIAL', icon: 'social', href: '/social', category: 'main' },
   { id: 'leaderboard', label: 'LEADERBOARD', icon: 'leaderboard', href: '/leaderboard', category: 'main' },
   
   // Study Tools (formerly AI Tools)
-  { id: 'study-tools', label: 'STUDY TOOLS', icon: 'study-tools', href: '#', category: 'divider' },
   { id: 'study-buddy', label: 'STUDY BUDDY', icon: 'study-buddy', href: '/study-buddy', category: 'study' },
   { id: 'story-quest', label: 'STORY QUEST', icon: 'story-quest', href: '/story-quest', category: 'study' },
   { id: 'schedule', label: 'SCHEDULE', icon: 'schedule', href: '/schedule', category: 'study' },
   { id: 'exercise-gen', label: 'EXERCISE GEN', icon: 'exercise-gen', href: '/exercise-generator', category: 'study' },
   
   // More
-  { id: 'more', label: 'MORE', icon: 'more', href: '#', category: 'divider' },
   { id: 'portal', label: 'PARENTS', icon: 'portal', href: '/portal', category: 'more' },
   { id: 'profile', label: 'PROFILE', icon: 'profile', href: '/profile', category: 'more' },
+  { id: 'teacher', label: 'TEACHER', icon: 'teacher', href: '/teacher', category: 'more', role: 'teacher' },
 ];
 
 /**
@@ -180,7 +194,8 @@ const SideNavBar = ({
           {/* Study Tools Section - Only show if has items */}
           {studyItems.length > 0 && (
             <div className="mb-4">
-              <p className="px-3 py-2 text-[8px] text-secondary/50 font-['Press_Start_2P'] uppercase tracking-wider">
+              <p className="px-3 py-2 text-[8px] text-secondary/50 font-['Press_Start_2P'] uppercase tracking-wider flex items-center gap-2">
+                <Sparkles className="w-3 h-3" />
                 Study Tools
               </p>
               {studyItems.map((item) => (
@@ -200,14 +215,18 @@ const SideNavBar = ({
               <p className="px-3 py-2 text-[8px] text-secondary/50 font-['Press_Start_2P'] uppercase tracking-wider">
                 More
               </p>
-              {moreItems.map((item) => (
-                <NavItem
-                  key={item.id}
-                  {...item}
-                  active={activeItem === item.id}
-                  onClick={() => onItemClick?.(item.id)}
-                />
-              ))}
+              {moreItems.map((item) => {
+                // Skip teacher link if user is not a teacher
+                if (item.role === 'teacher' && user?.role !== 'teacher') return null;
+                return (
+                  <NavItem
+                    key={item.id}
+                    {...item}
+                    active={activeItem === item.id}
+                    onClick={() => onItemClick?.(item.id)}
+                  />
+                );
+              })}
             </div>
           )}
         </nav>
