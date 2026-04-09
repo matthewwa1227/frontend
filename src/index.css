@@ -382,3 +382,37 @@ button, a {
 .pr-safe {
   padding-right: env(safe-area-inset-right, 0px);
 }
+
+/* ============================================================================
+   PROGRESS DASHBOARD - Pixel Art RPG Styles
+   ============================================================================ */
+
+/* Retro grid background pattern */
+.retro-grid {
+  background-size: 40px 40px;
+  background-image: 
+    linear-gradient(to right, rgba(255, 177, 196, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 177, 196, 0.05) 1px, transparent 1px);
+}
+
+/* Segmented progress bar for charts */
+.segmented-progress {
+  background-image: linear-gradient(90deg, transparent 0%, transparent 80%, #1a063b 80%, #1a063b 100%);
+  background-size: 8px 100%;
+}
+
+/* Font retro alias */
+.font-retro {
+  font-family: 'Press Start 2P', cursive, monospace;
+  -webkit-font-smoothing: none;
+  -moz-osx-font-smoothing: unset;
+}
+
+/* Steps animation timing */
+.steps-start {
+  transition-timing-function: steps(4, start);
+}
+
+.steps-end {
+  transition-timing-function: steps(4, end);
+}

@@ -1,42 +1,50 @@
-import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Target, Trophy, TrendingUp, Plus, CheckCircle, Clock, 
-  BookOpen, Calendar, X, Trash2, Edit2
-} from 'lucide-react';
 import { getUser } from '../../utils/auth';
 
-const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000';
-const pixelText = { fontFamily: 'monospace' };
+// Layout Components
+import TopAppBar from '../layout/TopAppBar';
+import SideNavBar, { BottomNavBar } from '../layout/SideNavBar';
 
 const ProgressDashboard = () => {
   const navigate = useNavigate();
-  const user = getUser();
-  const [goals, setGoals] = useState([]);
-  const [progress, setProgress] = useState(null);
+  const currentUser = getUser();
+  const [user, setUser] = useState(currentUser);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [showAddGoal, setShowAddGoal] = useState(false);
-  const [editingGoal, setEditingGoal] = useState(null);
-  const [newGoal, setNewGoal] = useState({
-    title: '',
-    description: '',
-    goalType: 'weekly',
-    targetMetric: 'minutes',
-    targetValue: 120,
-    subject: '',
-    endDate: '',
-    rewardXp: 50
-  });
+  const [progress, setProgress] = useState(null);
 
+  // Navigation items matching the design
+  const navItems = useMemo(() => [
+    // Main Navigation
+    { id: 'dashboard', label: 'DASHBOARD', icon: 'target', href: '/dashboard', category: 'main' },
+    { id: 'tasks', label: 'QUEST LOG', icon: 'checklist', href: '/tasks', category: 'main' },
+    { id: 'timer', label: 'CHAMBER OF FOCUS', icon: 'timer', href: '/timer', category: 'main' },
+    { id: 'progress', label: 'PROGRESS', icon: 'trending_up', href: '/progress', category: 'main' },
+    { id: 'social', label: 'SOCIAL', icon: 'groups', href: '/social', category: 'main' },
+    { id: 'leaderboard', label: 'LEADERBOARD', icon: 'trophy', href: '/leaderboard', category: 'main' },
+    
+    // Study Tools
+    { id: 'study-buddy', label: 'STUDY BUDDY', icon: 'chat', href: '/study-buddy', category: 'study' },
+    { id: 'story-quest', label: 'STORY QUEST', icon: 'smart_toy', href: '/story-quest', category: 'study' },
+    { id: 'schedule', label: 'SCHEDULE', icon: 'calendar_month', href: '/schedule', category: 'study' },
+    { id: 'exercise-gen', label: 'EXERCISE GEN', icon: 'edit_document', href: '/exercise-generator', category: 'study' },
+    
+    // More
+    { id: 'portal', label: 'PARENTS', icon: 'family_restroom', href: '/portal', category: 'more' },
+    { id: 'profile', label: 'PROFILE', icon: 'person', href: '/profile', category: 'more' },
+  ], []);
+
+  // Fetch progress data
   useEffect(() => {
-    fetchData();
+    fetchProgressData();
   }, []);
 
-  const fetchData = async () => {
+  const fetchProgressData = async () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+      const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000';
       
       const response = await fetch(`${API_BASE}/api/progress/dashboard`, {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -45,7 +53,6 @@ const ProgressDashboard = () => {
       if (response.ok) {
         const data = await response.json();
         if (data.success) {
-          setGoals(data.data.goals || []);
           setProgress(data.data);
         }
       }
@@ -56,524 +63,306 @@ const ProgressDashboard = () => {
     }
   };
 
-  const createGoal = async () => {
-    try {
-      const token = localStorage.getItem('token') || localStorage.getItem('authToken');
-      const response = await fetch(`${API_BASE}/api/progress/goals`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(newGoal)
-      });
-
-      if (response.ok) {
-        setShowAddGoal(false);
-        setNewGoal({
-          title: '',
-          description: '',
-          goalType: 'weekly',
-          targetMetric: 'minutes',
-          targetValue: 120,
-          subject: '',
-          endDate: '',
-          rewardXp: 50
-        });
-        fetchData();
-      } else {
-        const error = await response.json();
-        alert(error.message || 'Failed to create goal');
-      }
-    } catch (error) {
-      console.error('Error creating goal:', error);
-      alert('Error creating goal');
-    }
+  // Mock data for display (replace with real data from API)
+  const stats = {
+    totalHours: progress?.summary?.totalStudyHours || 1284,
+    questsCompleted: 412,
+    rank: 14,
+    league: 'GOLD III',
+    topPercent: 'TOP 2%',
+    streak: 14,
+    shadowLevel: 16,
+    heroDominance: 84
   };
 
-  const updateGoalProgress = async (goalId, newValue) => {
-    try {
-      const token = localStorage.getItem('token') || localStorage.getItem('authToken');
-      const response = await fetch(`${API_BASE}/api/progress/goals/${goalId}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ currentValue: parseInt(newValue) })
-      });
+  // Weekly data for chart
+  const weeklyData = [
+    { day: 'MON', hours: 2.4, percent: 40 },
+    { day: 'TUE', hours: 4.2, percent: 65 },
+    { day: 'WED', hours: 3.1, percent: 50 },
+    { day: 'THU', hours: 6.8, percent: 90, highlight: true },
+    { day: 'FRI', hours: 2.8, percent: 45 },
+    { day: 'SAT', hours: 1.5, percent: 30 },
+    { day: 'SUN', hours: 0.8, percent: 20 },
+  ];
 
-      if (response.ok) {
-        fetchData();
-      }
-    } catch (error) {
-      console.error('Error updating goal:', error);
-    }
-  };
+  // Subject mastery data
+  const subjects = [
+    { name: 'MATHEMATICS', level: 58, title: 'ARCH-GEOMETER', percent: 70, color: 'primary', icon: 'functions' },
+    { name: 'ENGLISH LITS', level: 45, title: 'BARDIC SCHOLAR', percent: 50, color: 'secondary', icon: 'history_edu' },
+    { name: 'LIBERAL STUDIES', level: 72, title: 'WORLD-SAGE', percent: 80, color: 'tertiary', icon: 'public' },
+  ];
 
-  const deleteGoal = async (goalId) => {
-    if (!window.confirm('Are you sure you want to delete this goal?')) return;
-    
-    try {
-      const token = localStorage.getItem('token') || localStorage.getItem('authToken');
-      await fetch(`${API_BASE}/api/progress/goals/${goalId}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      fetchData();
-    } catch (error) {
-      console.error('Error deleting goal:', error);
-    }
-  };
+  // Relics/achievements
+  const relics = [
+    { icon: 'diamond', color: 'primary', unlocked: true },
+    { icon: 'auto_stories', color: 'secondary', unlocked: true },
+    { icon: 'shield_with_heart', color: 'tertiary', unlocked: true },
+    { icon: 'bolt', color: 'primary', unlocked: true },
+    { icon: 'lock', color: 'outline', unlocked: false },
+    { icon: 'lock', color: 'outline', unlocked: false },
+    { icon: 'lock', color: 'outline', unlocked: false },
+    { icon: 'lock', color: 'outline', unlocked: false },
+  ];
 
-  const getDaysLeft = (endDate) => {
-    if (!endDate) return null;
-    const days = Math.ceil((new Date(endDate) - new Date()) / (1000 * 60 * 60 * 24));
-    return days > 0 ? days : 0;
-  };
+  // Streak days
+  const streakDays = Array.from({ length: 14 }, (_, i) => ({
+    day: i + 1,
+    completed: i < 13,
+    special: i === 11 // Day 12 has star
+  }));
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-slate-400" style={pixelText}>Loading progress...</p>
+          <div className="text-4xl mb-4 animate-pulse">⚔️</div>
+          <p className="font-retro text-[10px] text-secondary">LOADING LEGEND...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-900 p-6">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2" style={{ ...pixelText, textShadow: '2px 2px 4px rgba(0,0,0,0.5)' }}>
-            📊 PROGRESS DASHBOARD
-          </h1>
-          <p className="text-slate-400" style={pixelText}>
-            Track your goals and learning journey
-          </p>
-        </div>
+    <div className="min-h-screen bg-background retro-grid">
+      {/* Top Navigation */}
+      <TopAppBar 
+        title="STUDYQUEST" 
+        user={user}
+        onMenuClick={() => setMobileMenuOpen(true)}
+      />
+      
+      {/* Side Navigation (Desktop) */}
+      <SideNavBar 
+        items={navItems} 
+        user={user}
+        isOpen={mobileMenuOpen}
+        onClose={() => setMobileMenuOpen(false)}
+        activeItem="progress"
+        onItemClick={(id) => {
+          const item = navItems.find(n => n.id === id);
+          if (item && item.href) {
+            navigate(item.href);
+          }
+        }}
+      />
 
-        {/* Stats Overview */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <StatCard 
-            icon={Target} 
-            label="Active Goals" 
-            value={goals.filter(g => g.status === 'active').length}
-            color="blue"
-          />
-          <StatCard 
-            icon={Trophy} 
-            label="Completed" 
-            value={goals.filter(g => g.status === 'completed').length}
-            color="amber"
-          />
-          <StatCard 
-            icon={Clock} 
-            label="Study Hours (30d)" 
-            value={progress?.summary?.totalStudyHours || 0}
-            color="emerald"
-          />
-          <StatCard 
-            icon={TrendingUp} 
-            label="Avg Accuracy" 
-            value={`${Math.round(progress?.summary?.averageAccuracy || 0)}%`}
-            color="purple"
-          />
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Active Goals */}
-          <div className="lg:col-span-2">
-            <div className="bg-slate-800 rounded-2xl p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-white flex items-center gap-2" style={pixelText}>
-                  <Target className="w-6 h-6 text-blue-400" />
-                  YOUR GOALS
-                </h2>
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setShowAddGoal(true)}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg font-bold flex items-center gap-2"
-                  style={pixelText}
-                >
-                  <Plus className="w-4 h-4" />
-                  NEW GOAL
-                </motion.button>
-              </div>
-
-              {goals.length === 0 ? (
-                <div className="text-center py-12">
-                  <Target className="w-16 h-16 text-slate-600 mx-auto mb-4" />
-                  <p className="text-slate-400 mb-4" style={pixelText}>No goals yet. Create your first goal!</p>
-                  <button 
-                    onClick={() => setShowAddGoal(true)}
-                    className="px-6 py-3 bg-blue-600 text-white rounded-lg font-bold"
-                    style={pixelText}
-                  >
-                    CREATE GOAL
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {goals.map((goal) => (
-                    <GoalCard 
-                      key={goal.id} 
-                      goal={goal} 
-                      onUpdate={updateGoalProgress}
-                      onDelete={deleteGoal}
-                      daysLeft={getDaysLeft(goal.end_date)}
-                    />
-                  ))}
-                </div>
-              )}
+      {/* Main Content Canvas */}
+      <main className="lg:ml-64 pt-24 pb-12 px-4 md:px-8 max-w-7xl mx-auto">
+        {/* Top Metrics Bento */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+          {/* Metric 1: Total Study Hours */}
+          <div className="bg-surface-container border-b-4 border-r-4 border-surface-container-lowest p-6 relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-2 opacity-10">
+              <span className="material-symbols-outlined text-6xl">schedule</span>
             </div>
-
-            {/* Weekly Progress */}
-            {progress?.weeklySummary && progress.weeklySummary.length > 0 && (
-              <div className="bg-slate-800 rounded-2xl p-6 mt-8">
-                <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2" style={pixelText}>
-                  <TrendingUp className="w-6 h-6 text-emerald-400" />
-                  WEEKLY PROGRESS
-                </h2>
-                <div className="grid grid-cols-4 gap-4">
-                  {progress.weeklySummary.map((week, i) => (
-                    <div key={i} className="bg-slate-700 rounded-xl p-4 text-center">
-                      <p className="text-slate-400 text-xs mb-2" style={pixelText}>
-                        Week {week.tracking_week}
-                      </p>
-                      <p className="text-2xl font-bold text-emerald-400" style={pixelText}>
-                        {Math.round(week.week_minutes / 60)}h
-                      </p>
-                      <p className="text-slate-500 text-xs" style={pixelText}>
-                        {week.week_sessions} sessions
-                      </p>
-                      {week.week_accuracy && (
-                        <p className="text-blue-400 text-xs mt-1" style={pixelText}>
-                          {Math.round(week.week_accuracy)}% acc
-                        </p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            <div className="font-retro text-[10px] text-primary mb-4">TOTAL STUDY HOURS</div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-4xl font-bold font-headline tracking-tighter">{stats.totalHours.toLocaleString()}</span>
+              <span className="text-secondary font-headline text-sm font-bold uppercase">h</span>
+            </div>
+            <div className="mt-4 text-[10px] font-retro text-tertiary">+12.5% vs last month</div>
           </div>
 
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Subject Breakdown */}
-            {progress?.subjects && progress.subjects.length > 0 && (
-              <div className="bg-slate-800 rounded-2xl p-6">
-                <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2" style={pixelText}>
-                  <BookOpen className="w-5 h-5 text-purple-400" />
-                  SUBJECTS
-                </h2>
-                <div className="space-y-3">
-                  {progress.subjects.map((subject, i) => (
-                    <div key={i} className="flex items-center justify-between p-3 bg-slate-700 rounded-lg">
-                      <span className="text-white" style={pixelText}>{subject.name}</span>
-                      <div className="text-right">
-                        <p className="text-purple-400 font-bold" style={pixelText}>
-                          {Math.round(subject.minutes / 60)}h
-                        </p>
-                        {subject.avg_accuracy && (
-                          <p className="text-xs text-slate-400" style={pixelText}>
-                            {Math.round(subject.avg_accuracy)}% acc
-                          </p>
-                        )}
+          {/* Metric 2: Quests Completed */}
+          <div className="bg-surface-container border-b-4 border-r-4 border-surface-container-lowest p-6 relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-2 opacity-10">
+              <span className="material-symbols-outlined text-6xl">swords</span>
+            </div>
+            <div className="font-retro text-[10px] text-secondary mb-4">QUESTS COMPLETED</div>
+            <div className="text-4xl font-bold font-headline tracking-tighter">{stats.questsCompleted}</div>
+            <div className="mt-4 text-[10px] font-retro text-primary">LEGENDARY STREAK: {stats.streak}D</div>
+          </div>
+
+          {/* Metric 3: League Rank */}
+          <div className="bg-surface-container border-b-4 border-r-4 border-surface-container-lowest p-6 relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-2 opacity-10">
+              <span className="material-symbols-outlined text-6xl">trophy</span>
+            </div>
+            <div className="font-retro text-[10px] text-tertiary mb-4">LEAGUE RANK</div>
+            <div className="flex items-center gap-3">
+              <span className="text-4xl font-bold font-headline tracking-tighter">#{stats.rank}</span>
+              <span className="bg-tertiary-container text-on-tertiary-container px-2 py-1 font-retro text-[8px]">{stats.league}</span>
+            </div>
+            <div className="mt-4 text-[10px] font-retro text-secondary">{stats.topPercent} OF SCHOLARS</div>
+          </div>
+        </div>
+
+        {/* Main Grid: Charts & Mastery */}
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 mb-12">
+          {/* XP Growth Chart & Dominance */}
+          <div className="xl:col-span-2 space-y-8">
+            {/* Weekly Knowledge Accrual Chart */}
+            <section className="bg-surface-container-low p-8 border-2 border-surface-container-highest">
+              <h2 className="font-retro text-[12px] text-on-background mb-8 flex items-center gap-3">
+                <span className="material-symbols-outlined text-secondary">analytics</span> WEEKLY KNOWLEDGE ACCRUAL
+              </h2>
+              <div className="flex items-end justify-between h-48 gap-2 mb-4">
+                {weeklyData.map((data, index) => (
+                  <div key={index} className="flex flex-col items-center flex-1 group">
+                    <div 
+                      className="w-full bg-surface-container-highest relative flex flex-col justify-end"
+                      style={{ height: `${data.percent}%` }}
+                    >
+                      <div 
+                        className={`bg-primary w-full border-t-2 border-primary-container segmented-progress ${data.highlight ? 'shadow-[0_0_15px_rgba(255,74,141,0.5)]' : ''}`}
+                        style={{ height: '100%' }}
+                      />
+                    </div>
+                    <span className="mt-4 font-retro text-[8px] text-secondary">{data.day}</span>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            {/* Hero Dominance Ratio */}
+            <section className="bg-surface-container-low p-8 border-2 border-surface-container-highest relative">
+              <div className="flex justify-between items-end mb-4">
+                <div className="flex flex-col">
+                  <span className="font-retro text-[8px] text-secondary mb-1">HERO DOMINANCE</span>
+                  <span className="font-headline text-3xl font-bold tracking-tighter">{stats.heroDominance}%</span>
+                </div>
+                <div className="flex flex-col items-end">
+                  <span className="font-retro text-[8px] text-error mb-1">SHADOW CORRUPTION</span>
+                  <span className="font-headline text-3xl font-bold tracking-tighter opacity-50">{stats.shadowLevel}%</span>
+                </div>
+              </div>
+              <div className="w-full h-8 bg-surface-container-highest flex border-2 border-surface-container">
+                <div 
+                  className="h-full bg-secondary shadow-[inset_0_0_10px_rgba(0,241,254,0.5)] border-r-4 border-primary"
+                  style={{ width: `${stats.heroDominance}%` }}
+                />
+                <div className="h-full bg-surface-variant flex-1 flex items-center justify-center">
+                  <span className="material-symbols-outlined text-xs opacity-30">skull</span>
+                </div>
+              </div>
+              <p className="mt-4 font-headline text-xs text-on-surface-variant italic">The Shadow is fading. Your focus remains absolute.</p>
+            </section>
+          </div>
+
+          {/* Subject Mastery Trees */}
+          <div className="xl:col-span-1 space-y-6">
+            <section className="bg-surface-container p-8 border-2 border-surface-container-highest h-full">
+              <h2 className="font-retro text-[12px] text-on-background mb-10 flex items-center gap-3">
+                <span className="material-symbols-outlined text-tertiary">account_tree</span> SUBJECT MASTERY
+              </h2>
+              <div className="space-y-12">
+                {subjects.map((subject, index) => (
+                  <div key={index} className="flex items-center gap-6">
+                    <div className="relative w-20 h-20 flex-shrink-0">
+                      <svg className="w-full h-full transform -rotate-90">
+                        <circle 
+                          className="text-surface-container-highest" 
+                          cx="40" 
+                          cy="40" 
+                          fill="transparent" 
+                          r="36" 
+                          stroke="currentColor" 
+                          strokeWidth="8"
+                        />
+                        <circle 
+                          className={`text-${subject.color}`}
+                          cx="40" 
+                          cy="40" 
+                          fill="transparent" 
+                          r="36" 
+                          stroke="currentColor" 
+                          strokeDasharray="226.2" 
+                          strokeDashoffset={226.2 - (226.2 * subject.percent / 100)}
+                          strokeWidth="8"
+                        />
+                      </svg>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <span className={`material-symbols-outlined text-2xl text-${subject.color}`}>{subject.icon}</span>
                       </div>
                     </div>
-                  ))}
-                </div>
+                    <div>
+                      <div className="font-headline font-bold text-lg mb-1">{subject.name}</div>
+                      <div className="font-retro text-[8px] text-tertiary">LVL {subject.level} {subject.title}</div>
+                    </div>
+                  </div>
+                ))}
               </div>
-            )}
-
-            {/* Stats Summary */}
-            <div className="bg-slate-800 rounded-2xl p-6">
-              <h2 className="text-lg font-bold text-white mb-4" style={pixelText}>YOUR STATS</h2>
-              <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-slate-400" style={pixelText}>Current Level</span>
-                  <span className="text-white font-bold" style={pixelText}>{progress?.stats?.level || 1}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-400" style={pixelText}>Total XP</span>
-                  <span className="text-amber-400 font-bold" style={pixelText}>{progress?.stats?.xp || 0}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-400" style={pixelText}>Current Streak</span>
-                  <span className="text-emerald-400 font-bold" style={pixelText}>
-                    {progress?.stats?.current_streak || 0} days
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-400" style={pixelText}>Longest Streak</span>
-                  <span className="text-purple-400 font-bold" style={pixelText}>
-                    {progress?.stats?.longest_streak || 0} days
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Tips */}
-            <div className="bg-blue-900/30 border border-blue-500/30 rounded-2xl p-6">
-              <h3 className="text-blue-300 font-bold mb-3" style={pixelText}>💡 TIPS</h3>
-              <ul className="space-y-2 text-sm text-slate-300" style={pixelText}>
-                <li>• Set weekly goals for better consistency</li>
-                <li>• Focus on weak subjects first</li>
-                <li>• Maintain your streak daily</li>
-                <li>• Join study groups for motivation</li>
-              </ul>
-            </div>
+            </section>
           </div>
         </div>
 
-        {/* Add Goal Modal */}
-        {showAddGoal && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <motion.div 
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="bg-slate-800 rounded-2xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto"
-            >
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xl font-bold text-white" style={pixelText}>CREATE NEW GOAL</h3>
-                <button onClick={() => setShowAddGoal(false)} className="text-slate-400 hover:text-white">
-                  <X className="w-6 h-6" />
-                </button>
-              </div>
-              
-              <div className="space-y-4">
-                <div>
-                  <label className="text-slate-400 text-xs block mb-1" style={pixelText}>Goal Title *</label>
-                  <input
-                    type="text"
-                    value={newGoal.title}
-                    onChange={(e) => setNewGoal({...newGoal, title: e.target.value})}
-                    className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white"
-                    placeholder="e.g., Complete 10 Math sessions"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-slate-400 text-xs block mb-1" style={pixelText}>Description</label>
-                  <textarea
-                    value={newGoal.description}
-                    onChange={(e) => setNewGoal({...newGoal, description: e.target.value})}
-                    className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white"
-                    rows={2}
-                    placeholder="What do you want to achieve?"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-slate-400 text-xs block mb-1" style={pixelText}>Type</label>
-                    <select
-                      value={newGoal.goalType}
-                      onChange={(e) => setNewGoal({...newGoal, goalType: e.target.value})}
-                      className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white"
-                    >
-                      <option value="daily">Daily</option>
-                      <option value="weekly">Weekly</option>
-                      <option value="monthly">Monthly</option>
-                      <option value="subject">Subject</option>
-                      <option value="skill">Skill</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-slate-400 text-xs block mb-1" style={pixelText}>Metric</label>
-                    <select
-                      value={newGoal.targetMetric}
-                      onChange={(e) => setNewGoal({...newGoal, targetMetric: e.target.value})}
-                      className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white"
-                    >
-                      <option value="minutes">Minutes</option>
-                      <option value="sessions">Sessions</option>
-                      <option value="xp">XP</option>
-                      <option value="accuracy">Accuracy %</option>
-                      <option value="streak">Streak Days</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-slate-400 text-xs block mb-1" style={pixelText}>Target Value</label>
-                    <input
-                      type="number"
-                      value={newGoal.targetValue}
-                      onChange={(e) => setNewGoal({...newGoal, targetValue: parseInt(e.target.value) || 0})}
-                      className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white"
-                      min={1}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-slate-400 text-xs block mb-1" style={pixelText}>XP Reward</label>
-                    <input
-                      type="number"
-                      value={newGoal.rewardXp}
-                      onChange={(e) => setNewGoal({...newGoal, rewardXp: parseInt(e.target.value) || 0})}
-                      className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white"
-                      min={0}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-slate-400 text-xs block mb-1" style={pixelText}>Subject (optional)</label>
-                  <select
-                    value={newGoal.subject}
-                    onChange={(e) => setNewGoal({...newGoal, subject: e.target.value})}
-                    className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white"
+        {/* Lower Section: Relics & Streak */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Relic Gallery */}
+          <section className="bg-surface-container-low p-8 border-2 border-surface-container-highest">
+            <h2 className="font-retro text-[12px] text-on-background mb-8 flex items-center gap-3">
+              <span className="material-symbols-outlined text-primary">auto_awesome</span> EARNED RELICS
+            </h2>
+            <div className="grid grid-cols-4 md:grid-cols-6 gap-4">
+              {relics.map((relic, index) => (
+                <div 
+                  key={index}
+                  className={`aspect-square bg-surface-container border-2 p-2 flex items-center justify-center transition-colors cursor-pointer ${
+                    relic.unlocked 
+                      ? `border-${relic.color} hover:bg-${relic.color}-container group` 
+                      : 'border-surface-variant grayscale opacity-40'
+                  }`}
+                >
+                  <span 
+                    className={`material-symbols-outlined ${relic.unlocked ? `text-${relic.color} group-hover:text-white` : 'text-outline'}`}
+                    style={relic.unlocked ? {fontVariationSettings: "'FILL' 1"} : {}}
                   >
-                    <option value="">All Subjects</option>
-                    <option value="Mathematics">Mathematics</option>
-                    <option value="Science">Science</option>
-                    <option value="English">English</option>
-                    <option value="Chinese">Chinese</option>
-                    <option value="History">History</option>
-                    <option value="Geography">Geography</option>
-                  </select>
+                    {relic.icon}
+                  </span>
                 </div>
+              ))}
+            </div>
+          </section>
 
-                <div>
-                  <label className="text-slate-400 text-xs block mb-1" style={pixelText}>End Date (optional)</label>
-                  <input
-                    type="date"
-                    value={newGoal.endDate}
-                    onChange={(e) => setNewGoal({...newGoal, endDate: e.target.value})}
-                    className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white"
-                    min={new Date().toISOString().split('T')[0]}
-                  />
+          {/* Streak Calendar */}
+          <section className="bg-surface-container-low p-8 border-2 border-surface-container-highest">
+            <h2 className="font-retro text-[12px] text-on-background mb-8 flex items-center gap-3">
+              <span className="material-symbols-outlined text-secondary">local_fire_department</span> {stats.streak}-DAY STREAK TRACKER
+            </h2>
+            <div className="flex flex-wrap gap-3">
+              {streakDays.map((day, index) => (
+                <div 
+                  key={index}
+                  className={`w-10 h-10 flex items-center justify-center relative ${
+                    day.completed 
+                      ? 'bg-primary border-b-4 border-on-primary-fixed-variant' 
+                      : 'bg-surface-container-highest border-b-4 border-surface-variant opacity-50'
+                  }`}
+                >
+                  <span className={`font-retro text-[8px] ${day.completed ? 'text-white' : 'text-on-surface-variant'}`}>
+                    {day.day}
+                  </span>
+                  {day.special && (
+                    <div className="absolute -top-2 -right-2 bg-tertiary p-1">
+                      <span className="material-symbols-outlined text-[8px] text-on-tertiary">star</span>
+                    </div>
+                  )}
                 </div>
+              ))}
+            </div>
+            <div className="mt-6 flex items-center gap-4 bg-surface-container p-4">
+              <div className="text-tertiary">
+                <span className="material-symbols-outlined text-4xl" style={{fontVariationSettings: "'FILL' 1"}}>military_tech</span>
               </div>
-
-              <div className="flex gap-3 mt-6">
-                <button
-                  onClick={() => setShowAddGoal(false)}
-                  className="flex-1 py-3 bg-slate-700 text-white rounded-xl font-bold"
-                  style={pixelText}
-                >
-                  CANCEL
-                </button>
-                <button
-                  onClick={createGoal}
-                  disabled={!newGoal.title}
-                  className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold disabled:opacity-50"
-                  style={pixelText}
-                >
-                  CREATE GOAL
-                </button>
+              <div>
+                <div className="font-headline font-bold text-sm">STREAK MULTIPLIER ACTIVE</div>
+                <div className="font-retro text-[8px] text-primary">1.5X XP GAIN ENABLED</div>
               </div>
-            </motion.div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-const StatCard = ({ icon: Icon, label, value, color }) => {
-  const colors = {
-    blue: 'bg-blue-500/20 text-blue-400 border-blue-500/50',
-    amber: 'bg-amber-500/20 text-amber-400 border-amber-500/50',
-    emerald: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50',
-    purple: 'bg-purple-500/20 text-purple-400 border-purple-500/50',
-  };
-
-  return (
-    <div className={`p-4 rounded-xl border-2 ${colors[color]}`}>
-      <Icon className="w-6 h-6 mb-2" />
-      <p className="text-2xl font-bold" style={pixelText}>{value}</p>
-      <p className="text-xs opacity-70" style={pixelText}>{label}</p>
-    </div>
-  );
-};
-
-const GoalCard = ({ goal, onUpdate, onDelete, daysLeft }) => {
-  const progress = Math.round((goal.current_value / goal.target_value) * 100);
-  const isCompleted = goal.status === 'completed';
-  
-  return (
-    <div className={`bg-slate-700 rounded-xl p-4 ${isCompleted ? 'border-2 border-emerald-500/50' : ''}`}>
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex-1">
-          <div className="flex items-center gap-2">
-            <h3 className="text-white font-bold" style={pixelText}>{goal.title}</h3>
-            {isCompleted && <CheckCircle className="w-5 h-5 text-emerald-400" />}
-          </div>
-          {goal.description && (
-            <p className="text-slate-400 text-sm mt-1" style={pixelText}>{goal.description}</p>
-          )}
-          <div className="flex items-center gap-3 mt-2">
-            <span className="text-xs bg-slate-600 text-slate-300 px-2 py-1 rounded" style={pixelText}>
-              {goal.goal_type.toUpperCase()}
-            </span>
-            {goal.subject && (
-              <span className="text-xs bg-blue-900/50 text-blue-300 px-2 py-1 rounded" style={pixelText}>
-                {goal.subject}
-              </span>
-            )}
-            {daysLeft !== null && daysLeft > 0 && (
-              <span className="text-xs bg-amber-900/50 text-amber-300 px-2 py-1 rounded" style={pixelText}>
-                {daysLeft} days left
-              </span>
-            )}
-          </div>
+            </div>
+          </section>
         </div>
-        <div className="flex items-center gap-2">
-          {!isCompleted && (
-            <>
-              <button 
-                onClick={() => {
-                  const newValue = prompt(`Update progress (current: ${goal.current_value} / ${goal.target_value}):`, goal.current_value);
-                  if (newValue && !isNaN(newValue)) onUpdate(goal.id, newValue);
-                }}
-                className="p-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-white"
-                title="Update Progress"
-              >
-                <Edit2 className="w-4 h-4" />
-              </button>
-              <button 
-                onClick={() => onDelete(goal.id)}
-                className="p-2 bg-red-600 hover:bg-red-500 rounded-lg text-white"
-                title="Delete Goal"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </>
-          )}
-        </div>
-      </div>
+      </main>
 
-      {/* Progress Bar */}
-      <div className="h-3 bg-slate-600 rounded-full overflow-hidden mb-3">
-        <motion.div 
-          initial={{ width: 0 }}
-          animate={{ width: `${Math.min(progress, 100)}%` }}
-          className={`h-full rounded-full ${isCompleted ? 'bg-emerald-500' : 'bg-blue-500'}`}
-        />
-      </div>
-
-      <div className="flex items-center justify-between">
-        <p className="text-slate-400 text-xs" style={pixelText}>
-          {goal.current_value} / {goal.target_value} {goal.target_metric}
-        </p>
-        <p className={`text-sm font-bold ${isCompleted ? 'text-emerald-400' : 'text-blue-400'}`} style={pixelText}>
-          {progress}%
-        </p>
-      </div>
-      
-      {isCompleted && goal.reward_xp > 0 && (
-        <p className="text-emerald-400 text-xs mt-2" style={pixelText}>
-          🎉 Completed! +{goal.reward_xp} XP earned
-        </p>
-      )}
+      {/* Bottom Navigation (Mobile Only) */}
+      <BottomNavBar 
+        items={navItems.filter(i => ['dashboard', 'tasks', 'timer', 'social'].includes(i.id))} 
+        activeItem="progress"
+        onItemClick={(id) => {
+          const item = navItems.find(n => n.id === id);
+          if (item) navigate(item.href);
+        }}
+      />
     </div>
   );
 };
