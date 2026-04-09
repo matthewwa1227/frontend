@@ -1,143 +1,19 @@
 import React, { useState, useRef, useCallback, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { exerciseAPI } from '../../utils/api';
 import { getUser } from '../../utils/auth';
 
-// Pixel font style
-const pixelFont = { fontFamily: "'Press Start 2P', monospace" };
+// Layout Components
+import TopAppBar from '../layout/TopAppBar';
+import SideNavBar, { BottomNavBar } from '../layout/SideNavBar';
 
-// ============================================
-// FILE UPLOAD ZONE COMPONENT
-// ============================================
-const FileUploadZone = ({ onFilesSelect, files, analyzing, analyzed, onRemoveFile }) => {
-  const fileInputRef = useRef(null);
-  const [isDragging, setIsDragging] = useState(false);
-
-  const handleDragOver = useCallback((e) => {
-    e.preventDefault();
-    setIsDragging(true);
-  }, []);
-
-  const handleDragLeave = useCallback((e) => {
-    e.preventDefault();
-    setIsDragging(false);
-  }, []);
-
-  const handleDrop = useCallback((e) => {
-    e.preventDefault();
-    setIsDragging(false);
-    const droppedFiles = Array.from(e.dataTransfer.files);
-    if (droppedFiles.length > 0) onFilesSelect(droppedFiles);
-  }, [onFilesSelect]);
-
-  const handleFileInput = (e) => {
-    const selectedFiles = Array.from(e.target.files);
-    if (selectedFiles.length > 0) onFilesSelect(selectedFiles);
-  };
-
-  const getFileIcon = () => {
-    if (analyzing) return '⏳';
-    if (analyzed) return '✅';
-    if (files.length > 0) return '📄';
-    return '📎';
-  };
-
-  return (
-    <div
-      onClick={() => fileInputRef.current?.click()}
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      onDrop={handleDrop}
-      className={`
-        relative border-4 border-dashed p-8 text-center cursor-pointer transition-all
-        ${isDragging ? 'border-primary bg-primary/10' : ''}
-        ${files.length > 0 ? 'border-tertiary bg-tertiary/10' : 'border-outline-variant hover:border-primary'}
-        ${analyzing ? 'border-secondary bg-secondary/10' : ''}
-      `}
-    >
-      <input
-        ref={fileInputRef}
-        type="file"
-        multiple
-        accept=".pdf,.docx,.txt,.md,.jpg,.jpeg,.png,.webp"
-        onChange={handleFileInput}
-        className="hidden"
-      />
-      
-      <div className={`text-4xl mb-3 ${analyzing ? 'animate-spin' : ''}`}>
-        {getFileIcon()}
-      </div>
-      
-      {files.length > 0 ? (
-        <div>
-          <p className="text-tertiary font-bold text-xs" style={pixelFont}>
-            {files.length} file{files.length > 1 ? 's' : ''} selected
-          </p>
-          <p className="text-on-surface-variant text-[10px] mt-1" style={pixelFont}>
-            {(files.reduce((a, f) => a + f.size, 0) / 1024 / 1024).toFixed(2)} MB total
-          </p>
-          {analyzing && (
-            <p className="text-secondary text-xs mt-2" style={pixelFont}>
-              🔍 ANALYZING...
-            </p>
-          )}
-          {analyzed && (
-            <p className="text-tertiary text-xs mt-2" style={pixelFont}>
-              ✨ AUTO-DETECTED!
-            </p>
-          )}
-        </div>
-      ) : (
-        <div>
-          <p className="text-primary font-bold text-xs mb-1" style={pixelFont}>
-            DROP FILES HERE
-          </p>
-          <p className="text-on-surface-variant text-[10px]" style={pixelFont}>
-            OR CLICK TO BROWSE
-          </p>
-          <p className="text-on-surface-variant/60 text-[8px] mt-2" style={pixelFont}>
-            PDF, DOCX, TXT, IMAGES
-          </p>
-        </div>
-      )}
-    </div>
-  );
-};
-
-// ============================================
-// MODE TOGGLE COMPONENT
-// ============================================
-const ModeToggle = ({ mode, onChange }) => {
-  const modes = [
-    { id: 'original', label: 'ORIGINAL', icon: '✨', color: 'primary' },
-    { id: 'similar', label: 'SIMILAR', icon: '📋', color: 'secondary' },
-    { id: 'reading', label: 'READING', icon: '📖', color: 'tertiary' },
-  ];
-
-  return (
-    <div className="flex gap-2 p-2 bg-surface-container border-2 border-outline-variant">
-      {modes.map((m) => (
-        <button
-          key={m.id}
-          onClick={() => onChange(m.id)}
-          className={`flex-1 py-3 px-2 text-[10px] font-bold transition-all border-2 ${
-            mode === m.id
-              ? `bg-${m.color} text-on-${m.color} border-on-${m.color} shadow-[4px_4px_0px_0px_${m.color === 'primary' ? '#ff4a8d' : m.color === 'secondary' ? '#00f1fe' : '#e9c400'}]`
-              : 'bg-surface-container text-on-surface-variant border-outline-variant hover:border-primary'
-          }`}
-          style={pixelFont}
-        >
-          <span className="block text-lg mb-1">{m.icon}</span>
-          <span>{m.label}</span>
-        </button>
-      ))}
-    </div>
-  );
-};
-
-// ============================================
-// MAIN COMPONENT
-// ============================================
 const ExerciseGenerator = () => {
+  const navigate = useNavigate();
+  const currentUser = getUser();
+  const [user, setUser] = useState(currentUser);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  
+  // Form state
   const [mode, setMode] = useState('original');
   const [subject, setSubject] = useState('');
   const [concept, setConcept] = useState('');
@@ -148,16 +24,42 @@ const ExerciseGenerator = () => {
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [analyzing, setAnalyzing] = useState(false);
   const [analyzed, setAnalyzed] = useState(false);
-  const [extractedExercises, setExtractedExercises] = useState([]);
   const [autoDetected, setAutoDetected] = useState(false);
   const [referenceExercises, setReferenceExercises] = useState('');
   const [preservePattern, setPreservePattern] = useState(true);
   const [exercises, setExercises] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [loadingStatus, setLoadingStatus] = useState('');
+  const [loadingProgress, setLoadingProgress] = useState(0);
   const [error, setError] = useState(null);
+  
+  const fileInputRef = useRef(null);
 
-  const user = useMemo(() => getUser(), []);
+  // Navigation items
+  const navItems = useMemo(() => [
+    // Main Navigation
+    { id: 'dashboard', label: 'DASHBOARD', icon: 'target', href: '/dashboard', category: 'main' },
+    { id: 'tasks', label: 'QUEST LOG', icon: 'checklist', href: '/tasks', category: 'main' },
+    { id: 'timer', label: 'CHAMBER OF FOCUS', icon: 'timer', href: '/timer', category: 'main' },
+    { id: 'progress', label: 'PROGRESS', icon: 'trending_up', href: '/progress', category: 'main' },
+    { id: 'social', label: 'SOCIAL', icon: 'groups', href: '/social', category: 'main' },
+    { id: 'leaderboard', label: 'LEADERBOARD', icon: 'trophy', href: '/leaderboard', category: 'main' },
+    
+    // Study Tools
+    { id: 'study-buddy', label: 'STUDY BUDDY', icon: 'chat', href: '/study-buddy', category: 'study' },
+    { id: 'story-quest', label: 'STORY QUEST', icon: 'smart_toy', href: '/story-quest', category: 'study' },
+    { id: 'schedule', label: 'SCHEDULE', icon: 'calendar_month', href: '/schedule', category: 'study' },
+    { id: 'exercise-gen', label: 'EXERCISE GEN', icon: 'edit_document', href: '/exercise-generator', category: 'study' },
+    
+    // More
+    { id: 'portal', label: 'PARENTS', icon: 'family_restroom', href: '/portal', category: 'more' },
+    { id: 'profile', label: 'PROFILE', icon: 'person', href: '/profile', category: 'more' },
+  ], []);
+
+  // Recent artifacts mock data
+  const recentArtifacts = [
+    { id: 1, name: 'Calculus Scroll IV', time: '2m ago', icon: 'scrollable_header', color: 'tertiary' },
+    { id: 2, name: 'Organic Chem Tome', time: '1h ago', icon: 'description', color: 'secondary' },
+  ];
 
   // Handle file selection
   const handleFilesSelect = async (newFiles) => {
@@ -177,15 +79,11 @@ const ExerciseGenerator = () => {
         setSubject(result.data.subject || '');
         setConcept(result.data.concept || '');
         setDifficulty(result.data.difficulty || 'medium');
-        setExtractedExercises(result.data.extractedExercises || []);
-        setNumExercises(result.data.suggestedQuestionCount || 10);
         setAnalyzed(true);
         setAutoDetected(true);
-      } else {
-        setError(result.data.message || 'Failed to analyze document');
       }
     } catch (err) {
-      setError('Failed to analyze document. Please try again.');
+      setError('Failed to analyze document');
     } finally {
       setAnalyzing(false);
     }
@@ -196,812 +94,524 @@ const ExerciseGenerator = () => {
     if (uploadedFiles.length <= 1) {
       setAnalyzed(false);
       setAutoDetected(false);
-      setExtractedExercises([]);
     }
   };
 
-  const clearAllFiles = () => {
-    setUploadedFiles([]);
-    setAnalyzed(false);
-    setAutoDetected(false);
-    setExtractedExercises([]);
-  };
-
+  // Generate exercises
   const generateExercises = async () => {
-    // Validation
-    if (mode === 'original') {
-      if (!subject || !concept) {
-        setError('Please fill in Subject and Grammar/Concept Focus');
-        return;
-      }
-    } else if (mode === 'similar') {
-      if (uploadedFiles.length === 0 && !referenceExercises.trim()) {
-        setError('Please upload a document or paste reference exercises');
-        return;
-      }
-    } else if (mode === 'reading') {
-      if (!subject || !['English', 'Chinese'].includes(subject)) {
-        setError('Please select English or Chinese for Reading mode');
-        return;
-      }
+    if (mode === 'original' && (!subject || !concept)) {
+      setError('Please fill in Subject and Concept Focus');
+      return;
     }
     
     setLoading(true);
     setError(null);
-    setLoadingStatus(mode === 'reading' ? 'writing_passage' : '');
+    setLoadingProgress(0);
     
-    const safeCount = Math.min(numExercises, 15);
-    const timeoutDuration = mode === 'reading' ? 240000 : 60000;
+    const progressInterval = setInterval(() => {
+      setLoadingProgress(prev => Math.min(prev + 5, 75));
+    }, 500);
     
     try {
       let res;
-      
       if (mode === 'original') {
         res = await exerciseAPI.generate({
-          subject,
-          concept,
-          numExercises: safeCount,
-          difficulty
+          subject, concept, numExercises, difficulty
         });
       } else if (mode === 'reading') {
-        setLoadingStatus('writing_passage');
-        
-        const startTime = Date.now();
-        
-        const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('TIMEOUT')), timeoutDuration);
+        res = await exerciseAPI.generateReading({
+          subject, difficulty, passageType, numQuestions: numExercises
         });
-        
-        const progressInterval = setInterval(() => {
-          const elapsed = Date.now() - startTime;
-          console.log(`⏳ Reading generation... (${elapsed/1000}s)`);
-        }, 30000);
-        
-        res = await Promise.race([
-          exerciseAPI.generateReading({
-            subject,
-            difficulty,
-            passageType,
-            numQuestions: safeCount
-          }),
-          timeoutPromise
-        ]);
-        
-        clearInterval(progressInterval);
-        setLoadingStatus('creating_questions');
       } else {
         res = await exerciseAPI.generateSimilar({
           document: uploadedFiles[0],
-          subject,
-          concept,
-          numExercises: safeCount,
-          difficulty,
-          preservePattern,
-          referenceExercises: extractedExercises.length > 0 
-            ? JSON.stringify(extractedExercises) 
-            : referenceExercises
+          subject, concept, numExercises, difficulty, preservePattern
         });
       }
       
-      setExercises(res.data);
+      setLoadingProgress(100);
+      setTimeout(() => {
+        setExercises(res.data);
+        setLoading(false);
+      }, 300);
     } catch (err) {
-      if (err.message === 'TIMEOUT') {
-        setError(mode === 'reading' 
-          ? '⏱️ Timeout: Reading passages take 2-4 minutes. Try with 5 questions.' 
-          : 'Generation timed out. Please try again.');
-      } else {
-        setError('Something went wrong. Please try again.');
-      }
-    } finally {
+      setError('Failed to generate exercises');
       setLoading(false);
-      setLoadingStatus('');
+    } finally {
+      clearInterval(progressInterval);
     }
   };
 
-  const handlePrint = () => window.print();
-
-  const handleCopyReference = () => {
-    if (exercises?.questions) {
-      const text = exercises.questions.map((q, i) => {
-        let questionText = `${i + 1}. ${q.question}`;
-        if (q.choices) {
-          questionText += '\n' + q.choices.map((c, idx) => `   ${String.fromCharCode(65 + idx)}. ${c}`).join('\n');
-        }
-        questionText += `\n   Answer: ${typeof q.answer === 'object' ? q.answer.text : q.answer}`;
-        return questionText;
-      }).join('\n\n');
-      
-      navigator.clipboard.writeText(text);
-      alert('Exercises copied! You can paste them in "Similar Practice" mode.');
+  // Get mode color
+  const getModeColor = () => {
+    switch (mode) {
+      case 'original': return 'primary';
+      case 'similar': return 'secondary';
+      case 'reading': return 'tertiary';
+      default: return 'primary';
     }
   };
 
-  // Helper functions for display
-  const cleanText = (text) => {
-    if (!text) return '';
-    return text.replace(/([A-D])\.\s*\1\.\s*/g, '$1. ').trim();
-  };
-
-  const cleanQuestionText = (question, hasChoices) => {
-    if (!question) return '';
-    let cleaned = cleanText(question);
-    if (hasChoices) {
-      cleaned = cleaned.replace(/\s*[A-D]\.\s*[^A-D]+(?:[A-D]\.\s*[^A-D]+)*$/g, '');
-    }
-    return cleaned.trim();
-  };
-
-  const formatChoice = (choice, index) => {
-    const letter = String.fromCharCode(65 + index);
-    const text = typeof choice === 'object' ? choice.text : choice;
-    const cleanedText = cleanText(text).replace(/^[A-D]\.\s*/, '');
-    return `${letter}. ${cleanedText}`;
-  };
-
-  // Render different question types
-  const renderQuestion = (q, idx) => {
-    const hasChoices = q.choices && q.choices.length > 0;
-    const isTrueFalse = q.answer === 'T' || q.answer === 'F' || 
-                       q.answer?.toString().toLowerCase() === 'true' || 
-                       q.answer?.toString().toLowerCase() === 'false';
-    
-    switch (q.type) {
-      case 'fill_blank':
-        if (isTrueFalse) {
-          return (
-            <div className="ml-4 flex items-baseline gap-3">
-              <span className="text-sm leading-relaxed flex-1">{cleanQuestionText(q.question, false)}</span>
-              <span className="text-sm font-bold whitespace-nowrap">( ______ )</span>
-            </div>
-          );
-        }
-        
-        if (hasChoices) {
-          return (
-            <div className="ml-4">
-              <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
-                {q.choices.map((choice, i) => (
-                  <span key={i} className="whitespace-nowrap">{formatChoice(choice, i)}</span>
-                ))}
-              </div>
-            </div>
-          );
-        }
-        
-        return (
-          <div className="ml-4 space-y-2">
-            {q.items?.map((item, i) => (
-              <p key={i} className="text-sm leading-relaxed">{i + 1}. {cleanText(item.sentence)}</p>
-            ))}
-          </div>
-        );
-        
-      case 'multiple_choice':
-        return (
-          <div className="ml-4 grid grid-cols-1 md:grid-cols-2 gap-2">
-            {q.choices?.map((choice, i) => (
-              <p key={i} className="text-sm">{formatChoice(choice, i)}</p>
-            ))}
-          </div>
-        );
-        
-      case 'match':
-        return (
-          <div className="ml-4 flex flex-wrap gap-8">
-            <div>
-              <p className="font-bold text-sm mb-2 border-b border-black">Column A</p>
-              {q.columnA?.map((item, i) => (
-                <p key={i} className="text-sm py-1">{i + 1}. {item}</p>
-              ))}
-            </div>
-            <div>
-              <p className="font-bold text-sm mb-2 border-b border-black">Column B</p>
-              {q.columnB?.map((item, i) => (
-                <p key={i} className="text-sm py-1">{String.fromCharCode(65 + i)}. {item}</p>
-              ))}
-            </div>
-          </div>
-        );
-        
-      default:
-        return (
-          <div className="ml-4">
-            <p className="text-sm">Answer: <span className="border-b border-black inline-block min-w-[200px]"></span></p>
-          </div>
-        );
-    }
-  };
-
-  // Section card component
-  const SectionCard = ({ children, title, className = '' }) => (
-    <div className={`bg-surface-container-high border-4 border-outline-variant shadow-[8px_8px_0px_0px_#150136] ${className}`}>
-      {title && (
-        <div className="bg-surface-container border-b-4 border-outline-variant p-4">
-          <h2 className="text-sm font-bold text-on-surface" style={pixelFont}>{title}</h2>
-        </div>
-      )}
-      <div className="p-4">
-        {children}
-      </div>
-    </div>
-  );
+  const modeColor = getModeColor();
 
   return (
-    <div className="min-h-screen bg-background pt-20 pb-24 px-4 md:px-6">
-      <div className="max-w-5xl mx-auto">
-        
-        {/* Header Card */}
-        <div className="bg-surface-container-high border-4 border-secondary shadow-[8px_8px_0px_0px_#00f1fe] mb-6 overflow-hidden">
-          <div className="bg-gradient-to-r from-secondary to-secondary-container p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-white border-4 border-on-secondary flex items-center justify-center shadow-[4px_4px_0px_0px_#000]">
-                  <span className="text-2xl">📝</span>
-                </div>
-                <div>
-                  <h1 className="text-lg md:text-xl font-bold text-on-secondary" style={pixelFont}>
-                    EXERCISE GEN
-                  </h1>
-                  <p className="text-on-secondary/80 text-xs" style={pixelFont}>
-                    Create Practice Worksheets
-                  </p>
-                </div>
-              </div>
-              
-              {/* Stats */}
-              <div className="hidden sm:flex items-center gap-4 text-on-secondary">
-                <div className="text-center">
-                  <div className="text-xs opacity-80" style={pixelFont}>MODE</div>
-                  <div className="text-lg font-bold uppercase" style={pixelFont}>{mode}</div>
-                </div>
-              </div>
-            </div>
+    <div className="min-h-screen bg-background">
+      {/* Top Navigation */}
+      <TopAppBar 
+        title="SCROLL FORGE" 
+        user={user}
+        onMenuClick={() => setMobileMenuOpen(true)}
+      />
+      
+      {/* Side Navigation */}
+      <SideNavBar 
+        items={navItems} 
+        user={user}
+        isOpen={mobileMenuOpen}
+        onClose={() => setMobileMenuOpen(false)}
+        activeItem="exercise-gen"
+        onItemClick={(id) => {
+          const item = navItems.find(n => n.id === id);
+          if (item && item.href) navigate(item.href);
+        }}
+      />
+
+      {/* Main Content Area */}
+      <main className="lg:ml-64 pt-20 pb-32 px-4 md:px-8">
+        {/* Top App Bar */}
+        <header className="flex justify-between items-center w-full mb-8 bg-background border-b-4 border-surface-container py-4">
+          <div className="flex items-center gap-4">
+            <h2 className="text-2xl font-bold text-primary tracking-tighter font-headline uppercase">FORGE COMMAND</h2>
           </div>
-        </div>
+        </header>
 
-        {/* Main Content */}
         {!exercises ? (
-          <SectionCard title="⚙️ CONFIGURE WORKSHEET">
-            {error && (
-              <div className="mb-4 p-4 bg-error/10 border-4 border-error">
-                <p className="text-error text-xs" style={pixelFont}>❌ {error}</p>
-              </div>
-            )}
-            
-            <div className="space-y-6">
-              {/* Mode Toggle */}
-              <div>
-                <label className="text-secondary text-[10px] block mb-2" style={pixelFont}>
-                  GENERATION MODE
-                </label>
-                <ModeToggle mode={mode} onChange={(newMode) => {
-                  setMode(newMode);
-                  clearAllFiles();
-                  if (newMode === 'reading') setSubject('English');
-                }} />
-                <p className="text-on-surface-variant text-[10px] mt-2" style={pixelFont}>
-                  {mode === 'original' ? 'Generate brand new exercises' : 
-                   mode === 'reading' ? '📖 Reading comprehension passages' : 
-                   'Create exercises from your files'}
-                </p>
-              </div>
-
-              {/* Reading Mode Settings */}
-              {mode === 'reading' && (
-                <div className="bg-tertiary/10 border-4 border-tertiary p-4">
-                  <div className="flex items-center gap-2 mb-4">
-                    <span className="text-2xl">📖</span>
-                    <span className="text-tertiary font-bold text-xs" style={pixelFont}>READING MODE</span>
+          /* Command Center Grid */
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            {/* Left: Blueprint Configuration */}
+            <section className="col-span-12 lg:col-span-3 space-y-6">
+              {/* Mode Selection */}
+              <div className="bg-surface-container p-6 relative group">
+                <div className="absolute -inset-1 border-2 border-primary/20 pointer-events-none"></div>
+                <div className="flex items-center gap-2 mb-6">
+                  <span className="material-symbols-outlined text-primary neon-glow-primary">architecture</span>
+                  <h3 className="font-retro text-[10px] uppercase text-primary">Blueprint</h3>
+                </div>
+                
+                <div className="space-y-4">
+                  {/* Mode Buttons */}
+                  <div className="grid grid-cols-1 gap-2">
+                    {[
+                      { id: 'original', label: 'ORIGINAL', icon: 'auto_fix_high', desc: 'Pure AI Creation' },
+                      { id: 'similar', label: 'MIMIC', icon: 'content_copy', desc: 'Follow existing patterns' },
+                      { id: 'reading', label: 'READING', icon: 'menu_book', desc: 'Comprehension passages' },
+                    ].map((m) => (
+                      <button
+                        key={m.id}
+                        onClick={() => setMode(m.id)}
+                        className={`w-full flex items-center gap-3 p-3 border-2 transition-all ${
+                          mode === m.id
+                            ? 'bg-primary/10 border-primary text-primary'
+                            : 'bg-surface-container-high border-outline-variant hover:border-secondary text-on-surface/60'
+                        }`}
+                      >
+                        <span className="material-symbols-outlined">{m.icon}</span>
+                        <div className="text-left">
+                          <p className="font-retro text-[8px] uppercase">{m.label}</p>
+                          <p className="text-[10px] opacity-50 font-body">{m.desc}</p>
+                        </div>
+                      </button>
+                    ))}
                   </div>
-                  
-                  {/* Language Selection */}
-                  <div className="mb-4">
-                    <label className="text-tertiary text-[10px] block mb-2" style={pixelFont}>LANGUAGE</label>
-                    <div className="grid grid-cols-2 gap-3">
-                      {['English', 'Chinese'].map((lang) => (
+
+                  {/* Subject Selection */}
+                  <div>
+                    <label className="block font-retro text-[8px] text-secondary/60 mb-2 uppercase">Subject Matter</label>
+                    <select
+                      value={subject}
+                      onChange={(e) => setSubject(e.target.value)}
+                      className="w-full bg-surface-container-low border-2 border-outline-variant text-on-surface p-3 font-headline focus:border-primary focus:ring-0 appearance-none"
+                    >
+                      <option value="">SELECT SUBJECT</option>
+                      <option value="Mathematics">ALGEBRAIC RUNES</option>
+                      <option value="Science">BIOLOGICAL MANA</option>
+                      <option value="Physics">QUANTUM WEAVING</option>
+                      <option value="History">HISTORIC CHRONICLES</option>
+                      <option value="English">LINGUISTIC MAGIC</option>
+                      <option value="Chemistry">ELEMENTAL ALCHEMY</option>
+                    </select>
+                  </div>
+
+                  {/* Concept Focus */}
+                  <div>
+                    <label className="block font-retro text-[8px] text-secondary/60 mb-2 uppercase">Focus / Concept</label>
+                    <input
+                      type="text"
+                      value={concept}
+                      onChange={(e) => setConcept(e.target.value)}
+                      placeholder="e.g., Calculus II"
+                      className="w-full bg-surface-container-low border-2 border-outline-variant text-on-surface p-3 font-headline focus:border-primary focus:ring-0"
+                    />
+                  </div>
+
+                  {/* Difficulty */}
+                  <div>
+                    <label className="block font-retro text-[8px] text-secondary/60 mb-2 uppercase">Skill Tier</label>
+                    <div className="grid grid-cols-1 gap-2">
+                      {['easy', 'medium', 'hard'].map((diff) => (
                         <button
-                          key={lang}
-                          onClick={() => setSubject(lang)}
-                          className={`py-3 px-4 border-4 text-xs transition-all ${
-                            subject === lang
-                              ? 'bg-tertiary text-on-tertiary border-on-tertiary shadow-[4px_4px_0px_0px_#e9c400]'
-                              : 'bg-surface-container text-on-surface-variant border-outline-variant hover:border-tertiary'
+                          key={diff}
+                          onClick={() => setDifficulty(diff)}
+                          className={`w-full text-left p-3 border-2 font-headline flex justify-between items-center transition-colors ${
+                            difficulty === diff
+                              ? 'border-primary bg-primary/10 text-primary'
+                              : 'border-outline-variant hover:border-secondary text-on-surface/60'
                           }`}
-                          style={pixelFont}
                         >
-                          {lang === 'English' ? '🇬🇧 ENGLISH' : '🇭🇰 CHINESE'}
+                          {diff === 'easy' ? 'NOVICE' : diff === 'medium' ? 'ADEPT' : 'ARCHMAGE'}
+                          <span className="material-symbols-outlined text-sm">
+                            {difficulty === diff ? 'star' : 'star_border'}
+                          </span>
                         </button>
                       ))}
                     </div>
                   </div>
 
-                  {/* Passage Type */}
-                  <div className="mb-4">
-                    <label className="text-tertiary text-[10px] block mb-2" style={pixelFont}>PASSAGE TYPE</label>
-                    <select
-                      value={passageType}
-                      onChange={(e) => setPassageType(e.target.value)}
-                      className="w-full bg-surface-container-lowest border-4 border-outline-variant p-3 text-on-surface focus:border-tertiary focus:outline-none"
-                      style={pixelFont}
-                    >
-                      <option value="narrative">📖 NARRATIVE (Story)</option>
-                      <option value="argumentative">💬 ARGUMENTATIVE (Debate)</option>
-                      <option value="descriptive">🎨 DESCRIPTIVE</option>
-                      <option value="expository">📚 EXPOSITORY (Informative)</option>
-                      {subject === 'Chinese' && <option value="classical">📜 CLASSICAL (文言文)</option>}
-                    </select>
-                  </div>
-
-                  {/* Vocabulary Toggle */}
-                  <div className="flex items-center gap-3">
+                  {/* Question Count */}
+                  <div>
+                    <label className="block font-retro text-[8px] text-secondary/60 mb-2 uppercase">Artifact Count</label>
                     <input
-                      type="checkbox"
-                      id="includeVocabulary"
-                      checked={includeVocabulary}
-                      onChange={(e) => setIncludeVocabulary(e.target.checked)}
-                      className="w-4 h-4 accent-tertiary"
+                      type="range"
+                      min="5"
+                      max="25"
+                      value={numExercises}
+                      onChange={(e) => setNumExercises(Number(e.target.value))}
+                      className="w-full accent-primary bg-surface-container-highest h-2 appearance-none"
                     />
-                    <label htmlFor="includeVocabulary" className="text-on-surface text-xs" style={pixelFont}>
-                      Include vocabulary list
-                    </label>
+                    <div className="flex justify-between mt-2 font-retro text-[8px] text-secondary">
+                      <span>5</span>
+                      <span className="text-primary">{numExercises}</span>
+                      <span>25</span>
+                    </div>
                   </div>
                 </div>
-              )}
+              </div>
 
-              {/* Similar Mode - File Upload */}
-              {mode === 'similar' && (
+              {/* Recently Forged */}
+              <div className="bg-surface-container-low p-6 border-l-4 border-secondary/20">
+                <h3 className="font-retro text-[10px] uppercase text-secondary mb-4 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-sm">history</span>
+                  Recent Artifacts
+                </h3>
                 <div className="space-y-4">
-                  <div>
-                    <label className="text-secondary text-[10px] block mb-2" style={pixelFont}>
-                      UPLOAD REFERENCE FILES
-                    </label>
-                    <FileUploadZone
-                      onFilesSelect={handleFilesSelect}
-                      files={uploadedFiles}
-                      analyzing={analyzing}
-                      analyzed={analyzed}
-                    />
-                    
-                    {/* File List */}
-                    {uploadedFiles.length > 0 && (
-                      <div className="mt-3 space-y-2">
-                        {uploadedFiles.map((file, idx) => (
-                          <div 
-                            key={idx} 
-                            className="flex items-center justify-between bg-surface-container border-2 border-outline-variant p-3"
-                          >
-                            <div className="flex items-center gap-2 overflow-hidden">
-                              <span className="text-tertiary text-xs">📄</span>
-                              <span className="text-on-surface text-xs truncate" style={pixelFont}>
-                                {file.name}
-                              </span>
-                              <span className="text-on-surface-variant text-[10px]" style={pixelFont}>
-                                ({(file.size / 1024).toFixed(1)} KB)
-                              </span>
-                            </div>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); removeFile(idx); }}
-                              className="text-error hover:text-red-400 px-2"
-                              style={pixelFont}
-                            >
-                              ✕
-                            </button>
-                          </div>
-                        ))}
-                        
-                        <div className="flex items-center justify-between pt-2">
-                          <button
-                            onClick={clearAllFiles}
-                            className="text-error text-xs hover:text-red-400"
-                            style={pixelFont}
-                          >
-                            🗑️ REMOVE ALL
-                          </button>
-                          {autoDetected && (
-                            <span className="text-tertiary text-xs" style={pixelFont}>
-                              ✨ AUTO-DETECTED!
-                            </span>
-                          )}
-                        </div>
+                  {recentArtifacts.map((artifact) => (
+                    <div key={artifact.id} className="group flex items-center gap-3 p-2 hover:bg-surface-container-highest transition-colors cursor-pointer">
+                      <div className="w-8 h-8 bg-surface-container-highest flex items-center justify-center">
+                        <span className={`material-symbols-outlined text-${artifact.color} text-lg`}>{artifact.icon}</span>
                       </div>
-                    )}
-                  </div>
+                      <div>
+                        <p className="text-[10px] font-headline font-bold text-on-surface">{artifact.name}</p>
+                        <p className="text-[8px] font-retro text-on-surface/40 uppercase">{artifact.time}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
 
-                  {/* Manual Input Fallback */}
-                  {uploadedFiles.length === 0 && (
-                    <div>
-                      <div className="flex items-center gap-4 mb-3">
-                        <div className="flex-1 h-px bg-outline-variant" />
-                        <span className="text-on-surface-variant text-[10px]" style={pixelFont}>OR</span>
-                        <div className="flex-1 h-px bg-outline-variant" />
+            {/* Center: Summoning Circle */}
+            <section className="col-span-12 lg:col-span-6 flex flex-col items-center justify-center min-h-[400px] relative">
+              {/* Summoning Ring Background */}
+              <div className="absolute w-[350px] h-[350px] rounded-full bg-gradient-radial from-primary/10 to-transparent animate-pulse"></div>
+              
+              {/* Main Progress Ring */}
+              <div className="relative w-72 h-72 flex items-center justify-center">
+                {/* SVG Progress Circle */}
+                <svg className="w-full h-full transform -rotate-90">
+                  <circle 
+                    className="text-surface-container-highest" 
+                    cx="144" 
+                    cy="144" 
+                    fill="transparent" 
+                    r="130" 
+                    stroke="currentColor" 
+                    strokeWidth="8"
+                  />
+                  <circle 
+                    className="text-primary neon-glow-primary"
+                    cx="144" 
+                    cy="144" 
+                    fill="transparent" 
+                    r="130" 
+                    stroke="currentColor" 
+                    strokeDasharray="817" 
+                    strokeDashoffset={817 - (817 * (loading ? loadingProgress : 0) / 100)}
+                    strokeLinecap="butt" 
+                    strokeWidth="12"
+                  />
+                </svg>
+                
+                {/* Center Content */}
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+                  {loading ? (
+                    <>
+                      <span className="material-symbols-outlined text-5xl text-primary mb-4 animate-spin">refresh</span>
+                      <h2 className="font-retro text-3xl text-on-surface mb-2">{loadingProgress}%</h2>
+                      <p className="font-retro text-[10px] text-secondary animate-pulse uppercase">ESSENCE STABILIZING...</p>
+                    </>
+                  ) : (
+                    <>
+                      <span className="material-symbols-outlined text-6xl text-primary mb-4 neon-glow-primary">auto_fix_high</span>
+                      <h2 className="font-retro text-xl text-on-surface mb-2">READY</h2>
+                      <p className="font-retro text-[10px] text-secondary uppercase">CONFIGURE BLUEPRINT</p>
+                    </>
+                  )}
+                </div>
+
+                {/* Floating Orbiting Icons */}
+                <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-10 h-10 bg-surface-container border-2 border-primary flex items-center justify-center shadow-lg">
+                  <span className="material-symbols-outlined text-primary text-sm">functions</span>
+                </div>
+                <div className="absolute top-1/4 -right-2 w-8 h-8 bg-surface-container border-2 border-secondary flex items-center justify-center shadow-lg">
+                  <span className="material-symbols-outlined text-secondary text-xs">science</span>
+                </div>
+                <div className="absolute bottom-1/4 -left-2 w-8 h-8 bg-surface-container border-2 border-tertiary flex items-center justify-center shadow-lg">
+                  <span className="material-symbols-outlined text-tertiary text-xs">menu_book</span>
+                </div>
+              </div>
+
+              {/* Status Feedback */}
+              <div className="mt-8 w-full max-w-md bg-surface-container-highest p-4 flex gap-4 items-center border-t-4 border-primary">
+                <div className="w-2 h-2 bg-primary animate-ping"></div>
+                <p className="font-headline italic text-on-surface/80 text-sm">
+                  "The runes are aligning. Configure your blueprint to begin forging."
+                </p>
+              </div>
+
+              {/* Error Display */}
+              {error && (
+                <div className="mt-4 w-full max-w-md bg-error/10 p-4 border-2 border-error">
+                  <p className="font-retro text-[10px] text-error uppercase">{error}</p>
+                </div>
+              )}
+            </section>
+
+            {/* Right: Enchantment Settings */}
+            <section className="col-span-12 lg:col-span-3 space-y-6">
+              <div className="bg-surface-container p-6 relative">
+                <div className="absolute -inset-1 border-2 border-secondary/20 pointer-events-none"></div>
+                <div className="flex items-center gap-2 mb-6">
+                  <span className="material-symbols-outlined text-secondary neon-glow-secondary">magic_button</span>
+                  <h3 className="font-retro text-[10px] uppercase text-secondary">Enchantments</h3>
+                </div>
+
+                <div className="space-y-4">
+                  {/* File Upload for Similar Mode */}
+                  {mode === 'similar' && (
+                    <div className="space-y-3">
+                      <label className="block font-retro text-[8px] text-secondary/60 uppercase">Reference Scrolls</label>
+                      <div
+                        onClick={() => fileInputRef.current?.click()}
+                        className="w-full p-4 border-2 border-dashed border-outline-variant hover:border-primary transition-colors cursor-pointer text-center"
+                      >
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          multiple
+                          accept=".pdf,.docx,.txt"
+                          onChange={(e) => handleFilesSelect(Array.from(e.target.files))}
+                          className="hidden"
+                        />
+                        <span className="material-symbols-outlined text-3xl text-primary mb-2">upload_file</span>
+                        <p className="font-retro text-[8px] text-on-surface/60 uppercase">Drop files or click</p>
                       </div>
-                      <label className="text-on-surface-variant text-[10px] block mb-2" style={pixelFont}>
-                        PASTE EXERCISES MANUALLY
-                      </label>
-                      <textarea
-                        value={referenceExercises}
-                        onChange={(e) => setReferenceExercises(e.target.value)}
-                        placeholder="Paste example exercises here..."
-                        className="w-full h-32 bg-surface-container-lowest border-4 border-outline-variant p-3 text-on-surface placeholder-on-surface-variant focus:border-secondary focus:outline-none resize-none text-xs"
-                        style={pixelFont}
-                      />
+                      
+                      {uploadedFiles.length > 0 && (
+                        <div className="space-y-2">
+                          {uploadedFiles.map((file, idx) => (
+                            <div key={idx} className="flex items-center justify-between bg-surface-container-high p-2">
+                              <span className="text-[10px] truncate">{file.name}</span>
+                              <button onClick={() => removeFile(idx)} className="text-error">
+                                <span className="material-symbols-outlined text-sm">close</span>
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {analyzing && (
+                        <p className="font-retro text-[8px] text-secondary animate-pulse">ANALYZING SCROLL...</p>
+                      )}
+                      {analyzed && (
+                        <p className="font-retro text-[8px] text-tertiary">✓ AUTO-DETECTED</p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Reading Mode Options */}
+                  {mode === 'reading' && (
+                    <div className="space-y-3">
+                      <label className="block font-retro text-[8px] text-secondary/60 uppercase">Passage Type</label>
+                      <select
+                        value={passageType}
+                        onChange={(e) => setPassageType(e.target.value)}
+                        className="w-full bg-surface-container-low border-2 border-outline-variant text-on-surface p-3 font-headline focus:border-secondary focus:ring-0"
+                      >
+                        <option value="narrative">📖 NARRATIVE</option>
+                        <option value="argumentative">💬 ARGUMENTATIVE</option>
+                        <option value="descriptive">🎨 DESCRIPTIVE</option>
+                        <option value="expository">📚 EXPOSITORY</option>
+                      </select>
+
+                      <div className="flex items-center gap-3 mt-4">
+                        <input
+                          type="checkbox"
+                          id="vocab"
+                          checked={includeVocabulary}
+                          onChange={(e) => setIncludeVocabulary(e.target.checked)}
+                          className="w-4 h-4 accent-secondary"
+                        />
+                        <label htmlFor="vocab" className="font-retro text-[8px] text-on-surface uppercase">Include Vocabulary</label>
+                      </div>
                     </div>
                   )}
 
                   {/* Preserve Pattern Toggle */}
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="checkbox"
-                      id="preservePattern"
-                      checked={preservePattern}
-                      onChange={(e) => setPreservePattern(e.target.checked)}
-                      className="w-4 h-4 accent-secondary"
-                    />
-                    <label htmlFor="preservePattern" className="text-on-surface text-xs" style={pixelFont}>
-                      Strictly preserve the exact pattern
-                    </label>
-                  </div>
-                </div>
-              )}
+                  {mode === 'similar' && (
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        id="preserve"
+                        checked={preservePattern}
+                        onChange={(e) => setPreservePattern(e.target.checked)}
+                        className="w-4 h-4 accent-secondary"
+                      />
+                      <label htmlFor="preserve" className="font-retro text-[8px] text-on-surface uppercase">Preserve Pattern</label>
+                    </div>
+                  )}
 
-              {/* Subject & Concept (Not in Reading Mode) */}
-              {mode !== 'reading' && (
-                <>
-                  <div>
-                    <label className="text-secondary text-[10px] block mb-2" style={pixelFont}>
-                      SUBJECT {autoDetected && <span className="text-tertiary">(AUTO)</span>}
-                    </label>
-                    <select 
-                      value={subject} 
-                      onChange={(e) => setSubject(e.target.value)}
-                      className={`w-full bg-surface-container-lowest border-4 p-3 text-on-surface focus:border-secondary focus:outline-none ${
-                        autoDetected ? 'border-tertiary' : 'border-outline-variant'
-                      }`}
-                      style={pixelFont}
-                    >
-                      <option value="">SELECT SUBJECT</option>
-                      <option value="English">ENGLISH</option>
-                      <option value="Mathematics">MATHEMATICS</option>
-                      <option value="History">HISTORY</option>
-                      <option value="Science">SCIENCE</option>
-                      <option value="Chinese">CHINESE</option>
-                      <option value="Geography">GEOGRAPHY</option>
-                      <option value="Other">OTHER</option>
-                    </select>
+                  {/* Mana Cost / Progress */}
+                  <div className="mt-8 pt-6 border-t border-outline-variant/30">
+                    <h4 className="font-retro text-[8px] text-secondary/60 mb-4 uppercase">Mana Cost</h4>
+                    <div className="h-4 w-full bg-surface-container-lowest overflow-hidden">
+                      <div 
+                        className={`h-full bg-${modeColor} w-3/4 shadow-[0_0_10px_currentColor]`}
+                      ></div>
+                    </div>
+                    <p className="mt-2 font-retro text-[8px] text-secondary text-right uppercase">
+                      {Math.round(numExercises * 3)} / 100 MP
+                    </p>
                   </div>
-
-                  <div>
-                    <label className="text-secondary text-[10px] block mb-2" style={pixelFont}>
-                      CONCEPT / GRAMMAR FOCUS {autoDetected && <span className="text-tertiary">(AUTO)</span>}
-                    </label>
-                    <input 
-                      type="text"
-                      placeholder="e.g., past tense, fractions..."
-                      value={concept}
-                      onChange={(e) => setConcept(e.target.value)}
-                      className={`w-full bg-surface-container-lowest border-4 p-3 text-on-surface placeholder-on-surface-variant focus:border-secondary focus:outline-none ${
-                        autoDetected ? 'border-tertiary' : 'border-outline-variant'
-                      }`}
-                      style={pixelFont}
-                    />
-                  </div>
-                </>
-              )}
-
-              {/* Number & Difficulty */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-secondary text-[10px] block mb-2" style={pixelFont}>QUESTIONS</label>
-                  <select 
-                    value={numExercises}
-                    onChange={(e) => setNumExercises(Number(e.target.value))}
-                    className="w-full bg-surface-container-lowest border-4 border-outline-variant p-3 text-on-surface focus:border-secondary focus:outline-none"
-                    style={pixelFont}
-                  >
-                    <option value={5}>5 (FAST)</option>
-                    <option value={10}>10</option>
-                    {mode === 'reading' && <option value={15}>15</option>}
-                  </select>
-                </div>
-                
-                <div>
-                  <label className="text-secondary text-[10px] block mb-2" style={pixelFont}>DIFFICULTY</label>
-                  <select 
-                    value={difficulty}
-                    onChange={(e) => setDifficulty(e.target.value)}
-                    className="w-full bg-surface-container-lowest border-4 border-outline-variant p-3 text-on-surface focus:border-secondary focus:outline-none"
-                    style={pixelFont}
-                  >
-                    <option value="easy">⭐ EASY</option>
-                    <option value="medium">⭐⭐ MEDIUM</option>
-                    <option value="hard">⭐⭐⭐ HARD</option>
-                  </select>
                 </div>
               </div>
-
-              {/* Time Warning */}
-              {(numExercises >= 10 || mode === 'reading') && (
-                <div className="bg-secondary/10 border-4 border-secondary p-3">
-                  <p className="text-secondary text-[10px]" style={pixelFont}>
-                    ⏱️ {mode === 'reading' 
-                      ? 'Reading passages take 2-4 minutes. Please wait...' 
-                      : 'This may take 15-30 seconds. Please wait...'}
-                  </p>
-                </div>
-              )}
-
-              {/* Generate Button */}
-              <button 
-                onClick={generateExercises}
-                disabled={loading || analyzing}
-                className={`w-full py-4 border-4 text-sm transition-all ${
-                  loading || analyzing
-                    ? 'bg-surface-container text-on-surface-variant border-outline-variant cursor-not-allowed'
-                    : mode === 'similar' 
-                      ? 'bg-secondary text-on-secondary border-on-secondary shadow-[4px_4px_0px_0px_#00f1fe] hover:shadow-[2px_2px_0px_0px_#00f1fe] hover:translate-x-[2px] hover:translate-y-[2px]'
-                      : mode === 'reading'
-                        ? 'bg-tertiary text-on-tertiary border-on-tertiary shadow-[4px_4px_0px_0px_#e9c400] hover:shadow-[2px_2px_0px_0px_#e9c400] hover:translate-x-[2px] hover:translate-y-[2px]'
-                        : 'bg-primary text-on-primary border-on-primary shadow-[4px_4px_0px_0px_#ff4a8d] hover:shadow-[2px_2px_0px_0px_#ff4a8d] hover:translate-x-[2px] hover:translate-y-[2px]'
-                }`}
-                style={pixelFont}
-              >
-                {loading ? (
-                  <span className="flex items-center justify-center gap-3">
-                    <span className="animate-spin">⏳</span>
-                    <span className="flex flex-col items-start">
-                      <span>{mode === 'reading' ? 'WRITING PASSAGE...' : 'GENERATING...'}</span>
-                      {mode === 'reading' && (
-                        <span className="text-[8px] opacity-70">2-4 minutes • Don't close</span>
-                      )}
-                    </span>
-                  </span>
-                ) : (
-                  <>
-                    {mode === 'similar' && '📋 '}
-                    {mode === 'reading' && '📖 '}
-                    {mode === 'original' && '✨ '}
-                    GENERATE
-                    {mode === 'reading' && ' READING'}
-                  </>
-                )}
-              </button>
-            </div>
-          </SectionCard>
+            </section>
+          </div>
         ) : (
           /* Generated Exercises Display */
-          <>
-            {/* Fallback Notice */}
-            {(exercises.isAutoGenerated || exercises._fallback) && (
-              <div className="bg-tertiary/10 border-4 border-tertiary p-3 mb-4 no-print">
-                <p className="text-tertiary text-xs flex items-center justify-between" style={pixelFont}>
-                  <span>⚠️ AI timed out. Showing pre-made exercises.</span>
-                  <button onClick={() => { setExercises(null); generateExercises(); }} className="underline">
-                    RETRY
-                  </button>
-                </p>
-              </div>
-            )}
-
-            {/* Print Version */}
-            <div className="bg-white text-black p-8 border-4 border-black shadow-[8px_8px_0px_0px_#000] print:shadow-none print:border-0" id="exercise-sheet">
+          <div className="max-w-4xl mx-auto">
+            <div className="bg-white text-black p-8 border-4 border-black shadow-[8px_8px_0px_0px_#000]">
               {/* Header */}
               <div className="text-center mb-8 border-b-4 border-black pb-6">
                 <h1 className="text-2xl font-bold mb-3" style={{ fontFamily: 'serif' }}>
-                  {exercises.isReadingComprehension 
-                    ? `📖 ${exercises.subject === 'Chinese' ? '閱讀理解練習' : 'Reading Comprehension'}`
-                    : (exercises.title || `${subject} Practice`)}
+                  {exercises.title || `${subject} Practice Scroll`}
                 </h1>
-                <div className="text-sm space-y-1" style={{ fontFamily: 'sans-serif' }}>
-                  <p>
-                    <strong>Subject:</strong> {exercises.subject || subject} 
-                    {!exercises.isReadingComprehension && <span> | <strong>Focus:</strong> {exercises.concept || concept}</span>}
-                  </p>
-                  <p><strong>Difficulty:</strong> {exercises.difficulty || difficulty} | <strong>Questions:</strong> {exercises.questions?.length || 0}</p>
-                  {exercises.wordCount && <span> | <strong>Words:</strong> {exercises.wordCount}</span>}
-                  {exercises.autoDetected && <p className="text-green-600"><em>✨ Auto-detected from document</em></p>}
-                </div>
-                
-                {/* Student Info */}
-                <div className="mt-6 pt-4 border-t-2 border-dashed border-gray-400">
-                  <div className="flex justify-center gap-8 text-sm">
-                    <span><strong>Name:</strong> _______________</span>
-                    <span><strong>Class:</strong> _______</span>
-                    <span><strong>Date:</strong> _______</span>
-                  </div>
+                <div className="text-sm space-y-1">
+                  <p><strong>Subject:</strong> {exercises.subject || subject}</p>
+                  <p><strong>Difficulty:</strong> {exercises.difficulty || difficulty}</p>
                 </div>
               </div>
 
-              {/* Reading Comprehension Layout */}
-              {exercises.isReadingComprehension ? (
-                <>
-                  {exercises.title && (
-                    <div className="text-center mb-6">
-                      <h2 className="text-xl font-bold" style={{ fontFamily: 'serif' }}>{exercises.title}</h2>
-                    </div>
-                  )}
-
-                  {/* Passage */}
-                  <div className="bg-gray-50 p-6 rounded-lg mb-8 border-2 border-gray-200">
-                    <h3 className="text-sm font-bold text-gray-600 mb-3 uppercase">📖 Reading Passage</h3>
-                    <div className="text-sm leading-relaxed text-justify" style={{ fontFamily: 'serif', lineHeight: '1.8' }}>
-                      {exercises.passage?.split('\n').map((paragraph, idx) => (
-                        <p key={idx} className="mb-4 indent-8">{paragraph}</p>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Vocabulary */}
-                  {exercises.vocabulary && exercises.vocabulary.length > 0 && (
-                    <div className="bg-amber-50 p-4 rounded-lg mb-8 border border-amber-200">
-                      <h3 className="text-sm font-bold text-amber-800 mb-3">📝 Vocabulary</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-                        {exercises.vocabulary.map((v, idx) => (
-                          <div key={idx} className="bg-white p-2 rounded border border-amber-100">
-                            <span className="font-bold text-amber-900">{v.word}</span>
-                            <span className="text-gray-600"> — {v.meaning}</span>
-                          </div>
+              {/* Questions */}
+              <div className="space-y-6">
+                {exercises.questions?.map((q, idx) => (
+                  <div key={idx}>
+                    <p className="font-bold mb-2">{idx + 1}. {q.question}</p>
+                    {q.choices && (
+                      <div className="ml-4 grid grid-cols-1 md:grid-cols-2 gap-2">
+                        {q.choices.map((choice, i) => (
+                          <p key={i}>{String.fromCharCode(65 + i)}. {choice}</p>
                         ))}
                       </div>
-                    </div>
-                  )}
-
-                  {/* Instructions */}
-                  <div className="bg-gray-100 p-4 rounded-lg mb-6 text-sm italic">
-                    <strong>Instructions:</strong> {exercises.subject === 'Chinese' 
-                      ? '閱讀以上文章，然後回答下列問題。' 
-                      : 'Read the passage, then answer the questions below.'}
+                    )}
                   </div>
-
-                  {/* Questions */}
-                  <div className="space-y-6">
-                    {exercises.questions?.map((q, idx) => (
-                      <div key={idx} className="break-inside-avoid">
-                        <p className="font-bold text-base mb-2" style={{ fontFamily: 'serif' }}>
-                          <span className="text-emerald-600 text-sm mr-2">
-                            [{q.type === 'main_idea' || q.type === '主旨' ? '主旨' :
-                              q.type === 'detail' || q.type === '段意' ? '段意' :
-                              q.type === 'vocabulary' || q.type === '詞意' ? '詞意' :
-                              q.type === 'inference' || q.type === '推理' ? '推理' :
-                              q.type === 'tone' || q.type === '語氣' ? '語氣' :
-                              q.type === '賞析' ? '賞析' : '理解'}]
-                          </span>
-                          {idx + 1}. {q.question}
-                        </p>
-                        <div className="ml-4 grid grid-cols-1 md:grid-cols-2 gap-2">
-                          {q.options?.map((option, i) => (
-                            <p key={i} className="text-sm">
-                              <span className="font-bold">{String.fromCharCode(65 + i)}.</span> {option.replace(/^[A-D]\.\s*/, '')}
-                            </p>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              ) : (
-                /* Standard Exercise Layout */
-                <>
-                  <div className="bg-gray-100 p-4 rounded-lg mb-6 text-sm italic">
-                    <strong>Instructions:</strong> Read each question carefully. Write your answers clearly.
-                  </div>
-
-                  <div className="space-y-8">
-                    {exercises.questions?.map((q, idx) => {
-                      const hasChoices = q.choices && q.choices.length > 0;
-                      const isFillBlank = q.type === 'fill_blank';
-                      const isTrueFalse = q.answer === 'T' || q.answer === 'F' || 
-                                         q.answer?.toString().toLowerCase() === 'true' || 
-                                         q.answer?.toString().toLowerCase() === 'false';
-                      
-                      const typeIcon = q.type === 'multiple_choice' || (isFillBlank && hasChoices && !isTrueFalse) 
-                        ? '🔘' 
-                        : isTrueFalse 
-                          ? '✓/✗' 
-                          : q.type === 'match' 
-                            ? '⇄' 
-                            : '✏️';
-                      
-                      return (
-                        <div key={idx} className="break-inside-avoid">
-                          <p className="font-bold text-base mb-3" style={{ fontFamily: 'serif' }}>
-                            <span className="text-slate-500 mr-1">{typeIcon}</span>
-                            {idx + 1}. {cleanQuestionText(q.question, hasChoices)}
-                          </p>
-                          {renderQuestion(q, idx)}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </>
-              )}
-
-              {/* Footer */}
-              <div className="mt-12 pt-6 border-t-2 border-gray-300 text-center text-xs text-gray-500">
-                <p>Generated by StudyQuest</p>
-                <p>Good luck! 💪</p>
+                ))}
               </div>
 
               {/* Answer Key */}
-              <div className="mt-12 pt-8 border-t-4 border-dashed border-gray-400 page-break-before print:mt-0">
-                <h3 className="text-xl font-bold mb-6 text-center" style={{ fontFamily: 'serif' }}>
-                  ANSWER KEY (Teacher Use Only)
-                </h3>
-                
-                {exercises.isReadingComprehension ? (
-                  <div className="space-y-3 text-sm">
-                    {exercises.questions?.map((q, idx) => (
-                      <div key={idx} className="bg-gray-100 p-3 rounded">
-                        <div className="flex items-start gap-2">
-                          <span className="font-bold whitespace-nowrap">{idx + 1}.</span>
-                          <div>
-                            <span className="font-bold text-emerald-700">{q.answer}</span>
-                            {q.explanation && <p className="text-xs text-gray-600 mt-1 italic">{q.explanation}</p>}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-4 md:grid-cols-5 gap-4 text-sm">
-                    {exercises.questions?.map((q, idx) => {
-                      let answerText = typeof q.answer === 'object' ? q.answer.text : q.answer;
-                      answerText = cleanText(answerText).replace(/^[A-D]\.\s*/, '');
-                      return (
-                        <div key={idx} className="bg-gray-100 p-2 rounded">
-                          <span className="font-bold">{idx + 1}.</span> {answerText}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
+              <div className="mt-12 pt-8 border-t-4 border-dashed border-gray-400">
+                <h3 className="text-xl font-bold mb-6 text-center">ANSWER KEY</h3>
+                <div className="grid grid-cols-5 gap-4">
+                  {exercises.questions?.map((q, idx) => (
+                    <div key={idx} className="bg-gray-100 p-2">
+                      <span className="font-bold">{idx + 1}.</span> {q.answer}
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
 
             {/* Action Buttons */}
-            <div className="mt-6 flex flex-wrap gap-4 no-print">
+            <div className="mt-6 flex flex-wrap gap-4">
               <button 
-                onClick={handlePrint}
-                className="px-6 py-3 bg-tertiary text-on-tertiary border-4 border-on-tertiary shadow-[4px_4px_0px_0px_#e9c400] hover:shadow-[2px_2px_0px_0px_#e9c400] hover:translate-x-[2px] hover:translate-y-[2px] transition-all text-xs"
-                style={pixelFont}
+                onClick={() => window.print()}
+                className="px-6 py-3 bg-tertiary text-on-tertiary border-4 border-on-tertiary shadow-[4px_4px_0px_0px_#e9c400] font-retro text-[10px] uppercase"
               >
-                🖨️ PRINT
+                PRINT SCROLL
               </button>
-              
-              <button 
-                onClick={handleCopyReference}
-                className="px-6 py-3 bg-secondary text-on-secondary border-4 border-on-secondary shadow-[4px_4px_0px_0px_#00f1fe] hover:shadow-[2px_2px_0px_0px_#00f1fe] hover:translate-x-[2px] hover:translate-y-[2px] transition-all text-xs"
-                style={pixelFont}
-              >
-                📋 COPY
-              </button>
-              
               <button 
                 onClick={() => { setExercises(null); setError(null); }}
-                className="px-6 py-3 bg-surface-container text-on-surface border-4 border-outline-variant hover:bg-surface-container-high transition-all text-xs"
-                style={pixelFont}
+                className="px-6 py-3 bg-surface-container text-on-surface border-4 border-outline-variant font-retro text-[10px] uppercase"
               >
-                🔄 NEW
+                FORGE NEW
               </button>
             </div>
-          </>
+          </div>
         )}
-      </div>
 
-      {/* Print Styles */}
+        {/* Floating Forge Button */}
+        {!exercises && (
+          <div className="fixed bottom-8 left-1/2 -translate-x-1/2 w-full max-w-2xl px-6 z-40">
+            <button 
+              onClick={generateExercises}
+              disabled={loading}
+              className={`w-full py-6 flex items-center justify-center gap-4 group transition-all transform hover:-translate-y-1 active:translate-y-1 relative ${
+                loading ? 'bg-surface-container cursor-not-allowed' : `bg-${modeColor}-container hover:bg-${modeColor}`
+              } text-white`}
+            >
+              {/* Button Lip for 3D effect */}
+              <div className={`absolute inset-x-0 -bottom-2 h-2 bg-${modeColor === 'primary' ? '#8f0044' : modeColor === 'secondary' ? '#004f54' : '#544600'}`}></div>
+              <span className="material-symbols-outlined text-3xl group-hover:scale-110 transition-transform">hardware</span>
+              <span className="font-retro text-xl tracking-wider uppercase">
+                {loading ? 'FORGING...' : 'FORGE SCROLL'}
+              </span>
+              <div className="absolute right-8 opacity-20 group-hover:opacity-100 transition-opacity">
+                <span className="material-symbols-outlined text-4xl" style={{fontVariationSettings: "'FILL' 1"}}>rebase_edit</span>
+              </div>
+            </button>
+          </div>
+        )}
+      </main>
+
+      {/* Bottom Navigation (Mobile Only) */}
+      <BottomNavBar 
+        items={navItems.filter(i => ['dashboard', 'tasks', 'timer', 'social'].includes(i.id))} 
+        activeItem="exercise-gen"
+        onItemClick={(id) => {
+          const item = navItems.find(n => n.id === id);
+          if (item) navigate(item.href);
+        }}
+      />
+
+      {/* Additional CSS for neon glow effects */}
       <style>{`
-        @media print {
-          @page { margin: 15mm; }
-          .no-print { display: none !important; }
-          #exercise-sheet { 
-            background: white !important; 
-            color: black !important;
-            padding: 0 !important;
-            box-shadow: none !important;
-            border: none !important;
-          }
-          .page-break-before { page-break-before: always; }
-          .break-inside-avoid { break-inside: avoid; }
-          body { background: white !important; }
+        .neon-glow-primary {
+          filter: drop-shadow(0 0 8px #ff4a8d);
+        }
+        .neon-glow-secondary {
+          filter: drop-shadow(0 0 8px #00f1fe);
+        }
+        .bg-gradient-radial {
+          background: radial-gradient(circle, rgba(255,74,141,0.1) 0%, rgba(26,6,59,0) 70%);
         }
       `}</style>
     </div>
