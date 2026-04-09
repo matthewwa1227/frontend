@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '../utils/cn';
 import { getUser } from '../utils/auth';
@@ -32,8 +32,8 @@ const SocialHub = () => {
   const [showCreateChallenge, setShowCreateChallenge] = useState(false);
   const [joinedChallenges, setJoinedChallenges] = useState([]);
 
-  // Navigation items - all links from Navbar.jsx
-  const navItems = [
+  // Navigation items - all links with categories
+  const navItems = useMemo(() => [
     // Main Navigation
     { id: 'dashboard', label: 'DASHBOARD', icon: 'target', href: '/dashboard', category: 'main' },
     { id: 'tasks', label: 'QUEST LOG', icon: 'checklist', href: '/tasks', category: 'main' },
@@ -51,7 +51,7 @@ const SocialHub = () => {
     // More
     { id: 'portal', label: 'PARENTS', icon: 'family_restroom', href: '/portal', category: 'more' },
     { id: 'profile', label: 'PROFILE', icon: 'person', href: '/profile', category: 'more' },
-  ];
+  ], []);
 
   // Tab configuration
   const tabs = [
@@ -172,13 +172,11 @@ const SocialHub = () => {
   const handleCreateChallenge = (formData) => {
     console.log('Creating challenge:', formData);
     setShowCreateChallenge(false);
-    // Would send to backend here
   };
 
   // Handle add friend
   const handleAddFriend = (username) => {
     console.log('Adding friend:', username);
-    // Would send friend request to backend
   };
 
   // Render tab content
@@ -278,8 +276,23 @@ const SocialHub = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
-        <TopAppBar title="SOCIAL HUB" user={currentUser} />
-        <main className="md:ml-64 pt-24 px-6">
+        {/* Top Navigation */}
+        <TopAppBar title="SOCIAL HUB" user={currentUser} onMenuClick={() => setMobileMenuOpen(true)} />
+        
+        {/* Side Navigation */}
+        <SideNavBar 
+          items={navItems} 
+          user={user}
+          isOpen={mobileMenuOpen}
+          onClose={() => setMobileMenuOpen(false)}
+          activeItem="social"
+          onItemClick={(id) => {
+            const item = navItems.find(n => n.id === id);
+            if (item && item.href) navigate(item.href);
+          }}
+        />
+        
+        <main className="lg:ml-64 pt-24 px-6">
           <div className="max-w-7xl mx-auto">
             <div className="animate-pulse space-y-4">
               <div className="h-32 bg-surface-container w-full" />
@@ -300,7 +313,7 @@ const SocialHub = () => {
         onMenuClick={() => setMobileMenuOpen(true)}
       />
       
-      {/* Side Navigation */}
+      {/* Side Navigation - Desktop Sidebar */}
       <SideNavBar 
         items={navItems} 
         user={user}
@@ -316,7 +329,7 @@ const SocialHub = () => {
       />
 
       {/* Main Content */}
-      <main className="md:ml-64 pt-24 px-4 pb-24 lg:pb-8">
+      <main className="lg:ml-64 pt-24 px-4 pb-24 lg:pb-8">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
           <div className="mb-6">
