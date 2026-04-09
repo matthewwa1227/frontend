@@ -160,50 +160,56 @@ const SideNavBar = ({
         
         {/* Navigation Items - Scrollable */}
         <nav className="flex-1 px-2 py-4 overflow-y-auto scrollbar-pixel">
-          {/* Main Section */}
-          <div className="mb-4">
-            <p className="px-3 py-2 text-[8px] text-secondary/50 font-['Press_Start_2P'] uppercase tracking-wider">
-              Main
-            </p>
-            {mainItems.map((item) => (
-              <NavItem
-                key={item.id}
-                {...item}
-                active={activeItem === item.id}
-                onClick={() => onItemClick?.(item.id)}
-              />
-            ))}
-          </div>
+          {/* Main Section - Only show if has items */}
+          {mainItems.length > 0 && (
+            <div className="mb-4">
+              <p className="px-3 py-2 text-[8px] text-secondary/50 font-['Press_Start_2P'] uppercase tracking-wider">
+                Main
+              </p>
+              {mainItems.map((item) => (
+                <NavItem
+                  key={item.id}
+                  {...item}
+                  active={activeItem === item.id}
+                  onClick={() => onItemClick?.(item.id)}
+                />
+              ))}
+            </div>
+          )}
           
-          {/* Study Tools Section */}
-          <div className="mb-4">
-            <p className="px-3 py-2 text-[8px] text-secondary/50 font-['Press_Start_2P'] uppercase tracking-wider">
-              Study Tools
-            </p>
-            {studyItems.map((item) => (
-              <NavItem
-                key={item.id}
-                {...item}
-                active={activeItem === item.id}
-                onClick={() => onItemClick?.(item.id)}
-              />
-            ))}
-          </div>
+          {/* Study Tools Section - Only show if has items */}
+          {studyItems.length > 0 && (
+            <div className="mb-4">
+              <p className="px-3 py-2 text-[8px] text-secondary/50 font-['Press_Start_2P'] uppercase tracking-wider">
+                Study Tools
+              </p>
+              {studyItems.map((item) => (
+                <NavItem
+                  key={item.id}
+                  {...item}
+                  active={activeItem === item.id}
+                  onClick={() => onItemClick?.(item.id)}
+                />
+              ))}
+            </div>
+          )}
           
-          {/* More Section */}
-          <div className="mb-4">
-            <p className="px-3 py-2 text-[8px] text-secondary/50 font-['Press_Start_2P'] uppercase tracking-wider">
-              More
-            </p>
-            {moreItems.map((item) => (
-              <NavItem
-                key={item.id}
-                {...item}
-                active={activeItem === item.id}
-                onClick={() => onItemClick?.(item.id)}
-              />
-            ))}
-          </div>
+          {/* More Section - Only show if has items */}
+          {moreItems.length > 0 && (
+            <div className="mb-4">
+              <p className="px-3 py-2 text-[8px] text-secondary/50 font-['Press_Start_2P'] uppercase tracking-wider">
+                More
+              </p>
+              {moreItems.map((item) => (
+                <NavItem
+                  key={item.id}
+                  {...item}
+                  active={activeItem === item.id}
+                  onClick={() => onItemClick?.(item.id)}
+                />
+              ))}
+            </div>
+          )}
         </nav>
         
         {/* Footer with Settings and Shadow Warning */}

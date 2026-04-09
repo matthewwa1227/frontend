@@ -78,12 +78,12 @@ const Dashboard = () => {
   const hasInitialFetchRef = useRef(false);
   const hasUserDataRef = useRef(false); // Track if we've successfully loaded user data
 
-  // Navigation items - simplified to 3 main links
+  // Navigation items - simplified to 3 main links (all in 'main' category)
   const navItems = useMemo(() => [
-    // Main Navigation
-    { id: 'dashboard', label: 'DASHBOARD', icon: 'target', href: '/dashboard' },
-    { id: 'tasks', label: 'TASKS', icon: 'checklist', href: '/tasks', badge: dailyQuests.filter(q => !q.completed).length.toString() },
-    { id: 'timer', label: 'TIMER', icon: 'timer', href: '/timer' },
+    // Main Navigation only
+    { id: 'dashboard', label: 'DASHBOARD', icon: 'target', href: '/dashboard', category: 'main' },
+    { id: 'tasks', label: 'TASKS', icon: 'checklist', href: '/tasks', category: 'main', badge: dailyQuests.filter(q => !q.completed).length.toString() },
+    { id: 'timer', label: 'TIMER', icon: 'timer', href: '/timer', category: 'main' },
   ], [dailyQuests]);
 
   // Load cached data on mount (non-user data only)
