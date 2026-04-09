@@ -347,6 +347,13 @@ const QuestLog = () => {
         user={user}
         isOpen={mobileMenuOpen}
         onClose={() => setMobileMenuOpen(false)}
+        activeItem="tasks"
+        onItemClick={(id) => {
+          const item = navItems.find(n => n.id === id);
+          if (item && item.href) {
+            navigate(item.href);
+          }
+        }}
       />
 
       {/* Main Content */}
