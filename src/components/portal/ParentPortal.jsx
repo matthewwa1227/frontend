@@ -18,8 +18,7 @@ import {
 } from 'lucide-react';
 import { familyAPI } from '../../utils/api';
 import { getUser } from '../../utils/auth';
-import SideNavBar from '../layout/SideNavBar';
-import BottomNavBar from '../layout/BottomNavBar';
+import SideNavBar, { BottomNavBar } from '../layout/SideNavBar';
 
 // Navigation items
 const navItems = [
