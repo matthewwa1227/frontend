@@ -79,7 +79,7 @@ export const defaultNavItems = [
   
   // Study Tools (formerly AI Tools)
   { id: 'study-buddy', label: 'STUDY BUDDY', icon: 'study-buddy', href: '/study-buddy', category: 'study' },
-  { id: 'story-quest', label: 'STORY QUEST', icon: 'story-quest', href: '/story-quest', category: 'study' },
+  { id: 'newquest', label: 'NEWQUEST', icon: 'smart_toy', href: '/newquest', category: 'study' },
   { id: 'schedule', label: 'SCHEDULE', icon: 'schedule', href: '/schedule', category: 'study' },
   { id: 'exercise-gen', label: 'EXERCISE GEN', icon: 'exercise-gen', href: '/exercise-generator', category: 'study' },
   

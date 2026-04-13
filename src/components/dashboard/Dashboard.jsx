@@ -637,7 +637,7 @@ export default function Dashboard() {
 
               {/* AI Story Quest */}
               <button
-                onClick={() => navigate('/story-quest')}
+                onClick={() => navigate('/newquest')}
                 className="bg-amber-800 border-4 border-amber-500 p-6 hover:bg-amber-700 transition-colors pixel-btn group"
               >
                 <div className="text-5xl mb-3 group-hover:bounce-pixel">⚔️</div>
@@ -652,7 +652,7 @@ export default function Dashboard() {
 
               {/* Story Quest RPG */}
               <button
-                onClick={() => navigate('/story-quest')}
+                onClick={() => navigate('/newquest')}
                 className="bg-purple-800 border-4 border-purple-500 p-6 hover:bg-purple-700 transition-colors pixel-btn group"
               >
                 <div className="text-5xl mb-3 group-hover:bounce-pixel">⚔️</div>

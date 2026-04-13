@@ -170,7 +170,7 @@ export const familyAPI = {
     api.patch(`/family/children/${studentId}/burnout-ack`),
 };
 
-// Story Quest RPG API
+// Story Quest RPG API (legacy)
 export const storyQuestAPI = {
   // Generate story content
   generateIntro: (topic) => api.post('/storyquest/intro', { topic }),
@@ -188,6 +188,18 @@ export const storyQuestAPI = {
   
   // Health check
   health: () => api.get('/storyquest/health')
+};
+
+// Newquest - Boss Battle API
+export const newquestAPI = {
+  startBossBattle: (projectId) => api.post('/boss-battles/start', { projectId }),
+  getBossBattle: (id) => api.get(`/boss-battles/${id}`),
+  submitStage: (id, solution, mode = 'normal') => api.post(`/boss-battles/${id}/stage`, { solution, mode }),
+  retryStage: (id) => api.post(`/boss-battles/${id}/retry`),
+  downshift: (id) => api.post(`/boss-battles/${id}/downshift`),
+  retake: (id) => api.post(`/boss-battles/${id}/retake`),
+  getArtifact: (id) => api.get(`/boss-battles/${id}/artifact`),
+  curateArtifact: (id, curatedContent) => api.post(`/boss-battles/${id}/artifact/curate`, { curatedContent }),
 };
 
 // Schedule Generator API (kept for ScheduleGenerator component)

@@ -55,7 +55,7 @@ export default function Navbar() {
   // Study Tools dropdown items
   const studyTools = [
     { path: '/study-buddy', label: 'Study Buddy', icon: MessageCircle, description: 'Chat with AI tutor' },
-    { path: '/story-quest', label: 'Story Quest', icon: Bot, description: 'RPG Learning Adventure' },
+    { path: '/newquest', label: 'Newquest', icon: Bot, description: 'Boss Battle Challenges' },
     { path: '/schedule', label: 'Schedule Generator', icon: CalendarDays, description: 'Plan your study time' },
     { path: '/exercise-generator', label: 'Exercise Generator', icon: FileText, description: 'Printable worksheets' },
   ];

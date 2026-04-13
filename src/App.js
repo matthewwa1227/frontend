@@ -28,6 +28,7 @@ import ScheduleGenerator from './components/ScheduleGenerator/ScheduleGenerator'
 import ExerciseGenerator from './components/ExerciseGenerator/ExerciseGenerator';
 
 import AITutor from './components/AITutor/StoryQuestAI';
+import Newquest from './components/Newquest/Newquest';
 import StudyBuddy from './components/StudyBuddy/StudyBuddy';
 import RevisionMode from './components/AITutor/RevisionMode';
 
@@ -225,18 +226,16 @@ function App() {
           />
 
           <Route 
-            path="/story-quest" 
+            path="/newquest" 
             element={
               <ProtectedRoute allowedRoles={['student']}>
-                <>
-                  <Navbar />
-                  <div className="pt-4">
-                    <AITutor />
-                  </div>
-                </>
+                <Newquest />
               </ProtectedRoute>
             } 
           />
+
+          {/* Legacy redirect */}
+          <Route path="/story-quest" element={<Navigate to="/newquest" replace />} />
 
           {/* Redirect old AI Tutor routes */}
           <Route path="/tutor" element={<Navigate to="/study-buddy" replace />} />

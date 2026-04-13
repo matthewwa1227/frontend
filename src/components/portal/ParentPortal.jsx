@@ -29,7 +29,7 @@ const navItems = [
   { id: 'social', label: 'SOCIAL', icon: 'groups', href: '/social', category: 'main' },
   { id: 'leaderboard', label: 'LEADERBOARD', icon: 'trophy', href: '/leaderboard', category: 'main' },
   { id: 'study-buddy', label: 'STUDY BUDDY', icon: 'chat', href: '/study-buddy', category: 'study' },
-  { id: 'story-quest', label: 'STORY QUEST', icon: 'smart_toy', href: '/story-quest', category: 'study' },
+  { id: 'newquest', label: 'NEWQUEST', icon: 'smart_toy', href: '/newquest', category: 'study' },
   { id: 'schedule', label: 'SCHEDULE', icon: 'calendar_month', href: '/schedule', category: 'study' },
   { id: 'exercise-gen', label: 'EXERCISE GEN', icon: 'edit_document', href: '/exercise-generator', category: 'study' },
   { id: 'portal', label: 'FAMILY PORTAL', icon: 'family_restroom', href: '/portal', category: 'more' },
