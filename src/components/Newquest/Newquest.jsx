@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Terminal, Flag, Play, Broom, CheckCircle, Lock, Skull,
-  Description, LineChart, Bolt, ChevronRight, RotateCcw, Trophy, AlertTriangle,
-  ArrowLeft, Code, Target, Zap, Swords, ArrowBack, ArrowForward, HelpCircle,
-  Lightbulb, MenuBook, Database, WorkspacePremium, ContentCopy, Search,
+  Terminal, Flag, Play, Trash2, CheckCircle, Lock, Skull,
+  FileText, LineChart, Bolt, ChevronRight, RotateCcw, Trophy, AlertTriangle,
+  ArrowLeft, Code, Target, Zap, Swords, ChevronLeft, HelpCircle,
+  Lightbulb, BookOpen, Database, Award, Copy, Search, ClipboardList,
   CheckCheck, Clock, Sparkles, Bell, Settings, TrendingUp,
   LayoutGrid, Bot, GitBranch
 } from 'lucide-react';
@@ -294,7 +294,7 @@ const BossBattleView = ({ battleState, project, artifacts, onBack, onStageSubmit
                   {hotfixMode ? 'EXIT HOTFIX' : 'ENTER HOTFIX'}
                 </PixelBtn>
               )}
-              <PixelBtn onClick={onBack} variant="ghost" icon={ArrowBack}>
+              <PixelBtn onClick={onBack} variant="ghost" icon={ChevronLeft}>
                 BACK
               </PixelBtn>
             </div>
@@ -374,7 +374,7 @@ const BossBattleView = ({ battleState, project, artifacts, onBack, onStageSubmit
             <div className="bg-surface-container-low border-r-4 border-primary p-4 md:p-6 space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className={`${fontRetro} text-[10px] text-tertiary`}>KNOWLEDGE ARTIFACTS</h3>
-                <WorkspacePremium className="w-5 h-5 text-tertiary" />
+                <Award className="w-5 h-5 text-tertiary" />
               </div>
               <div className="space-y-2 max-h-48 overflow-y-auto retro-scroll">
                 {artifacts.length > 0 ? artifacts.map((art) => {
@@ -389,7 +389,7 @@ const BossBattleView = ({ battleState, project, artifacts, onBack, onStageSubmit
                       }`}
                     >
                       <div className="flex items-center gap-3">
-                        <Description className={`w-4 h-4 ${isRelevant ? 'text-white' : 'text-tertiary'}`} />
+                        <FileText className={`w-4 h-4 ${isRelevant ? 'text-white' : 'text-tertiary'}`} />
                         <span className={`font-headline text-sm font-bold tracking-tight ${isRelevant ? 'text-on-primary uppercase' : ''}`}>
                           {art.title}
                         </span>
@@ -492,7 +492,7 @@ const LearnChapterView = ({ chapter, project, artifacts, onBack, onComplete }) =
           <nav className="flex flex-col gap-4">
             <div className="group cursor-pointer">
               <div className="flex items-center gap-3 p-4 bg-primary text-on-primary shadow-[4px_4px_0_0_#ff4a8d] transition-all active:translate-y-1">
-                <MenuBook className="w-5 h-5" />
+                <BookOpen className="w-5 h-5" />
                 <span className={`${fontRetro} text-[8px] uppercase`}>{chapter?.title}</span>
               </div>
             </div>
@@ -500,7 +500,7 @@ const LearnChapterView = ({ chapter, project, artifacts, onBack, onComplete }) =
               <span className={`${fontRetro} text-[8px] text-outline px-2 mb-2 uppercase opacity-50`}>Saved Artifacts</span>
               {artifacts.map((art) => (
                 <div key={art.id} className="flex items-center gap-3 p-3 text-secondary hover:bg-surface-container transition-all cursor-pointer">
-                  <Description className="w-4 h-4" />
+                  <FileText className="w-4 h-4" />
                   <span className="font-headline font-medium text-sm">{art.title}</span>
                 </div>
               ))}
@@ -511,7 +511,7 @@ const LearnChapterView = ({ chapter, project, artifacts, onBack, onComplete }) =
           </nav>
           <div className="mt-auto pt-6 border-t border-outline-variant/20">
             <div className="bg-tertiary/10 p-4 border-l-4 border-tertiary flex gap-3">
-              <WorkspacePremium className="w-5 h-5 text-tertiary flex-shrink-0" />
+              <Award className="w-5 h-5 text-tertiary flex-shrink-0" />
               <div className="flex flex-col">
                 <span className={`${fontRetro} text-[8px] text-tertiary`}>MASTER QUEST</span>
                 <span className="font-body text-xs text-on-surface/80">Complete this chapter to forge a Knowledge Artifact.</span>
@@ -581,7 +581,7 @@ print(f"Void rows banished! New count: {len(df_clean)}")`}
                   onClick={() => handleCopy(content)}
                   className="absolute bottom-4 right-4 bg-surface-container-high p-2 hover:bg-primary-container transition-colors"
                 >
-                  <ContentCopy className="w-4 h-4 text-white" />
+                  <Copy className="w-4 h-4 text-white" />
                 </button>
               </div>
             </article>
@@ -592,9 +592,9 @@ print(f"Void rows banished! New count: {len(df_clean)}")`}
                 onClick={onBack}
                 className="flex items-center gap-2 font-mono text-[10px] text-outline hover:text-primary transition-colors"
               >
-                <ArrowBack className="w-4 h-4" /> PREVIOUS
+                <ArrowLeft className="w-4 h-4" /> PREVIOUS
               </button>
-              <PixelBtn onClick={onComplete} variant="primary" icon={ArrowForward}>
+              <PixelBtn onClick={onComplete} variant="primary" icon={ChevronRight}>
                 COMPLETE QUEST
               </PixelBtn>
             </div>
@@ -644,7 +644,7 @@ const HubView = ({ project, chapters, artifacts, bossBattle, onStartBattle, onRe
     id: ch.id,
     title: ch.title?.toUpperCase() || 'CHAPTER',
     status: ch.status,
-    icon: ch.title?.toLowerCase().includes('clean') ? Broom :
+    icon: ch.title?.toLowerCase().includes('clean') ? Trash2 :
           ch.title?.toLowerCase().includes('csv') || ch.title?.toLowerCase().includes('load') ? Terminal :
           ch.title?.toLowerCase().includes('visual') ? LineChart : Code
   }));
@@ -676,11 +676,11 @@ const HubView = ({ project, chapters, artifacts, bossBattle, onStartBattle, onRe
             <span>SKILL TREE</span>
           </div>
           <div className="flex items-center gap-3 p-3 text-[#ddfcff] opacity-80 hover:bg-[#1a063b] hover:text-white font-['Press_Start_2P'] text-[10px] cursor-pointer">
-            <Assignment className="w-4 h-4" />
+            <ClipboardList className="w-4 h-4" />
             <span>QUEST LOG</span>
           </div>
           <div className="flex items-center gap-3 p-3 text-[#ddfcff] opacity-80 hover:bg-[#1a063b] hover:text-white font-['Press_Start_2P'] text-[10px] cursor-pointer">
-            <Description className="w-4 h-4" />
+            <FileText className="w-4 h-4" />
             <span>ARTIFACTS</span>
           </div>
           <div className="flex items-center gap-3 p-3 text-[#ddfcff] opacity-80 hover:bg-[#1a063b] hover:text-white font-['Press_Start_2P'] text-[10px] cursor-pointer">
@@ -777,7 +777,7 @@ const HubView = ({ project, chapters, artifacts, bossBattle, onStartBattle, onRe
                     } ${step.id === 'boss' && !isLocked ? 'border-tertiary-container' : ''}`}>
                       {isCompleted ? <CheckCircle className="w-8 h-8 md:w-10 md:h-10 text-secondary-fixed-dim" /> :
                        isLocked ? <Lock className="w-8 h-8 md:w-10 md:h-10 text-on-surface-variant" /> :
-                       step.icon === Broom ? <Broom className="w-8 h-8 md:w-10 md:h-10 text-primary" /> :
+                       step.icon === Trash2 ? <Trash2 className="w-8 h-8 md:w-10 md:h-10 text-primary" /> :
                        step.icon === Skull ? <Skull className="w-8 h-8 md:w-10 md:h-10 text-tertiary" /> :
                        step.icon === LineChart ? <LineChart className="w-8 h-8 md:w-10 md:h-10 text-primary" /> :
                        <Terminal className="w-8 h-8 md:w-10 md:h-10 text-secondary-fixed-dim" />}
@@ -825,7 +825,7 @@ const HubView = ({ project, chapters, artifacts, bossBattle, onStartBattle, onRe
           {/* Artifacts */}
           <div className="lg:col-span-1">
             <div className="flex items-center gap-3 mb-4">
-              <Description className="text-tertiary" />
+              <FileText className="text-tertiary" />
               <h3 className="font-headline font-bold text-xl uppercase tracking-tighter">Knowledge Artifacts</h3>
             </div>
             <div className="space-y-4">
@@ -833,7 +833,7 @@ const HubView = ({ project, chapters, artifacts, bossBattle, onStartBattle, onRe
                 <div key={art.id} className="bg-surface-container p-4 border-l-4 border-tertiary flex items-center justify-between group hover:bg-surface-container-high transition-colors">
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 bg-surface-container-highest flex items-center justify-center">
-                      <Description className="text-tertiary" />
+                      <FileText className="text-tertiary" />
                     </div>
                     <div>
                       <h4 className="font-headline font-bold text-sm">{art.title}</h4>
@@ -845,7 +845,7 @@ const HubView = ({ project, chapters, artifacts, bossBattle, onStartBattle, onRe
                 <>
                   <div className="bg-surface-container p-4 border-l-4 border-tertiary flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-surface-container-highest flex items-center justify-center"><Description className="text-tertiary" /></div>
+                      <div className="w-12 h-12 bg-surface-container-highest flex items-center justify-center"><FileText className="text-tertiary" /></div>
                       <div><h4 className="font-headline font-bold text-sm">Pandas Cheat Sheet</h4><p className="text-xs text-on-surface-variant">Forged 2 days ago</p></div>
                     </div>
                   </div>
@@ -925,7 +925,7 @@ const HubView = ({ project, chapters, artifacts, bossBattle, onStartBattle, onRe
           <span>SKILLS</span>
         </div>
         <div className="flex flex-col items-center justify-center text-[#ddfcff] p-2 font-['Press_Start_2P'] text-[8px] uppercase">
-          <Description className="w-5 h-5 mb-1" />
+          <FileText className="w-5 h-5 mb-1" />
           <span>INVENTORY</span>
         </div>
         <div className="flex flex-col items-center justify-center text-[#ddfcff] p-2 font-['Press_Start_2P'] text-[8px] uppercase">
