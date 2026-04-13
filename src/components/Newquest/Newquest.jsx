@@ -231,7 +231,7 @@ const BossBattleView = ({ battleState, project, artifacts, onBack, onStageSubmit
             <ClipboardList className="w-5 h-5" />
             <span className="font-headline uppercase text-xs">Quest Log</span>
           </button>
-          <button className="w-full text-left text-on-surface flex items-center gap-3 px-6 py-4 opacity-70 hover:bg-background hover:opacity-100 transition-all hover:translate-x-1">
+          <button onClick={onBack} className="w-full text-left text-on-surface flex items-center gap-3 px-6 py-4 opacity-70 hover:bg-background hover:opacity-100 transition-all hover:translate-x-1">
             <TrendingUp className="w-5 h-5" />
             <span className="font-headline uppercase text-xs">Hall of Heroes</span>
           </button>
@@ -239,11 +239,11 @@ const BossBattleView = ({ battleState, project, artifacts, onBack, onStageSubmit
             <Swords className="w-5 h-5" />
             <span className="font-headline uppercase text-xs">Boss Battle</span>
           </div>
-          <button className="w-full text-left text-on-surface flex items-center gap-3 px-6 py-4 opacity-70 hover:bg-background hover:opacity-100 transition-all hover:translate-x-1">
+          <button onClick={onBack} className="w-full text-left text-on-surface flex items-center gap-3 px-6 py-4 opacity-70 hover:bg-background hover:opacity-100 transition-all hover:translate-x-1">
             <BookOpen className="w-5 h-5" />
             <span className="font-headline uppercase text-xs">Artifacts</span>
           </button>
-          <button className="w-full text-left text-on-surface flex items-center gap-3 px-6 py-4 opacity-70 hover:bg-background hover:opacity-100 transition-all hover:translate-x-1">
+          <button onClick={onBack} className="w-full text-left text-on-surface flex items-center gap-3 px-6 py-4 opacity-70 hover:bg-background hover:opacity-100 transition-all hover:translate-x-1">
             <Bot className="w-5 h-5" />
             <span className="font-headline uppercase text-xs">Hero Stats</span>
           </button>
@@ -757,18 +757,37 @@ const HubView = ({ project, chapters, artifacts, bossBattle, activeTab, onTabCha
   });
 
   const navItems = [
-    { id: 'skilltree', label: 'SKILL TREE', icon: GitBranch },
-    { id: 'quests', label: 'QUEST LOG', icon: ClipboardList },
-    { id: 'artifacts', label: 'ARTIFACTS', icon: FileText },
-    { id: 'rankings', label: 'RANKINGS', icon: TrendingUp },
+    { id: 'quests', label: 'Quest Log', icon: ClipboardList },
+    { id: 'rankings', label: 'Hall of Heroes', icon: Trophy },
+    { id: 'boss', label: 'Boss Battle', icon: Swords },
+    { id: 'artifacts', label: 'Artifacts', icon: FileText },
+    { id: 'skilltree', label: 'Hero Stats', icon: User },
   ];
 
   const mobileItems = [
-    { id: 'skilltree', label: 'DASHBOARD', icon: LayoutGrid },
-    { id: 'quests', label: 'SKILLS', icon: Bolt },
-    { id: 'artifacts', label: 'INVENTORY', icon: FileText },
-    { id: 'rankings', label: 'AI HELPER', icon: Bot },
+    { id: 'quests', label: 'Quests', icon: LayoutGrid },
+    { id: 'rankings', label: 'Rankings', icon: Trophy },
+    { id: 'boss', label: 'Battle', icon: Swords },
+    { id: 'artifacts', label: 'Library', icon: FileText },
   ];
+
+  const handleStartQuest = () => {
+    const activeCh = chapters.find(c => c.status === 'active');
+    if (activeCh && onLearnChapter) {
+      onLearnChapter(activeCh);
+    } else if (chapters.every(c => c.status === 'completed') && onStartBattle) {
+      onStartBattle();
+    }
+  };
+
+  const handleBossBattleNav = () => {
+    onTabChange('quests');
+    if (bossBattle?.status === 'active' || bossBattle?.status === 'in_progress') {
+      if (onResumeBattle) onResumeBattle();
+    } else if (onStartBattle) {
+      onStartBattle();
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background text-on-background font-body pb-24">
@@ -791,10 +810,14 @@ const HubView = ({ project, chapters, artifacts, bossBattle, activeTab, onTabCha
           {navItems.map((item) => {
             const isActive = activeTab === item.id;
             const Icon = item.icon;
+            const isBoss = item.id === 'boss';
             return (
               <div
                 key={item.id}
-                onClick={() => onTabChange(item.id)}
+                onClick={() => {
+                  if (isBoss) handleBossBattleNav();
+                  else onTabChange(item.id);
+                }}
                 className={`flex items-center gap-4 px-6 py-4 transition-transform duration-75 cursor-pointer ${
                   isActive
                     ? 'bg-[#ffb1c4] text-[#1a063b] border-l-4 border-[#e9c400]'
@@ -808,7 +831,10 @@ const HubView = ({ project, chapters, artifacts, bossBattle, activeTab, onTabCha
           })}
         </nav>
         <div className="px-6 mt-auto">
-          <button className="w-full py-4 bg-primary-container text-on-primary font-game text-[10px] uppercase shadow-[0_4px_0_0_#8f0044] hover:shadow-none hover:translate-y-1 transition-all duration-75">
+          <button
+            onClick={handleStartQuest}
+            className="w-full py-4 bg-primary-container text-on-primary font-game text-[10px] uppercase shadow-[0_4px_0_0_#8f0044] hover:shadow-none hover:translate-y-1 transition-all duration-75"
+          >
             START QUEST
           </button>
         </div>
@@ -847,10 +873,14 @@ const HubView = ({ project, chapters, artifacts, bossBattle, activeTab, onTabCha
         {mobileItems.map((item) => {
           const isActive = activeTab === item.id;
           const Icon = item.icon;
+          const isBoss = item.id === 'boss';
           return (
             <div
               key={item.id}
-              onClick={() => onTabChange(item.id)}
+              onClick={() => {
+                if (isBoss) handleBossBattleNav();
+                else onTabChange(item.id);
+              }}
               className={`flex flex-col items-center justify-center py-2 px-4 font-['Press_Start_2P'] text-[8px] uppercase cursor-pointer ${
                 isActive ? 'bg-[#ffb1c4] text-[#1a063b]' : 'text-[#ddfcff] hover:bg-[#ff4a8d]'
               }`}
@@ -1163,7 +1193,7 @@ const QuestsContent = ({ chapters, bossBattle, onLearnChapter, onStartBattle, on
             const tierColor = isActive ? 'text-tertiary border-tertiary' : isCompleted ? 'text-secondary border-secondary' : 'text-secondary-fixed-dim border-secondary-fixed-dim';
 
             return isCompleted ? (
-              <div key={ch.id} className="bg-background p-4 border-2 border-outline-variant/30 flex items-center justify-between group cursor-pointer" onClick={() => onLearnChapter && onLearnChapter(ch)}>
+              <div key={ch.id} className="bg-background p-4 border-2 border-outline-variant/30 flex items-center justify-between group cursor-pointer" onClick={() => onLearnChapter(ch)}>
                 <div className="flex items-center gap-4">
                   <Swords className="text-tertiary w-6 h-6" />
                   <div>
@@ -1218,7 +1248,7 @@ const QuestsContent = ({ chapters, bossBattle, onLearnChapter, onStartBattle, on
                   <div className="w-full md:w-auto flex flex-col gap-3">
                     {isActive ? (
                       <>
-                        <button onClick={() => onLearnChapter && onLearnChapter(ch)} className="bg-primary-container hover:translate-y-0.5 transition-transform text-white font-['Press_Start_2P'] text-[10px] py-4 px-8 border-b-4 border-on-primary-fixed-variant active:border-b-0 active:translate-y-1">START CHAPTER</button>
+                        <button onClick={() => onLearnChapter(ch)} className="bg-primary-container hover:translate-y-0.5 transition-transform text-white font-['Press_Start_2P'] text-[10px] py-4 px-8 border-b-4 border-on-primary-fixed-variant active:border-b-0 active:translate-y-1">START CHAPTER</button>
                         <button className="bg-surface-container-highest hover:bg-surface-bright text-primary font-['Press_Start_2P'] text-[10px] py-4 px-8 border-b-4 border-background">REVIEW NOTES</button>
                       </>
                     ) : (
