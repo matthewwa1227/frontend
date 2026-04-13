@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Terminal, Flag, PlayArrow, CleaningServices, CheckCircle, Lock, Skull, 
   Description, AutoGraph, Bolt, ChevronRight, RotateCcw, Trophy, AlertTriangle,
-  ArrowLeft, Code, Target, Zap, Swords, ArrowBack, ArrowForward, HelpCenter,
+  ArrowLeft, Code, Target, Zap, Swords, ArrowBack, ArrowForward, HelpCircle,
   Psychology, MenuBook, Database, WorkspacePremium, ContentCopy, Search,
   DoneAll, Schedule, AutoAwesome, Notifications, Settings, TrendingUp,
   GridView, Bot, AccountTree
@@ -106,7 +106,7 @@ const KimiFooter = ({ message, onHint, onDownshift, showDownshift = false, varia
     </div>
     <div className="flex items-center gap-4">
       {onHint && (
-        <PixelBtn onClick={onHint} variant="tertiary" icon={HelpCenter} className="text-[8px] py-2">
+        <PixelBtn onClick={onHint} variant="tertiary" icon={HelpCircle} className="text-[8px] py-2">
           REQUEST HINT
         </PixelBtn>
       )}
@@ -624,7 +624,7 @@ print(f"Void rows banished! New count: {len(df_clean)}")`}
             </div>
           </div>
           <button className="p-2 border-2 border-outline-variant hover:border-primary text-outline hover:text-primary transition-all">
-            <HelpCenter className="w-5 h-5" />
+            <HelpCircle className="w-5 h-5" />
           </button>
         </div>
       </footer>
