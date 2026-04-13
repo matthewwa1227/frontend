@@ -6,7 +6,7 @@ import {
   ArrowLeft, Code, Target, Zap, Swords, ArrowBack, ArrowForward, HelpCenter,
   Psychology, MenuBook, Database, WorkspacePremium, ContentCopy, Search,
   DoneAll, Schedule, AutoAwesome, Notifications, Settings, TrendingUp,
-  GridView, SmartToy, AccountTree
+  GridView, Bot, AccountTree
 } from 'lucide-react';
 import api from '../../utils/api';
 
@@ -96,7 +96,7 @@ const KimiFooter = ({ message, onHint, onDownshift, showDownshift = false, varia
   <footer className={`fixed bottom-0 left-0 w-full z-40 bg-[#1a063b] border-t-4 ${variant === 'arena' ? 'border-[#ffb1c4]' : 'border-primary'} shadow-[0_-4px_0_0_#271448] p-4 flex flex-col md:flex-row items-center justify-between gap-4`}>
     <div className="flex items-center gap-4">
       <div className="relative w-12 h-12 bg-surface-container-highest border-2 border-primary overflow-hidden flex items-center justify-center">
-        <SmartToy className="w-8 h-8 text-secondary" />
+        <Bot className="w-8 h-8 text-secondary" />
         <div className="absolute -top-1 -right-1 w-3 h-3 bg-tertiary animate-pulse border-2 border-[#1a063b]" />
       </div>
       <div>
@@ -606,7 +606,7 @@ print(f"Void rows banished! New count: {len(df_clean)}")`}
       <footer className="h-20 bg-[#1a063b]/90 backdrop-blur-md flex items-center justify-between px-8 border-t-4 border-primary sticky bottom-0 z-50">
         <div className="flex items-center gap-4">
           <div className="relative w-10 h-10 bg-secondary-container flex items-center justify-center">
-            <SmartToy className="w-6 h-6 text-on-secondary" />
+            <Bot className="w-6 h-6 text-on-secondary" />
             <div className="absolute -top-1 -right-1 w-3 h-3 bg-tertiary animate-pulse border-2 border-[#1a063b]" />
           </div>
           <div className="flex flex-col">
@@ -739,11 +739,11 @@ const HubView = ({ project, chapters, artifacts, bossBattle, onStartBattle, onRe
           {/* Kimi Advice */}
           <div className="bg-surface-container p-6 border-4 border-outline-variant relative shadow-[4px_4px_0_0_#1a063b] flex flex-col justify-center">
             <div className="absolute top-0 right-0 p-2 opacity-20">
-              <SmartToy className="w-10 h-10 text-tertiary" />
+              <Bot className="w-10 h-10 text-tertiary" />
             </div>
             <div className="flex items-center gap-4 mb-4">
               <div className="w-12 h-12 bg-tertiary-container flex items-center justify-center p-2">
-                <SmartToy className="w-8 h-8 text-on-tertiary" />
+                <Bot className="w-8 h-8 text-on-tertiary" />
               </div>
               <h3 className="font-headline font-bold text-tertiary">KIMI'S ADVICE</h3>
             </div>
@@ -929,7 +929,7 @@ const HubView = ({ project, chapters, artifacts, bossBattle, onStartBattle, onRe
           <span>INVENTORY</span>
         </div>
         <div className="flex flex-col items-center justify-center text-[#ddfcff] p-2 font-['Press_Start_2P'] text-[8px] uppercase">
-          <SmartToy className="w-5 h-5 mb-1" />
+          <Bot className="w-5 h-5 mb-1" />
           <span>AI HELPER</span>
         </div>
       </nav>
