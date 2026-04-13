@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Terminal, Flag, PlayArrow, CleaningServices, CheckCircle, Lock, Skull, 
-  Description, AutoGraph, Bolt, ChevronRight, RotateCcw, Trophy, AlertTriangle,
+  Terminal, Flag, Play, Broom, CheckCircle, Lock, Skull,
+  Description, LineChart, Bolt, ChevronRight, RotateCcw, Trophy, AlertTriangle,
   ArrowLeft, Code, Target, Zap, Swords, ArrowBack, ArrowForward, HelpCircle,
-  Psychology, MenuBook, Database, WorkspacePremium, ContentCopy, Search,
-  DoneAll, Schedule, AutoAwesome, Notifications, Settings, TrendingUp,
-  GridView, Bot, AccountTree
+  Lightbulb, MenuBook, Database, WorkspacePremium, ContentCopy, Search,
+  CheckCheck, Clock, Sparkles, Bell, Settings, TrendingUp,
+  LayoutGrid, Bot, GitBranch
 } from 'lucide-react';
 import api from '../../utils/api';
 
@@ -282,7 +282,7 @@ const BossBattleView = ({ battleState, project, artifacts, onBack, onStageSubmit
                 onClick={handleSubmit} 
                 disabled={submitting || !solution.trim()} 
                 variant={hotfixMode ? 'danger' : 'primary'} 
-                icon={hotfixMode ? AlertTriangle : PlayArrow}
+                icon={hotfixMode ? AlertTriangle : Play}
               >
                 {submitting ? 'VALIDATING...' : hotfixMode ? 'SUBMIT HOTFIX' : 'SUBMIT SOLUTION'}
               </PixelBtn>
@@ -467,7 +467,7 @@ const LearnChapterView = ({ chapter, project, artifacts, onBack, onComplete }) =
             </div>
           </div>
           <div className="flex gap-4">
-            <Notifications className="w-6 h-6 text-[#ffb1c4] cursor-pointer hover:bg-[#271448] p-1 rounded transition-all" />
+            <Bell className="w-6 h-6 text-[#ffb1c4] cursor-pointer hover:bg-[#271448] p-1 rounded transition-all" />
             <Settings className="w-6 h-6 text-[#ffb1c4] cursor-pointer hover:bg-[#271448] p-1 rounded transition-all" />
           </div>
         </div>
@@ -528,9 +528,9 @@ const LearnChapterView = ({ chapter, project, artifacts, onBack, onComplete }) =
               <div className="absolute -top-6 -left-6 w-24 h-24 bg-primary/5 rounded-full blur-3xl" />
               <h2 className={`${fontRetro} text-2xl md:text-3xl text-primary leading-relaxed uppercase mb-4 relative z-10`}>{chapter?.title}</h2>
               <div className="flex items-center gap-4 font-headline text-secondary tracking-widest uppercase text-sm font-bold opacity-80">
-                <span className="flex items-center gap-1"><Schedule className="w-4 h-4" /> 15 MIN QUEST</span>
+                <span className="flex items-center gap-1"><Clock className="w-4 h-4" /> 15 MIN QUEST</span>
                 <span className="w-1 h-1 bg-outline rounded-full" />
-                <span className="flex items-center gap-1"><AutoAwesome className="w-4 h-4" /> 450 XP REWARD</span>
+                <span className="flex items-center gap-1"><Sparkles className="w-4 h-4" /> 450 XP REWARD</span>
               </div>
             </div>
 
@@ -538,7 +538,7 @@ const LearnChapterView = ({ chapter, project, artifacts, onBack, onComplete }) =
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="md:col-span-2 bg-surface-container-low p-6 border-2 border-outline-variant relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-32 h-32 opacity-5 pointer-events-none transform translate-x-10 -translate-y-10">
-                  <Psychology className="w-32 h-32" />
+                  <Lightbulb className="w-32 h-32" />
                 </div>
                 <h3 className={`${fontRetro} text-[10px] text-tertiary mb-4 uppercase`}>Why It Matters</h3>
                 <p className="font-body text-on-surface leading-relaxed text-lg">{whyItMatters}</p>
@@ -548,7 +548,7 @@ const LearnChapterView = ({ chapter, project, artifacts, onBack, onComplete }) =
                 <ul className="space-y-3 font-headline text-sm font-bold text-on-surface-variant">
                   {keyPoints.map((pt, i) => (
                     <li key={i} className="flex items-start gap-2">
-                      <DoneAll className="w-5 h-5 text-primary flex-shrink-0" />
+                      <CheckCheck className="w-5 h-5 text-primary flex-shrink-0" />
                       <span>{String(pt).toUpperCase()}</span>
                     </li>
                   ))}
@@ -644,9 +644,9 @@ const HubView = ({ project, chapters, artifacts, bossBattle, onStartBattle, onRe
     id: ch.id,
     title: ch.title?.toUpperCase() || 'CHAPTER',
     status: ch.status,
-    icon: ch.title?.toLowerCase().includes('clean') ? CleaningServices : 
+    icon: ch.title?.toLowerCase().includes('clean') ? Broom :
           ch.title?.toLowerCase().includes('csv') || ch.title?.toLowerCase().includes('load') ? Terminal :
-          ch.title?.toLowerCase().includes('visual') ? AutoGraph : Code
+          ch.title?.toLowerCase().includes('visual') ? LineChart : Code
   }));
 
   skillSteps.push({
@@ -672,7 +672,7 @@ const HubView = ({ project, chapters, artifacts, bossBattle, onStartBattle, onRe
         </div>
         <nav className="flex-1 py-6 space-y-2">
           <div className="flex items-center gap-3 p-3 bg-[#1a063b] text-[#ffb1c4] border-l-4 border-[#ffb1c4] font-['Press_Start_2P'] text-[10px] cursor-pointer">
-            <AccountTree className="w-4 h-4" />
+            <GitBranch className="w-4 h-4" />
             <span>SKILL TREE</span>
           </div>
           <div className="flex items-center gap-3 p-3 text-[#ddfcff] opacity-80 hover:bg-[#1a063b] hover:text-white font-['Press_Start_2P'] text-[10px] cursor-pointer">
@@ -756,7 +756,7 @@ const HubView = ({ project, chapters, artifacts, bossBattle, onStartBattle, onRe
         {/* Skill Tree */}
         <section className="mb-12">
           <div className="flex items-center gap-4 mb-6">
-            <AccountTree className="text-primary text-3xl" />
+            <GitBranch className="text-primary text-3xl" />
             <h2 className="font-headline font-extrabold text-2xl tracking-tight uppercase">Project Skill Tree</h2>
           </div>
           <div className="bg-surface-container-low p-8 md:p-12 relative overflow-hidden border-2 border-outline-variant/20">
@@ -777,9 +777,9 @@ const HubView = ({ project, chapters, artifacts, bossBattle, onStartBattle, onRe
                     } ${step.id === 'boss' && !isLocked ? 'border-tertiary-container' : ''}`}>
                       {isCompleted ? <CheckCircle className="w-8 h-8 md:w-10 md:h-10 text-secondary-fixed-dim" /> :
                        isLocked ? <Lock className="w-8 h-8 md:w-10 md:h-10 text-on-surface-variant" /> :
-                       step.icon === CleaningServices ? <CleaningServices className="w-8 h-8 md:w-10 md:h-10 text-primary" /> :
+                       step.icon === Broom ? <Broom className="w-8 h-8 md:w-10 md:h-10 text-primary" /> :
                        step.icon === Skull ? <Skull className="w-8 h-8 md:w-10 md:h-10 text-tertiary" /> :
-                       step.icon === AutoGraph ? <AutoGraph className="w-8 h-8 md:w-10 md:h-10 text-primary" /> :
+                       step.icon === LineChart ? <LineChart className="w-8 h-8 md:w-10 md:h-10 text-primary" /> :
                        <Terminal className="w-8 h-8 md:w-10 md:h-10 text-secondary-fixed-dim" />}
                       
                       {isCompleted && <div className="absolute -top-3 -right-3 bg-secondary-fixed-dim text-on-secondary px-2 py-0.5 font-mono text-[8px]">DONE</div>}
@@ -851,7 +851,7 @@ const HubView = ({ project, chapters, artifacts, bossBattle, onStartBattle, onRe
                   </div>
                   <div className="bg-surface-container p-4 border-l-4 border-outline-variant opacity-50 flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-surface-container-highest flex items-center justify-center"><AutoGraph className="text-on-surface-variant" /></div>
+                      <div className="w-12 h-12 bg-surface-container-highest flex items-center justify-center"><LineChart className="text-on-surface-variant" /></div>
                       <div><h4 className="font-headline font-bold text-sm">Matplotlib Scroll</h4><p className="text-xs text-on-surface-variant">Unlock to Forge</p></div>
                     </div>
                   </div>
@@ -895,7 +895,7 @@ const HubView = ({ project, chapters, artifacts, bossBattle, onStartBattle, onRe
                   )}
                   
                   {activeChapter ? (
-                    <PixelBtn onClick={() => onLearnChapter(activeChapter)} variant="primary" icon={PlayArrow}>
+                    <PixelBtn onClick={() => onLearnChapter(activeChapter)} variant="primary" icon={Play}>
                       BEGIN CODING QUEST
                     </PixelBtn>
                   ) : chapters.every(c => c.status === 'completed') && !bossBattle ? (
@@ -903,7 +903,7 @@ const HubView = ({ project, chapters, artifacts, bossBattle, onStartBattle, onRe
                       START BOSS BATTLE
                     </PixelBtn>
                   ) : (
-                    <PixelBtn onClick={onResumeBattle} variant="primary" icon={PlayArrow}>
+                    <PixelBtn onClick={onResumeBattle} variant="primary" icon={Play}>
                       {bossBattle?.status === 'active' ? 'RESUME BOSS BATTLE' : 'CONTINUE'}
                     </PixelBtn>
                   )}
@@ -917,7 +917,7 @@ const HubView = ({ project, chapters, artifacts, bossBattle, onStartBattle, onRe
       {/* Mobile BottomNav */}
       <nav className="fixed bottom-0 left-0 w-full flex justify-around items-center h-16 bg-[#1a063b] border-t-4 border-[#ffb1c4] shadow-[0_-4px_0_0_#271448] md:hidden z-50">
         <div className="flex flex-col items-center justify-center bg-[#271448] text-[#ffb1c4] p-2 font-['Press_Start_2P'] text-[8px] uppercase">
-          <GridView className="w-5 h-5 mb-1" />
+          <LayoutGrid className="w-5 h-5 mb-1" />
           <span>DASHBOARD</span>
         </div>
         <div className="flex flex-col items-center justify-center text-[#ddfcff] p-2 font-['Press_Start_2P'] text-[8px] uppercase">
