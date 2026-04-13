@@ -6,7 +6,7 @@ import {
   ArrowLeft, Code, Target, Zap, Swords, ChevronLeft, HelpCircle,
   Lightbulb, BookOpen, Database, Award, Copy, Search, ClipboardList,
   CheckCheck, Clock, Sparkles, Bell, Settings, TrendingUp,
-  LayoutGrid, Bot, GitBranch
+  LayoutGrid, Bot, GitBranch, User, Shield, FlaskConical, Gem, Pin, X
 } from 'lucide-react';
 import api from '../../utils/api';
 
@@ -558,7 +558,7 @@ const LearnChapterView = ({ chapter, project, artifacts, onBack, onComplete }) =
         <div className="flex items-center gap-6">
           <div className="hidden md:flex items-center gap-4 bg-surface-container p-2 pr-4 border-2 border-primary-container">
             <div className="w-10 h-10 bg-primary-container flex items-center justify-center">
-              <span className="text-lg">🎓</span>
+              <User className="w-5 h-5 text-primary" />
             </div>
             <div className="flex flex-col">
               <span className={`${fontRetro} text-[8px] text-primary`}>SCHOLAR</span>
@@ -779,7 +779,7 @@ const HubView = ({ project, chapters, artifacts, bossBattle, activeTab, onTabCha
         <div className="px-6 mb-10">
           <div className="flex items-center gap-3 mb-2">
             <div className="w-10 h-10 bg-surface-container-highest flex items-center justify-center">
-              <span className="text-xl">🧙</span>
+              <User className="w-5 h-5 text-tertiary" />
             </div>
             <div>
               <p className="font-game text-[10px] text-[#e9c400] uppercase leading-none">ARCHIVIST</p>
@@ -1101,13 +1101,13 @@ const QuestsContent = ({ chapters, bossBattle, onLearnChapter, onStartBattle, on
       <div className="lg:col-span-4 space-y-8 order-2 lg:order-1">
         <section className="bg-surface-container shadow-[4px_4px_0_0_#150136] border-2 border-outline-variant p-6 relative overflow-hidden">
           <div className="absolute -top-4 -right-4 opacity-10">
-            <span className="text-[120px]">🛡️</span>
+            <Shield className="w-24 h-24 text-primary opacity-10" />
           </div>
           <h3 className={`${fontRetro} text-primary text-[10px] mb-6 uppercase tracking-tight`}>Hero Status</h3>
           <div className="space-y-6">
             <div className="flex items-center gap-4">
               <div className="w-16 h-16 bg-surface-container-highest border-4 border-primary flex items-center justify-center">
-                <span className="text-3xl">🧙</span>
+                <User className="w-8 h-8 text-primary" />
               </div>
               <div>
                 <p className={`${fontRetro} text-xs text-on-surface`}>CYBER_MONK</p>
@@ -1130,9 +1130,9 @@ const QuestsContent = ({ chapters, bossBattle, onLearnChapter, onStartBattle, on
         <section className="bg-surface-container shadow-[4px_4px_0_0_#150136] border-2 border-outline-variant p-6">
           <h3 className={`${fontRetro} text-primary text-[10px] mb-6 uppercase tracking-tight`}>Unlocked Artifacts</h3>
           <div className="grid grid-cols-3 gap-3">
-            {['📜','🔬','💎','🔒','🔒','🔒'].map((icon, i) => (
-              <div key={i} className={`aspect-square bg-background border-2 border-outline-variant flex items-center justify-center ${icon === '🔒' ? 'opacity-30' : 'cursor-pointer hover:border-tertiary transition-colors group'}`}>
-                <span className={`text-xl ${icon === '🔒' ? '' : 'group-hover:scale-110 transition-transform'}`}>{icon}</span>
+            {[BookOpen, FlaskConical, Gem, Lock, Lock, Lock].map((Icon, i) => (
+              <div key={i} className={`aspect-square bg-background border-2 border-outline-variant flex items-center justify-center ${i > 2 ? 'opacity-30' : 'cursor-pointer hover:border-tertiary transition-colors group'}`}>
+                <Icon className={`w-6 h-6 ${i > 2 ? 'text-on-surface' : 'text-tertiary group-hover:scale-110 transition-transform'}`} />
               </div>
             ))}
           </div>
@@ -1165,7 +1165,7 @@ const QuestsContent = ({ chapters, bossBattle, onLearnChapter, onStartBattle, on
             return isCompleted ? (
               <div key={ch.id} className="bg-background p-4 border-2 border-outline-variant/30 flex items-center justify-between group cursor-pointer" onClick={() => onLearnChapter && onLearnChapter(ch)}>
                 <div className="flex items-center gap-4">
-                  <span className="text-tertiary text-2xl">⚔️</span>
+                  <Swords className="text-tertiary w-6 h-6" />
                   <div>
                     <h4 className="text-on-surface/40 font-['Space_Grotesk'] font-bold text-lg uppercase tracking-wide line-through">{ch.title}</h4>
                     <p className="text-[8px] font-['Press_Start_2P'] text-tertiary">COMPLETED +{reward} XP</p>
@@ -1456,10 +1456,10 @@ const ArtifactsContent = ({ artifacts, chapters, onLearnChapter, onStartBattle }
                     </div>
                     <div className="flex gap-2">
                       <button className="w-10 h-10 bg-surface-container flex items-center justify-center hover:bg-surface-container-high transition-colors text-tertiary">
-                        <span className="text-lg">📌</span>
+                        <Pin className="w-5 h-5" />
                       </button>
                       <button onClick={() => setSelected(null)} className="w-10 h-10 bg-surface-container flex items-center justify-center hover:bg-surface-container-high transition-colors text-on-surface-variant">
-                        ✕
+                        <X className="w-5 h-5" />
                       </button>
                     </div>
                   </div>
@@ -1930,7 +1930,7 @@ export default function Newquest() {
     return (
       <div className="min-h-screen bg-background text-on-background flex items-center justify-center">
         <div className="text-center">
-          <div className="text-4xl mb-4 animate-pulse">⚔️</div>
+          <Swords className="w-12 h-12 mb-4 animate-pulse text-primary mx-auto" />
           <p className={`${fontRetro} text-[10px] text-primary`}>Loading Newquest...</p>
         </div>
       </div>
