@@ -1,5 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
+import { getUser } from '../../utils/auth';
 import { 
   Terminal, Flag, Play, Trash2, CheckCircle, Lock, Skull,
   FileText, LineChart, Bolt, ChevronRight, RotateCcw, Trophy, AlertTriangle,
@@ -9,6 +11,8 @@ import {
   LayoutGrid, Bot, GitBranch, User, Shield, FlaskConical, Gem, Pin, X
 } from 'lucide-react';
 import api from '../../utils/api';
+import TopAppBar from '../layout/TopAppBar';
+import SideNavBar, { BottomNavBar, defaultNavItems } from '../layout/SideNavBar';
 
 // ============================================
 // API SERVICE
@@ -193,65 +197,18 @@ const BossBattleView = ({ battleState, project, artifacts, onBack, onStageSubmit
   const previousSolution = activeStageNumber > 1 ? stageSolutions[activeStageNumber - 2] : null;
 
   return (
-    <div className="min-h-screen bg-background text-on-background font-body">
-      {/* TopBar */}
-      <header className="fixed top-0 w-full z-50 flex justify-between items-center px-6 h-16 bg-background border-b-4 border-surface-container shadow-[0_0_20px_rgba(255,177,196,0.1)]">
-        <div className="flex items-center gap-4">
-          <span className="text-xl font-bold tracking-tighter text-primary uppercase font-headline">NEON RELIC</span>
-          <div className="h-8 w-px bg-outline-variant/30 mx-2 hidden md:block" />
-          <div className="hidden md:flex items-center gap-2">
-            <Swords className="text-tertiary w-5 h-5" />
-            <span className={`${fontRetro} text-[10px] text-tertiary uppercase`}>BOSS BATTLE: THE SYNTHESIS</span>
-          </div>
+    <div className="bg-background text-on-background font-body px-4 md:px-8 pb-8">
+      {/* Back Bar */}
+      <div className="flex items-center gap-4 mb-6">
+        <button onClick={onBack} className="flex items-center gap-2 text-on-surface/70 hover:text-primary transition-colors px-3 py-2 bg-surface-container border-2 border-outline-variant/20">
+          <ArrowLeft className="w-4 h-4" />
+          <span className={`${fontRetro} text-[10px] uppercase`}>Back to Hub</span>
+        </button>
+        <div className="flex items-center gap-2">
+          <Swords className="text-tertiary w-5 h-5" />
+          <span className={`${fontRetro} text-[10px] text-tertiary uppercase`}>BOSS BATTLE: THE SYNTHESIS</span>
         </div>
-        <div className="flex items-center gap-6">
-          <div className="hidden md:flex items-center bg-surface-container-low px-4 py-1 border-2 border-outline-variant/20">
-            <Search className="text-secondary text-sm w-4 h-4 mr-2" />
-            <input className="bg-transparent border-none focus:ring-0 text-[10px] font-game text-secondary placeholder:text-secondary/30 w-48 uppercase" placeholder="SEARCH RELICS..." />
-          </div>
-          <div className="flex gap-4">
-            <button onClick={onBack} className="text-on-surface/60 hover:bg-surface-container hover:text-primary transition-colors duration-75 p-2">
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-            <button className="text-on-surface/60 hover:bg-surface-container hover:text-primary transition-colors duration-75 p-2">
-              <Settings className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* SideNav */}
-      <aside className="hidden md:flex flex-col fixed left-0 top-16 h-[calc(100vh-64px)] z-40 bg-surface-container w-64 border-r-4 border-background shadow-[4px_0_0_0_#1a063b]">
-        <div className="p-6 border-b-4 border-background">
-          <h2 className={`${fontRetro} text-primary text-lg mb-1`}>HERO TERMINAL</h2>
-          <p className="font-headline uppercase text-xs text-secondary/60 tracking-widest">LVL 42 SCHOLAR</p>
-        </div>
-        <nav className="flex-1 py-4">
-          <button onClick={onBack} className="w-full text-left text-on-surface flex items-center gap-3 px-6 py-4 opacity-70 hover:bg-background hover:opacity-100 transition-all hover:translate-x-1">
-            <ClipboardList className="w-5 h-5" />
-            <span className="font-headline uppercase text-xs">Quest Log</span>
-          </button>
-          <button onClick={onBack} className="w-full text-left text-on-surface flex items-center gap-3 px-6 py-4 opacity-70 hover:bg-background hover:opacity-100 transition-all hover:translate-x-1">
-            <TrendingUp className="w-5 h-5" />
-            <span className="font-headline uppercase text-xs">Hall of Heroes</span>
-          </button>
-          <div className="w-full bg-primary-container text-white flex items-center gap-3 px-6 py-4 border-b-4 border-[#8b1e45]">
-            <Swords className="w-5 h-5" />
-            <span className="font-headline uppercase text-xs">Boss Battle</span>
-          </div>
-          <button onClick={onBack} className="w-full text-left text-on-surface flex items-center gap-3 px-6 py-4 opacity-70 hover:bg-background hover:opacity-100 transition-all hover:translate-x-1">
-            <BookOpen className="w-5 h-5" />
-            <span className="font-headline uppercase text-xs">Artifacts</span>
-          </button>
-          <button onClick={onBack} className="w-full text-left text-on-surface flex items-center gap-3 px-6 py-4 opacity-70 hover:bg-background hover:opacity-100 transition-all hover:translate-x-1">
-            <Bot className="w-5 h-5" />
-            <span className="font-headline uppercase text-xs">Hero Stats</span>
-          </button>
-        </nav>
-      </aside>
-
-      {/* Main Canvas */}
-      <main className="md:ml-64 mt-16 p-6 min-h-[calc(100vh-64px)] pb-24 md:pb-6">
+      </div>
         {/* Battle Arena Header */}
         <section className="mb-8">
           <div className="flex justify-between items-end mb-4">
@@ -515,7 +472,6 @@ const BossBattleView = ({ battleState, project, artifacts, onBack, onStageSubmit
             </div>
           </button>
         </div>
-      </main>
     </div>
   );
 };
@@ -537,44 +493,17 @@ const LearnChapterView = ({ chapter, project, artifacts, onBack, onComplete }) =
   const whyItMatters = chapter?.why_it_matters || 'This skill is essential for completing your project.';
 
   return (
-    <div className="min-h-screen bg-background text-on-background font-body overflow-hidden flex flex-col">
-      {/* Header */}
-      <header className="bg-[#1a063b] flex justify-between items-center w-full px-6 py-4 shadow-[0_0_40px_rgba(255,177,196,0.1)] sticky top-0 z-50">
-        <div className="flex items-center gap-8">
-          <h1 className="text-2xl font-black text-[#ffb1c4] uppercase font-['Space_Grotesk'] tracking-tight">PROJECT_OMEGA</h1>
-          <div className="hidden md:flex items-center bg-surface-container-lowest p-2 border-l-4 border-secondary px-4 gap-4">
-            <div className="flex flex-col">
-              <span className={`${fontRetro} text-[8px] text-secondary opacity-70`}>ACTIVE PROJECT</span>
-              <span className="font-headline font-bold text-secondary uppercase tracking-wider">{project?.title}</span>
-            </div>
-            <div className="w-32 h-4 bg-surface-container-highest relative overflow-hidden">
-              <div className="h-full bg-gradient-to-r from-secondary to-secondary-container w-[65%] relative">
-                <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'linear-gradient(90deg, transparent 50%, rgba(0,0,0,0.5) 50%)', backgroundSize: '8px 100%' }} />
-              </div>
-            </div>
-            <span className={`${fontRetro} text-[8px] text-secondary`}>65%</span>
-          </div>
-        </div>
-        <div className="flex items-center gap-6">
-          <div className="hidden md:flex items-center gap-4 bg-surface-container p-2 pr-4 border-2 border-primary-container">
-            <div className="w-10 h-10 bg-primary-container flex items-center justify-center">
-              <User className="w-5 h-5 text-primary" />
-            </div>
-            <div className="flex flex-col">
-              <span className={`${fontRetro} text-[8px] text-primary`}>SCHOLAR</span>
-              <span className="font-headline font-black text-on-surface">LVL 42</span>
-            </div>
-          </div>
-          <div className="flex gap-4">
-            <Bell className="w-6 h-6 text-[#ffb1c4] cursor-pointer hover:bg-[#271448] p-1 rounded transition-all" />
-            <Settings className="w-6 h-6 text-[#ffb1c4] cursor-pointer hover:bg-[#271448] p-1 rounded transition-all" />
-          </div>
-        </div>
-      </header>
-      <div className="bg-[#271448] h-[2px] w-full" />
+    <div className="bg-background text-on-background font-body px-4 md:px-8 pb-8">
+      {/* Back Bar */}
+      <div className="flex items-center gap-4 mb-6">
+        <button onClick={onBack} className="flex items-center gap-2 text-on-surface/70 hover:text-primary transition-colors px-3 py-2 bg-surface-container border-2 border-outline-variant/20">
+          <ArrowLeft className="w-4 h-4" />
+          <span className={`${fontRetro} text-[10px] uppercase`}>Back to Hub</span>
+        </button>
+        <span className={`${fontRetro} text-[10px] text-secondary uppercase`}>ACTIVE PROJECT: {project?.title}</span>
+      </div>
 
-      {/* Main */}
-      <main className="flex-1 flex overflow-hidden">
+      <div className="flex flex-col lg:flex-row gap-6">
         {/* Knowledge Vault Sidebar */}
         <aside className="w-80 bg-surface-container-low border-r-4 border-surface-dim hidden md:flex flex-col p-4 gap-6 overflow-y-auto">
           <div className="flex flex-col gap-2">
@@ -699,7 +628,7 @@ print(f"Void rows banished! New count: {len(df_clean)}")`}
             </div>
           </div>
         </section>
-      </main>
+      </div>
 
       {/* Kimi Footer */}
       <footer className="h-20 bg-[#1a063b]/90 backdrop-blur-md flex items-center justify-between px-8 border-t-4 border-primary sticky bottom-0 z-50">
@@ -756,19 +685,11 @@ const HubView = ({ project, chapters, artifacts, bossBattle, activeTab, onTabCha
     icon: Skull
   });
 
-  const navItems = [
-    { id: 'quests', label: 'Quest Log', icon: ClipboardList },
-    { id: 'rankings', label: 'Hall of Heroes', icon: Trophy },
-    { id: 'boss', label: 'Boss Battle', icon: Swords },
-    { id: 'artifacts', label: 'Artifacts', icon: FileText },
+  const internalTabs = [
     { id: 'skilltree', label: 'Hero Stats', icon: User },
-  ];
-
-  const mobileItems = [
-    { id: 'quests', label: 'Quests', icon: LayoutGrid },
-    { id: 'rankings', label: 'Rankings', icon: Trophy },
-    { id: 'boss', label: 'Battle', icon: Swords },
-    { id: 'artifacts', label: 'Library', icon: FileText },
+    { id: 'quests', label: 'Quest Log', icon: ClipboardList },
+    { id: 'artifacts', label: 'Artifacts', icon: FileText },
+    { id: 'rankings', label: 'Hall of Heroes', icon: Trophy },
   ];
 
   const handleStartQuest = () => {
@@ -780,117 +701,61 @@ const HubView = ({ project, chapters, artifacts, bossBattle, activeTab, onTabCha
     }
   };
 
-  const handleBossBattleNav = () => {
-    onTabChange('quests');
-    if (bossBattle?.status === 'active' || bossBattle?.status === 'in_progress') {
-      if (onResumeBattle) onResumeBattle();
-    } else if (onStartBattle) {
-      onStartBattle();
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-background text-on-background font-body pb-24">
-      <TopBar title="KNOWLEDGE VAULT" tabs={navItems.map(n => ({ label: n.label, active: n.id === activeTab }))} />
-
-      {/* SideNav */}
-      <aside className="fixed left-0 h-screen w-64 z-40 bg-[#271448] py-8 border-r-4 border-[#1a063b] shadow-[4px_0px_0px_0px_rgba(0,0,0,0.3)] hidden md:flex flex-col">
-        <div className="px-6 mb-10">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 bg-surface-container-highest flex items-center justify-center">
-              <User className="w-5 h-5 text-tertiary" />
-            </div>
-            <div>
-              <p className="font-game text-[10px] text-[#e9c400] uppercase leading-none">ARCHIVIST</p>
-              <p className="font-game text-[8px] text-secondary opacity-70 mt-1 uppercase">LVL 42 MAGE</p>
-            </div>
-          </div>
-        </div>
-        <nav className="flex-1 space-y-1 px-2">
-          {navItems.map((item) => {
-            const isActive = activeTab === item.id;
-            const Icon = item.icon;
-            const isBoss = item.id === 'boss';
-            return (
-              <div
-                key={item.id}
-                onClick={() => {
-                  if (isBoss) handleBossBattleNav();
-                  else onTabChange(item.id);
-                }}
-                className={`flex items-center gap-4 px-6 py-4 transition-transform duration-75 cursor-pointer ${
-                  isActive
-                    ? 'bg-[#ffb1c4] text-[#1a063b] border-l-4 border-[#e9c400]'
-                    : 'text-[#ddfcff] hover:bg-[#1a063b] hover:translate-x-1'
-                }`}
-              >
-                <Icon className="w-5 h-5" />
-                <span className="font-game text-[10px] uppercase">{item.label}</span>
-              </div>
-            );
-          })}
-        </nav>
-        <div className="px-6 mt-auto">
-          <button
-            onClick={handleStartQuest}
-            className="w-full py-4 bg-primary-container text-on-primary font-game text-[10px] uppercase shadow-[0_4px_0_0_#8f0044] hover:shadow-none hover:translate-y-1 transition-all duration-75"
-          >
-            START QUEST
-          </button>
-        </div>
-      </aside>
-
-      {/* Main Content */}
-      <main className="md:ml-64 pt-24 pb-20 px-4 md:px-8 max-w-7xl mx-auto min-h-screen">
-        {activeTab === 'skilltree' && (
-          <SkillTreeContent
-            project={project}
-            chapters={chapters}
-            artifacts={artifacts}
-            bossBattle={bossBattle}
-            skillSteps={skillSteps}
-            progress={progress}
-            activeChapter={activeChapter}
-            onStartBattle={onStartBattle}
-            onResumeBattle={onResumeBattle}
-            onRetake={onRetake}
-            onLearnChapter={onLearnChapter}
-          />
-        )}
-        {activeTab === 'quests' && (
-          <QuestsContent chapters={chapters} bossBattle={bossBattle} onLearnChapter={onLearnChapter} onStartBattle={onStartBattle} onResumeBattle={onResumeBattle} />
-        )}
-        {activeTab === 'artifacts' && (
-          <ArtifactsContent artifacts={artifacts} chapters={chapters} onLearnChapter={onLearnChapter} onStartBattle={onStartBattle} />
-        )}
-        {activeTab === 'rankings' && (
-          <RankingsContent project={project} chapters={chapters} bossBattle={bossBattle} />
-        )}
-      </main>
-
-      {/* Mobile BottomNav */}
-      <nav className="fixed bottom-0 left-0 w-full flex justify-around items-center h-16 bg-[#1a063b] border-t-4 border-[#271448] shadow-[0_-4px_0_0_rgba(39,20,72,1)] md:hidden z-50">
-        {mobileItems.map((item) => {
+    <div className="max-w-7xl mx-auto">
+      {/* Internal Tab Bar */}
+      <div className="flex flex-wrap gap-2 mb-6 border-b-2 border-outline-variant/20 pb-2">
+        {internalTabs.map((item) => {
           const isActive = activeTab === item.id;
           const Icon = item.icon;
-          const isBoss = item.id === 'boss';
           return (
-            <div
+            <button
               key={item.id}
-              onClick={() => {
-                if (isBoss) handleBossBattleNav();
-                else onTabChange(item.id);
-              }}
-              className={`flex flex-col items-center justify-center py-2 px-4 font-['Press_Start_2P'] text-[8px] uppercase cursor-pointer ${
-                isActive ? 'bg-[#ffb1c4] text-[#1a063b]' : 'text-[#ddfcff] hover:bg-[#ff4a8d]'
+              onClick={() => onTabChange(item.id)}
+              className={`flex items-center gap-2 px-4 py-2 font-game text-[10px] uppercase transition-transform ${
+                isActive
+                  ? 'bg-primary-container text-on-primary border-b-4 border-on-primary-fixed-variant'
+                  : 'bg-surface-container text-on-surface hover:bg-surface-container-highest'
               }`}
             >
-              <Icon className="w-5 h-5 mb-1" />
-              <span>{item.label}</span>
-            </div>
+              <Icon className="w-4 h-4" />
+              {item.label}
+            </button>
           );
         })}
-      </nav>
+        <button
+          onClick={handleStartQuest}
+          className="ml-auto flex items-center gap-2 px-4 py-2 bg-tertiary text-on-tertiary font-game text-[10px] uppercase border-b-4 border-on-tertiary-fixed-variant hover:translate-y-0.5 transition-transform"
+        >
+          <Play className="w-4 h-4" />
+          START QUEST
+        </button>
+      </div>
+
+      {activeTab === 'skilltree' && (
+        <SkillTreeContent
+          project={project}
+          chapters={chapters}
+          artifacts={artifacts}
+          bossBattle={bossBattle}
+          skillSteps={skillSteps}
+          progress={progress}
+          activeChapter={activeChapter}
+          onStartBattle={onStartBattle}
+          onResumeBattle={onResumeBattle}
+          onRetake={onRetake}
+          onLearnChapter={onLearnChapter}
+        />
+      )}
+      {activeTab === 'quests' && (
+        <QuestsContent chapters={chapters} bossBattle={bossBattle} onLearnChapter={onLearnChapter} onStartBattle={onStartBattle} onResumeBattle={onResumeBattle} />
+      )}
+      {activeTab === 'artifacts' && (
+        <ArtifactsContent artifacts={artifacts} chapters={chapters} onLearnChapter={onLearnChapter} onStartBattle={onStartBattle} />
+      )}
+      {activeTab === 'rankings' && (
+        <RankingsContent project={project} chapters={chapters} bossBattle={bossBattle} />
+      )}
     </div>
   );
 };
@@ -1790,6 +1655,8 @@ const RankingsContent = ({ project, chapters, bossBattle }) => {
 // MAIN APP
 // ============================================
 export default function Newquest() {
+  const navigate = useNavigate();
+  const user = getUser();
   const [loading, setLoading] = useState(true);
   const [project, setProject] = useState(null);
   const [chapters, setChapters] = useState([]);
@@ -1797,9 +1664,10 @@ export default function Newquest() {
   const [bossBattle, setBossBattle] = useState(null);
   const [battleState, setBattleState] = useState(null);
   const [view, setView] = useState('hub'); // hub | battle | learn
-  const [tab, setTab] = useState('skilltree'); // skilltree | quests | artifacts | rankings
+  const [tab, setTab] = useState('quests'); // skilltree | quests | artifacts | rankings
   const [activeChapter, setActiveChapter] = useState(null);
   const [error, setError] = useState(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     initData();
@@ -1808,14 +1676,12 @@ export default function Newquest() {
   const initData = async () => {
     setLoading(true);
     try {
-      // Try get active project
       let proj = null;
       try {
         const res = await newquestAPI.getProjects('active');
         if (res.data?.projects?.length > 0) proj = res.data.projects[0];
       } catch (e) {}
 
-      // Fallback create
       if (!proj) {
         try {
           const createRes = await newquestAPI.createProject({
@@ -1848,7 +1714,6 @@ export default function Newquest() {
       ]);
       
       let chs = chRes.data.chapters || [];
-      // Default chapters if none exist
       if (chs.length === 0) {
         chs = [
           { id: 'ch1', title: 'CSV Loading', status: 'completed', chapter_number: 1 },
@@ -1906,12 +1771,8 @@ export default function Newquest() {
 
   const handleStageSubmit = async (result) => {
     if (!bossBattle) return;
-    // Reload battle state after short delay for animation
     setTimeout(async () => {
       await loadBossBattle(bossBattle.id);
-      if (result.status === 'victory' || result.status === 'progress' || result.status === 'hotfix-resolved') {
-        // Stay in battle view, state will update
-      }
     }, 800);
   };
 
@@ -1956,6 +1817,11 @@ export default function Newquest() {
     }
   };
 
+  const handleNavClick = (id) => {
+    const item = defaultNavItems.find(i => i.id === id);
+    if (item?.href) navigate(item.href);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background text-on-background flex items-center justify-center">
@@ -1968,50 +1834,67 @@ export default function Newquest() {
   }
 
   return (
-    <>
-      <AnimatePresence mode="wait">
-        {view === 'hub' && (
-          <motion.div key="hub" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <HubView
-              project={project}
-              chapters={chapters}
-              artifacts={artifacts}
-              bossBattle={bossBattle}
-              activeTab={tab}
-              onTabChange={setTab}
-              onStartBattle={startBossBattle}
-              onResumeBattle={resumeBattle}
-              onRetake={handleRetake}
-              onLearnChapter={handleLearnChapter}
-            />
-          </motion.div>
-        )}
-        
-        {view === 'battle' && battleState && (
-          <motion.div key="battle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <BossBattleView
-              battleState={battleState}
-              project={project}
-              artifacts={artifacts}
-              onBack={() => setView('hub')}
-              onStageSubmit={handleStageSubmit}
-              onDownshift={handleDownshift}
-            />
-          </motion.div>
-        )}
-        
-        {view === 'learn' && activeChapter && (
-          <motion.div key="learn" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <LearnChapterView
-              chapter={activeChapter}
-              project={project}
-              artifacts={artifacts}
-              onBack={() => setView('hub')}
-              onComplete={handleCompleteChapter}
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
+    <div className="min-h-screen bg-background text-on-background font-body">
+      <TopAppBar title="NEWQUEST" onMenuClick={() => setSidebarOpen(true)} user={user} />
+      <SideNavBar
+        items={defaultNavItems}
+        activeItem="newquest"
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        onItemClick={handleNavClick}
+        user={user}
+      />
+      <BottomNavBar
+        items={defaultNavItems.filter(i => i.category === 'main').slice(0, 4)}
+        activeItem="newquest"
+        onItemClick={handleNavClick}
+      />
+
+      <main className="lg:pl-64 pt-20 pb-24 md:pb-8 min-h-screen">
+        <AnimatePresence mode="wait">
+          {view === 'hub' && (
+            <motion.div key="hub" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="px-4 md:px-8">
+              <HubView
+                project={project}
+                chapters={chapters}
+                artifacts={artifacts}
+                bossBattle={bossBattle}
+                activeTab={tab}
+                onTabChange={setTab}
+                onStartBattle={startBossBattle}
+                onResumeBattle={resumeBattle}
+                onRetake={handleRetake}
+                onLearnChapter={handleLearnChapter}
+              />
+            </motion.div>
+          )}
+          
+          {view === 'battle' && battleState && (
+            <motion.div key="battle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              <BossBattleView
+                battleState={battleState}
+                project={project}
+                artifacts={artifacts}
+                onBack={() => setView('hub')}
+                onStageSubmit={handleStageSubmit}
+                onDownshift={handleDownshift}
+              />
+            </motion.div>
+          )}
+          
+          {view === 'learn' && activeChapter && (
+            <motion.div key="learn" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              <LearnChapterView
+                chapter={activeChapter}
+                project={project}
+                artifacts={artifacts}
+                onBack={() => setView('hub')}
+                onComplete={handleCompleteChapter}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </main>
 
       {/* Error Toast */}
       <AnimatePresence>
@@ -2027,6 +1910,6 @@ export default function Newquest() {
           </motion.div>
         )}
       </AnimatePresence>
-    </>
+    </div>
   );
 }
