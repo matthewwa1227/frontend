@@ -693,15 +693,22 @@ const HubView = ({ project, chapters, artifacts, bossBattle, activeTab, onTabCha
   ];
 
   const handleStartQuest = () => {
+    console.log('[START QUEST clicked]', { chaptersCount: chapters.length, chapterStatuses: chapters.map(c => c.status), hasProject: !!project });
     const activeCh = chapters.find(c => c.status === 'active');
     if (activeCh && onLearnChapter) {
+      console.log('[START QUEST] opening active chapter:', activeCh.id);
       onLearnChapter(activeCh);
     } else if (chapters.length === 0 && onGenerateFirstChapter) {
+      console.log('[START QUEST] no chapters, generating first');
       onGenerateFirstChapter();
     } else if (chapters.every(c => c.status === 'completed') && onStartBattle) {
+      console.log('[START QUEST] all completed, starting boss');
       onStartBattle();
     } else if (onGenerateFirstChapter) {
+      console.log('[START QUEST] fallback, generating next chapter');
       onGenerateFirstChapter();
+    } else {
+      console.warn('[START QUEST] no action taken');
     }
   };
 
@@ -753,7 +760,7 @@ const HubView = ({ project, chapters, artifacts, bossBattle, activeTab, onTabCha
         />
       )}
       {activeTab === 'quests' && (
-        <QuestsContent chapters={chapters} bossBattle={bossBattle} onLearnChapter={onLearnChapter} onStartBattle={onStartBattle} onResumeBattle={onResumeBattle} />
+        <QuestsContent chapters={chapters} bossBattle={bossBattle} onLearnChapter={onLearnChapter} onStartBattle={onStartBattle} onResumeBattle={onResumeBattle} onGenerateFirstChapter={onGenerateFirstChapter} />
       )}
       {activeTab === 'artifacts' && (
         <ArtifactsContent artifacts={artifacts} chapters={chapters} onLearnChapter={onLearnChapter} onStartBattle={onStartBattle} />
@@ -999,7 +1006,7 @@ const SkillTreeContent = ({ project, chapters, artifacts, bossBattle, skillSteps
 // ============================================
 // QUESTS CONTENT
 // ============================================
-const QuestsContent = ({ chapters, bossBattle, onLearnChapter, onStartBattle, onResumeBattle }) => {
+const QuestsContent = ({ chapters, bossBattle, onLearnChapter, onStartBattle, onResumeBattle, onGenerateFirstChapter }) => {
   const completedCount = chapters.filter(c => c.status === 'completed').length;
   const progress = chapters.length > 0 ? Math.round((completedCount / chapters.length) * 100) : 0;
 
@@ -1059,6 +1066,23 @@ const QuestsContent = ({ chapters, bossBattle, onLearnChapter, onStartBattle, on
         </div>
 
         <div className="space-y-6">
+          {chapters.length === 0 && onGenerateFirstChapter && (
+            <div className="bg-surface-container p-1 border-b-4 border-surface-container-lowest">
+              <div className="bg-surface-container border-2 border-outline-variant p-6 flex flex-col md:flex-row gap-6 items-start">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="text-[8px] font-['Press_Start_2P'] px-2 py-1 bg-primary-container text-white">NEW</span>
+                    <span className="text-[8px] font-['Press_Start_2P'] px-2 py-1 bg-background border text-tertiary border-tertiary">ELITE TIER</span>
+                  </div>
+                  <h2 className="font-['Space_Grotesk'] text-2xl font-bold text-on-surface mb-2">Chapter 1: Getting Started</h2>
+                  <p className="text-secondary/60 text-sm mb-6 leading-relaxed">Your journey begins here. Generate your first chapter to start learning and forging artifacts.</p>
+                </div>
+                <div className="w-full md:w-auto flex flex-col gap-3">
+                  <button onClick={onGenerateFirstChapter} className="bg-primary-container hover:translate-y-0.5 transition-transform text-white font-['Press_Start_2P'] text-[10px] py-4 px-8 border-b-4 border-on-primary-fixed-variant active:border-b-0 active:translate-y-1">START CHAPTER</button>
+                </div>
+              </div>
+            </div>
+          )}
           {chapters.map((ch, idx) => {
             const isActive = ch.status === 'active';
             const isCompleted = ch.status === 'completed';
@@ -1130,7 +1154,7 @@ const QuestsContent = ({ chapters, bossBattle, onLearnChapter, onStartBattle, on
                         <button className="bg-surface-container-highest hover:bg-surface-bright text-primary font-['Press_Start_2P'] text-[10px] py-4 px-8 border-b-4 border-background">REVIEW NOTES</button>
                       </>
                     ) : (
-                      <button className="bg-background text-on-surface font-['Press_Start_2P'] text-[10px] py-4 px-8 border-b-4 border-black hover:bg-surface-container-highest opacity-60 hover:opacity-100 transition-opacity">UNLOCK QUEST</button>
+                      <button onClick={() => onGenerateFirstChapter && onGenerateFirstChapter()} className="bg-background text-on-surface font-['Press_Start_2P'] text-[10px] py-4 px-8 border-b-4 border-black hover:bg-surface-container-highest opacity-60 hover:opacity-100 transition-opacity">UNLOCK QUEST</button>
                     )}
                   </div>
                 </div>
@@ -1749,10 +1773,16 @@ export default function Newquest() {
   };
 
   const handleGenerateFirstChapter = async () => {
-    if (!project) return;
+    console.log('[handleGenerateFirstChapter] called, project:', project?.id);
+    if (!project) {
+      console.warn('[handleGenerateFirstChapter] no project');
+      return;
+    }
     setLoading(true);
     try {
+      console.log('[handleGenerateFirstChapter] calling API /chapters/generate with projectId:', project.id);
       const res = await newquestAPI.generateChapter({ projectId: project.id });
+      console.log('[handleGenerateFirstChapter] API success:', res.data);
       const newChapter = {
         ...res.data.chapter,
         status: 'active'
@@ -1761,7 +1791,8 @@ export default function Newquest() {
       setActiveChapter(newChapter);
       setView('learn');
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to generate chapter');
+      console.error('[handleGenerateFirstChapter] API error:', err);
+      setError(err.response?.data?.error || err.message || 'Failed to generate chapter');
     } finally {
       setLoading(false);
     }
