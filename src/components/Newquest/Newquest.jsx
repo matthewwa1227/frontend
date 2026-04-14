@@ -700,6 +700,8 @@ const HubView = ({ project, chapters, artifacts, bossBattle, activeTab, onTabCha
       onGenerateFirstChapter();
     } else if (chapters.every(c => c.status === 'completed') && onStartBattle) {
       onStartBattle();
+    } else if (onGenerateFirstChapter) {
+      onGenerateFirstChapter();
     }
   };
 
@@ -976,6 +978,10 @@ const SkillTreeContent = ({ project, chapters, artifacts, bossBattle, skillSteps
               ) : chapters.every(c => c.status === 'completed') && !bossBattle ? (
                 <PixelBtn onClick={onStartBattle} variant="tertiary" icon={Swords}>
                   START BOSS BATTLE
+                </PixelBtn>
+              ) : onGenerateFirstChapter ? (
+                <PixelBtn onClick={onGenerateFirstChapter} variant="primary" icon={Play}>
+                  CONTINUE QUEST
                 </PixelBtn>
               ) : (
                 <PixelBtn onClick={onResumeBattle} variant="primary" icon={Play}>
@@ -1751,7 +1757,7 @@ export default function Newquest() {
         ...res.data.chapter,
         status: 'active'
       };
-      setChapters([newChapter]);
+      setChapters(prev => [...prev, newChapter]);
       setActiveChapter(newChapter);
       setView('learn');
     } catch (err) {
