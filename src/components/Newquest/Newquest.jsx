@@ -488,9 +488,9 @@ const LearnChapterView = ({ chapter, project, artifacts, onBack, onComplete }) =
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const content = chapter?.full_lesson || `This chapter covers ${chapter?.title}. Master the concepts to forge your Knowledge Artifact.`;
-  const keyPoints = chapter?.key_points || ['Key concept 1', 'Key concept 2', 'Key concept 3'];
-  const whyItMatters = chapter?.why_it_matters || 'This skill is essential for completing your project.';
+  const content = chapter?.full_lesson || chapter?.content?.fullLesson || `This chapter covers ${chapter?.title}. Master the concepts to forge your Knowledge Artifact.`;
+  const keyPoints = chapter?.key_points || chapter?.content?.keyPoints || ['Key concept 1', 'Key concept 2', 'Key concept 3'];
+  const whyItMatters = chapter?.why_it_matters || chapter?.content?.whyItMatters || 'This skill is essential for completing your project.';
 
   return (
     <div className="bg-background text-on-background font-body px-4 md:px-8 pb-8">
@@ -663,7 +663,7 @@ print(f"Void rows banished! New count: {len(df_clean)}")`}
 // ============================================
 // HUB VIEW
 // ============================================
-const HubView = ({ project, chapters, artifacts, bossBattle, activeTab, onTabChange, onStartBattle, onResumeBattle, onRetake, onLearnChapter }) => {
+const HubView = ({ project, chapters, artifacts, bossBattle, activeTab, onTabChange, onStartBattle, onResumeBattle, onRetake, onLearnChapter, onGenerateFirstChapter }) => {
   const completedCount = chapters.filter(c => c.status === 'completed').length;
   const progress = chapters.length > 0 ? Math.round((completedCount / chapters.length) * 100) : 0;
   const activeChapter = chapters.find(c => c.status === 'active');
@@ -696,6 +696,8 @@ const HubView = ({ project, chapters, artifacts, bossBattle, activeTab, onTabCha
     const activeCh = chapters.find(c => c.status === 'active');
     if (activeCh && onLearnChapter) {
       onLearnChapter(activeCh);
+    } else if (chapters.length === 0 && onGenerateFirstChapter) {
+      onGenerateFirstChapter();
     } else if (chapters.every(c => c.status === 'completed') && onStartBattle) {
       onStartBattle();
     }
@@ -745,6 +747,7 @@ const HubView = ({ project, chapters, artifacts, bossBattle, activeTab, onTabCha
           onResumeBattle={onResumeBattle}
           onRetake={onRetake}
           onLearnChapter={onLearnChapter}
+          onGenerateFirstChapter={onGenerateFirstChapter}
         />
       )}
       {activeTab === 'quests' && (
@@ -763,7 +766,7 @@ const HubView = ({ project, chapters, artifacts, bossBattle, activeTab, onTabCha
 // ============================================
 // SKILL TREE CONTENT
 // ============================================
-const SkillTreeContent = ({ project, chapters, artifacts, bossBattle, skillSteps, progress, activeChapter, onStartBattle, onResumeBattle, onRetake, onLearnChapter }) => (
+const SkillTreeContent = ({ project, chapters, artifacts, bossBattle, skillSteps, progress, activeChapter, onStartBattle, onResumeBattle, onRetake, onLearnChapter, onGenerateFirstChapter }) => (
   <>
     {/* Project HUD */}
     <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
@@ -965,6 +968,10 @@ const SkillTreeContent = ({ project, chapters, artifacts, bossBattle, skillSteps
               {activeChapter ? (
                 <PixelBtn onClick={() => onLearnChapter(activeChapter)} variant="primary" icon={Play}>
                   BEGIN CODING QUEST
+                </PixelBtn>
+              ) : chapters.length === 0 && onGenerateFirstChapter ? (
+                <PixelBtn onClick={onGenerateFirstChapter} variant="primary" icon={Play}>
+                  START FIRST CHAPTER
                 </PixelBtn>
               ) : chapters.every(c => c.status === 'completed') && !bossBattle ? (
                 <PixelBtn onClick={onStartBattle} variant="tertiary" icon={Swords}>
@@ -1302,7 +1309,7 @@ const ArtifactsContent = ({ artifacts, chapters, onLearnChapter, onStartBattle }
                     </div>
                     <div>
                       <h3 className="font-game text-[12px] text-on-surface mb-2 uppercase leading-tight">{art.title}</h3>
-                      <p className="text-xs text-on-surface-variant line-clamp-2">{art.summary || art.content_markdown?.slice(0, 100) || 'Knowledge artifact forged from chapter completion.'}</p>
+                      <p className="text-xs text-on-surface-variant line-clamp-2">{art.summary || art.content?.slice(0, 100) || 'Knowledge artifact forged from chapter completion.'}</p>
                     </div>
                     <div className="w-full h-1 bg-surface-container-highest overflow-hidden">
                       <div className="h-full bg-primary w-full" />
@@ -1368,8 +1375,8 @@ const ArtifactsContent = ({ artifacts, chapters, onLearnChapter, onStartBattle }
                       <span className="text-[10px] text-surface-variant ml-2">ARTIFACT-READER v1.0.4</span>
                     </div>
                     <div className="space-y-4">
-                      {studyArtifact.content_markdown ? (
-                        <div className="whitespace-pre-wrap text-secondary">{studyArtifact.content_markdown}</div>
+                      {studyArtifact.content ? (
+                        <div className="whitespace-pre-wrap text-secondary">{studyArtifact.content}</div>
                       ) : (
                         <>
                           <p className="text-primary-fixed"># {studyArtifact.title?.toUpperCase()}</p>
@@ -1713,18 +1720,16 @@ export default function Newquest() {
       ]);
       
       let chs = chRes.data.chapters || [];
-      if (chs.length === 0) {
-        chs = [
-          { id: 'ch1', title: 'CSV Loading', status: 'completed', chapter_number: 1 },
-          { id: 'ch2', title: 'Data Cleaning', status: 'active', chapter_number: 2 },
-          { id: 'ch3', title: 'Visualization', status: 'locked', chapter_number: 3 }
-        ];
-      }
+      // Normalize backend statuses to frontend statuses
+      chs = chs.map(ch => ({
+        ...ch,
+        status: ch.status === 'available' || ch.status === 'in_progress' ? 'active' : ch.status
+      }));
       setChapters(chs);
       setArtifacts(artRes.data.artifacts || []);
       
       const battles = bbRes.data.battles || [];
-      const active = battles.find(b => b.status === 'active');
+      const active = battles.find(b => b.status === 'active' || b.status === 'in_progress');
       const completed = battles.find(b => b.status === 'completed');
       if (active) {
         setBossBattle(active);
@@ -1734,6 +1739,25 @@ export default function Newquest() {
       }
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  const handleGenerateFirstChapter = async () => {
+    if (!project) return;
+    setLoading(true);
+    try {
+      const res = await newquestAPI.generateChapter({ projectId: project.id });
+      const newChapter = {
+        ...res.data.chapter,
+        status: 'active'
+      };
+      setChapters([newChapter]);
+      setActiveChapter(newChapter);
+      setView('learn');
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to generate chapter');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -1864,6 +1888,7 @@ export default function Newquest() {
                 onResumeBattle={resumeBattle}
                 onRetake={handleRetake}
                 onLearnChapter={handleLearnChapter}
+                onGenerateFirstChapter={handleGenerateFirstChapter}
               />
             </motion.div>
           )}
