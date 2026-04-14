@@ -1685,9 +1685,8 @@ export default function Newquest() {
       if (!proj) {
         try {
           const createRes = await newquestAPI.createProject({
-            title: 'Python Fitness Analyzer',
-            description: 'Learn Python by building a health dashboard that analyzes fitness data',
-            deliverable: 'Working fitness_dashboard.py script',
+            topic: 'Python Fitness Analyzer',
+            goal: 'Learn Python by building a health dashboard that analyzes fitness data',
             subject: 'Programming'
           });
           proj = createRes.data.project;
