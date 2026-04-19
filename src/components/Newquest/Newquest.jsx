@@ -1808,19 +1808,24 @@ export default function Newquest() {
       try {
         const res = await newquestAPI.getProjects('active');
         if (res.data?.projects?.length > 0) proj = res.data.projects[0];
-      } catch (e) {}
+      } catch (e) {
+        console.error('[initData] getProjects error:', e);
+        setError('Failed to load projects. Please refresh.');
+      }
 
       if (!proj) {
+        console.log('[initData] no active project found, showing topic modal');
         setTopicModal(true);
         setLoading(false);
         return;
       }
 
-      if (proj) {
-        setProject(proj);
-        await loadProjectData(proj.id);
-      }
+      console.log('[initData] loaded project:', proj.id, proj.title);
+      setTopicModal(false);
+      setProject(proj);
+      await loadProjectData(proj.id);
     } catch (err) {
+      console.error('[initData] error:', err);
       setError('Failed to initialize Newquest');
     } finally {
       setLoading(false);
@@ -1831,12 +1836,19 @@ export default function Newquest() {
     setLoading(true);
     try {
       const createRes = await newquestAPI.createProject({ topic, goal, subject });
-      const proj = createRes.data.project;
+      const proj = createRes.data?.project;
+      if (!proj) {
+        console.error('[createProjectWithTopic] no project in response:', createRes.data);
+        setError('Project creation failed: invalid response');
+        return;
+      }
+      console.log('[createProjectWithTopic] project created:', proj.id, proj.title);
       setProject(proj);
       setTopicModal(false);
       await loadProjectData(proj.id);
     } catch (err) {
-      setError('Failed to create project');
+      console.error('[createProjectWithTopic] error:', err);
+      setError(err.response?.data?.error || err.message || 'Failed to create project');
     } finally {
       setLoading(false);
     }
