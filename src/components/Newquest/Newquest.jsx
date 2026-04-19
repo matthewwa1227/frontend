@@ -709,7 +709,7 @@ const LearnChapterView = ({ chapter, project, artifacts, onBack, onComplete }) =
 // ============================================
 // HUB VIEW
 // ============================================
-const HubView = ({ project, chapters, artifacts, bossBattle, activeTab, onTabChange, onStartBattle, onResumeBattle, onRetake, onLearnChapter, onGenerateFirstChapter }) => {
+const HubView = ({ project, chapters, artifacts, bossBattle, activeTab, onTabChange, onStartBattle, onResumeBattle, onRetake, onLearnChapter, onGenerateFirstChapter, onStartNewQuest }) => {
   const completedCount = chapters.filter(c => c.status === 'completed').length;
   const progress = chapters.length > 0 ? Math.round((completedCount / chapters.length) * 100) : 0;
   const activeChapter = chapters.find(c => c.status === 'active');
@@ -790,6 +790,15 @@ const HubView = ({ project, chapters, artifacts, bossBattle, activeTab, onTabCha
           <Play className="w-4 h-4" />
           START QUEST
         </button>
+        {onStartNewQuest && (
+          <button
+            onClick={onStartNewQuest}
+            className="flex items-center gap-2 px-3 py-2 bg-surface-container-highest text-primary font-game text-[10px] uppercase border-b-4 border-background hover:translate-y-0.5 transition-transform"
+          >
+            <Sparkles className="w-3 h-3" />
+            NEW QUEST
+          </button>
+        )}
       </div>
 
       {activeTab === 'skilltree' && (
@@ -2082,6 +2091,7 @@ export default function Newquest() {
                 onRetake={handleRetake}
                 onLearnChapter={handleLearnChapter}
                 onGenerateFirstChapter={handleGenerateFirstChapter}
+                onStartNewQuest={() => setTopicModal(true)}
               />
             </motion.div>
           )}
