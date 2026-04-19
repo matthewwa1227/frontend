@@ -2134,7 +2134,15 @@ export default function Newquest() {
                 onRetake={handleRetake}
                 onLearnChapter={handleLearnChapter}
                 onGenerateFirstChapter={handleGenerateFirstChapter}
-                onStartNewQuest={() => setTopicModal(true)}
+                onStartNewQuest={() => {
+                  setProject(null);
+                  setChapters([]);
+                  setArtifacts([]);
+                  setBossBattle(null);
+                  setBattleState(null);
+                  setActiveChapter(null);
+                  setTopicModal(true);
+                }}
                 generating={generating}
               />
             </motion.div>
