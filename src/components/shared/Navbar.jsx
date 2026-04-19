@@ -56,6 +56,7 @@ export default function Navbar() {
   const studyTools = [
     { path: '/study-buddy', label: 'Study Buddy', icon: MessageCircle, description: 'Chat with AI tutor' },
     { path: '/newquest', label: 'Newquest', icon: Bot, description: 'Boss Battle Challenges' },
+    { path: '/archive-alchemist', label: 'Archive Alchemist', icon: BookOpen, description: 'Transmute documents into notes' },
     { path: '/schedule', label: 'Schedule Generator', icon: CalendarDays, description: 'Plan your study time' },
     { path: '/exercise-generator', label: 'Exercise Generator', icon: FileText, description: 'Printable worksheets' },
   ];
