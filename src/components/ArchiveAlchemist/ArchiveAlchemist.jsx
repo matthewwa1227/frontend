@@ -683,7 +683,7 @@ const ArchiveAlchemist = () => {
       />
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col relative min-h-screen">
+      <main className="flex-1 flex flex-col relative min-h-screen lg:ml-64">
         {/* Ambient Decor */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
           <div className="absolute top-1/4 right-1/4 w-96 h-96 bg-primary opacity-5 blur-[100px] rounded-full mix-blend-screen" />
