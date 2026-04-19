@@ -477,17 +477,11 @@ const BossBattleView = ({ battleState, project, artifacts, onBack, onStageSubmit
 };
 
 // ============================================
-// LEARN CHAPTER VIEW
+// LEARN CHAPTER VIEW (StoryQuest Style)
 // ============================================
 const LearnChapterView = ({ chapter, project, artifacts, onBack, onComplete }) => {
-  const [copied, setCopied] = useState(false);
   const [completing, setCompleting] = useState(false);
-
-  const handleCopy = (text) => {
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
+  const [chatOpen, setChatOpen] = useState(false);
 
   const handleComplete = async () => {
     if (completing) return;
@@ -502,171 +496,212 @@ const LearnChapterView = ({ chapter, project, artifacts, onBack, onComplete }) =
   const content = chapter?.full_lesson || chapter?.content?.fullLesson || `This chapter covers ${chapter?.title}. Master the concepts to forge your Knowledge Artifact.`;
   const keyPoints = chapter?.key_points || chapter?.content?.keyPoints || ['Key concept 1', 'Key concept 2', 'Key concept 3'];
   const whyItMatters = chapter?.why_it_matters || chapter?.content?.whyItMatters || 'This skill is essential for completing your project.';
+  const context = chapter?.context || chapter?.content?.context || 'You enter the learning chamber...';
+
+  // Parse lesson into sections if it contains markers
+  const lessonSections = content.split(/\n#{2,3}\s+/).filter(Boolean);
+  const hasSections = lessonSections.length > 1;
 
   return (
-    <div className="bg-background text-on-background font-body px-4 md:px-8 pb-8">
-      {/* Back Bar */}
-      <div className="flex items-center gap-4 mb-6">
-        <button onClick={onBack} className="flex items-center gap-2 text-on-surface/70 hover:text-primary transition-colors px-3 py-2 bg-surface-container border-2 border-outline-variant/20">
-          <ArrowLeft className="w-4 h-4" />
-          <span className={`${fontRetro} text-[10px] uppercase`}>Back to Hub</span>
-        </button>
-        <span className={`${fontRetro} text-[10px] text-secondary uppercase`}>ACTIVE PROJECT: {project?.title}</span>
+    <div className="bg-background text-on-background font-body min-h-screen">
+      {/* Top Bar */}
+      <div className="sticky top-0 z-30 flex justify-between items-center w-full px-4 md:px-8 py-4 bg-background/95 backdrop-blur border-b-4 border-surface-container">
+        <div className="flex items-center gap-4">
+          <button onClick={onBack} className="flex items-center gap-2 text-on-surface/70 hover:text-primary transition-colors px-3 py-2 bg-surface-container border-2 border-outline-variant/20">
+            <ArrowLeft className="w-4 h-4" />
+            <span className={`${fontRetro} text-[10px] uppercase`}>Back to Hub</span>
+          </button>
+          <span className={`${fontRetro} text-[10px] text-secondary uppercase hidden sm:inline`}>ACTIVE PROJECT: {project?.title}</span>
+        </div>
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={() => setChatOpen(!chatOpen)}
+            className="flex items-center gap-2 px-3 py-2 bg-surface-container border-2 border-primary text-primary hover:bg-primary hover:text-on-primary transition-colors"
+          >
+            <Bot className="w-4 h-4" />
+            <span className={`${fontRetro} text-[8px] uppercase hidden sm:inline`}>KIMI AI</span>
+          </button>
+        </div>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-6">
-        {/* Knowledge Vault Sidebar */}
-        <aside className="w-80 bg-surface-container-low border-r-4 border-surface-dim hidden md:flex flex-col p-4 gap-6 overflow-y-auto">
-          <div className="flex flex-col gap-2">
-            <label className={`${fontRetro} text-[10px] text-secondary uppercase px-2`}>Knowledge Vault</label>
-            <div className="relative">
-              <input 
-                className="w-full bg-surface-container-lowest border-2 border-outline-variant p-3 font-mono text-xs focus:border-primary focus:ring-0 text-on-surface"
-                placeholder="SEARCH ARTIFACTS..."
-                type="text"
-              />
-              <Search className="absolute right-3 top-3 w-4 h-4 text-outline" />
+      <div className="flex">
+        {/* Main Content */}
+        <main className="flex-1 min-h-screen">
+          {/* Story Narrative Hero */}
+          <section className="relative h-64 w-full bg-surface-container overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
+            <div className="relative h-full p-6 md:p-10 flex flex-col justify-end">
+              <span className={`${fontRetro} text-[10px] text-primary-fixed-dim mb-2 uppercase tracking-widest`}>{context}</span>
+              <h2 className={`${fontRetro} text-xl md:text-3xl text-primary mb-3 leading-tight`}>{chapter?.title?.toUpperCase()}</h2>
+              <p className="max-w-2xl text-on-surface text-sm md:text-base leading-relaxed font-light italic opacity-80">
+                {whyItMatters}
+              </p>
             </div>
-          </div>
-          <nav className="flex flex-col gap-4">
-            <div className="group cursor-pointer">
-              <div className="flex items-center gap-3 p-4 bg-primary text-on-primary shadow-[4px_4px_0_0_#ff4a8d] transition-all active:translate-y-1">
-                <BookOpen className="w-5 h-5" />
-                <span className={`${fontRetro} text-[8px] uppercase`}>{chapter?.title}</span>
-              </div>
-            </div>
-            <div className="flex flex-col gap-1">
-              <span className={`${fontRetro} text-[8px] text-outline px-2 mb-2 uppercase opacity-50`}>Saved Artifacts</span>
-              {artifacts.map((art) => (
-                <div key={art.id} className="flex items-center gap-3 p-3 text-secondary hover:bg-surface-container transition-all cursor-pointer">
-                  <FileText className="w-4 h-4" />
-                  <span className="font-headline font-medium text-sm">{art.title}</span>
-                </div>
-              ))}
-              {artifacts.length === 0 && (
-                <div className="p-3 text-on-surface-variant text-sm opacity-50">No artifacts yet</div>
-              )}
-            </div>
-          </nav>
-          <div className="mt-auto pt-6 border-t border-outline-variant/20">
-            <div className="bg-tertiary/10 p-4 border-l-4 border-tertiary flex gap-3">
-              <Award className="w-5 h-5 text-tertiary flex-shrink-0" />
-              <div className="flex flex-col">
-                <span className={`${fontRetro} text-[8px] text-tertiary`}>MASTER QUEST</span>
-                <span className="font-body text-xs text-on-surface/80">Complete this chapter to forge a Knowledge Artifact.</span>
-              </div>
-            </div>
-          </div>
-        </aside>
+          </section>
 
-        {/* Scriptorium */}
-        <section className="flex-1 bg-surface overflow-y-auto p-6 md:p-12">
-          <div className="max-w-4xl mx-auto space-y-10">
-            {/* Lesson Header */}
-            <div className="relative">
-              <div className="absolute -top-6 -left-6 w-24 h-24 bg-primary/5 rounded-full blur-3xl" />
-              <h2 className={`${fontRetro} text-2xl md:text-3xl text-primary leading-relaxed uppercase mb-4 relative z-10`}>{chapter?.title}</h2>
-              <div className="flex items-center gap-4 font-headline text-secondary tracking-widest uppercase text-sm font-bold opacity-80">
-                <span className="flex items-center gap-1"><Clock className="w-4 h-4" /> 15 MIN QUEST</span>
-                <span className="w-1 h-1 bg-outline rounded-full" />
-                <span className="flex items-center gap-1"><Sparkles className="w-4 h-4" /> 450 XP REWARD</span>
+          {/* Lesson Content Grid */}
+          <div className="px-4 md:px-8 py-8 space-y-8 max-w-5xl mx-auto">
+            {/* Key Points */}
+            <div className="bg-surface-container p-6 md:p-8 border-2 border-outline-variant shadow-[4px_4px_0_0_#1a063b] relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-4 opacity-10">
+                <Target className="w-24 h-24 text-primary" />
               </div>
-            </div>
-
-            {/* Bento Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="md:col-span-2 bg-surface-container-low p-6 border-2 border-outline-variant relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 opacity-5 pointer-events-none transform translate-x-10 -translate-y-10">
-                  <Lightbulb className="w-32 h-32" />
-                </div>
-                <h3 className={`${fontRetro} text-[10px] text-tertiary mb-4 uppercase`}>Why It Matters</h3>
-                <p className="font-body text-on-surface leading-relaxed text-lg">{whyItMatters}</p>
-              </div>
-              <div className="md:col-span-1 bg-surface-container-highest p-6 shadow-[8px_8px_0_0_#150136]">
-                <h3 className={`${fontRetro} text-[10px] text-secondary mb-4 uppercase`}>Key Points</h3>
-                <ul className="space-y-3 font-headline text-sm font-bold text-on-surface-variant">
-                  {keyPoints.map((pt, i) => (
-                    <li key={i} className="flex items-start gap-2">
-                      <CheckCheck className="w-5 h-5 text-primary flex-shrink-0" />
-                      <span>{String(pt).toUpperCase()}</span>
-                    </li>
-                  ))}
-                </ul>
+              <h3 className={`${fontRetro} text-[10px] text-tertiary mb-6 uppercase`}>Core Concepts</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {keyPoints.map((pt, i) => {
+                  const colors = ['text-secondary', 'text-primary', 'text-tertiary'];
+                  const bgColors = ['bg-secondary/10', 'bg-primary/10', 'bg-tertiary/10'];
+                  const borderColors = ['border-secondary', 'border-primary', 'border-tertiary'];
+                  const c = i % 3;
+                  return (
+                    <div key={i} className={`flex gap-4 p-4 bg-surface-container-low border-l-4 ${borderColors[c]}`}>
+                      <div className={`w-10 h-10 ${bgColors[c]} border ${borderColors[c]} flex items-center justify-center flex-shrink-0`}>
+                        <CheckCheck className={`w-5 h-5 ${colors[c]}`} />
+                      </div>
+                      <div>
+                        <p className={`font-headline font-bold text-sm ${colors[c]}`}>{String(pt).toUpperCase()}</p>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
             {/* Full Lesson */}
-            <article className="space-y-6">
-              <h3 className={`${fontRetro} text-[10px] text-primary uppercase`}>Full Lesson</h3>
-              <div className="font-body text-on-surface leading-relaxed space-y-4 text-lg whitespace-pre-wrap">
-                {content}
-              </div>
+            <div className="bg-surface-container-high p-6 md:p-8 border-l-8 border-primary">
+              <h3 className={`${fontRetro} text-[10px] text-primary mb-6 uppercase`}>The Lesson</h3>
+              {hasSections ? (
+                <div className="space-y-6">
+                  {lessonSections.map((section, i) => {
+                    const lines = section.split('\n').filter(Boolean);
+                    const title = lines[0] || `Section ${i + 1}`;
+                    const body = lines.slice(1).join('\n');
+                    return (
+                      <div key={i} className="bg-surface-container-lowest p-4 border border-outline-variant">
+                        <h4 className={`${fontRetro} text-[8px] text-secondary mb-2 uppercase`}>{title}</h4>
+                        <p className="text-on-surface leading-relaxed whitespace-pre-wrap">{body}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="font-body text-on-surface leading-relaxed space-y-4 text-base whitespace-pre-wrap">
+                  {content}
+                </div>
+              )}
+            </div>
 
-              {/* Code Block Example */}
-              <div className="bg-surface-container-lowest p-6 border-l-4 border-primary-container font-mono text-sm relative">
-                <div className="absolute top-2 right-4 font-mono text-[8px] text-outline opacity-40">PYTHON_SCROLL</div>
-                <pre className="text-secondary overflow-x-auto">
-{`import pandas as pd
-
-# Load your data realm
-df = pd.read_csv('fitness_data.csv')
-
-# Purge all rows with missing values
-df_clean = df.dropna()
-
-print(f"Void rows banished! New count: {len(df_clean)}")`}
-                </pre>
-                <button 
-                  onClick={() => handleCopy(content)}
-                  className="absolute bottom-4 right-4 bg-surface-container-high p-2 hover:bg-primary-container transition-colors"
-                >
-                  <Copy className="w-4 h-4 text-white" />
-                </button>
-              </div>
-            </article>
-
-            {/* Navigation */}
-            <div className="flex justify-between items-center pt-8 border-t-2 border-outline-variant/30">
-              <button 
-                onClick={onBack}
-                className="flex items-center gap-2 font-mono text-[10px] text-outline hover:text-primary transition-colors"
-              >
-                <ArrowLeft className="w-4 h-4" /> PREVIOUS
-              </button>
+            {/* Mastery Challenge */}
+            <div className="bg-surface-container p-6 md:p-8 border-2 border-outline-variant shadow-[4px_4px_0_0_#1a063b]">
+              <h3 className={`${fontRetro} text-[10px] text-tertiary mb-4 uppercase`}>Mastery Challenge</h3>
+              <p className="text-sm text-on-surface leading-relaxed mb-6">
+                Apply what you've learned. Complete this challenge to forge your Knowledge Artifact and unlock the next stage of your quest.
+              </p>
               <PixelBtn onClick={handleComplete} variant="primary" icon={ChevronRight} disabled={completing}>
                 {completing ? 'FORGING ARTIFACT...' : 'COMPLETE QUEST'}
               </PixelBtn>
             </div>
-          </div>
-        </section>
-      </div>
 
-      {/* Kimi Footer */}
-      <footer className="h-20 bg-[#1a063b]/90 backdrop-blur-md flex items-center justify-between px-8 border-t-4 border-primary sticky bottom-0 z-50">
-        <div className="flex items-center gap-4">
-          <div className="relative w-10 h-10 bg-secondary-container flex items-center justify-center">
-            <Bot className="w-6 h-6 text-on-secondary" />
-            <div className="absolute -top-1 -right-1 w-3 h-3 bg-tertiary animate-pulse border-2 border-[#1a063b]" />
-          </div>
-          <div className="flex flex-col">
-            <span className={`${fontRetro} text-[8px] text-secondary tracking-widest`}>KIMI_AI</span>
-            <p className="font-body text-sm text-on-surface font-medium italic">
-              "Try using <span className="text-secondary">.fillna()</span> for missing values!"
-            </p>
-          </div>
-        </div>
-        <div className="hidden md:flex items-center gap-6">
-          <div className="flex items-center gap-2">
-            <span className={`${fontRetro} text-[8px] text-outline`}>QUEST HP</span>
-            <div className="w-24 h-2 bg-surface-container-highest">
-              <div className="h-full bg-primary w-full" />
+            {/* Why It Matters */}
+            <div className="bg-surface-variant/40 p-6 md:p-8 border-2 border-outline-variant">
+              <div className="flex flex-col md:flex-row gap-6 items-center">
+                <div className="w-20 h-20 flex-shrink-0 bg-surface-container-lowest border-4 border-tertiary flex items-center justify-center">
+                  <Lightbulb className="w-10 h-10 text-tertiary" />
+                </div>
+                <div>
+                  <h3 className="font-headline text-xl font-bold text-tertiary mb-2">Why It Matters</h3>
+                  <p className="text-on-surface leading-relaxed">
+                    {whyItMatters}
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
-          <button className="p-2 border-2 border-outline-variant hover:border-primary text-outline hover:text-primary transition-all">
-            <HelpCircle className="w-5 h-5" />
-          </button>
-        </div>
-      </footer>
+        </main>
+
+        {/* Right Sidebar (Knowledge Vault + AI Tutor) */}
+        <aside className={`fixed right-0 top-[73px] h-[calc(100vh-73px)] w-80 bg-surface-container border-l-4 border-background flex flex-col z-20 transition-transform duration-300 ${chatOpen ? 'translate-x-0' : 'translate-x-full'} lg:translate-x-0 lg:static lg:h-auto lg:border-l-4 lg:border-surface-dim`}>
+          {/* Knowledge Vault */}
+          <div className="p-6 border-b-4 border-background">
+            <div className="flex items-center gap-2 mb-6">
+              <Lock className="w-4 h-4 text-tertiary" />
+              <h2 className={`${fontRetro} text-[10px] text-on-surface`}>KNOWLEDGE VAULT</h2>
+            </div>
+            <div className="space-y-3">
+              {artifacts.length > 0 ? artifacts.slice(0, 3).map((art, idx) => {
+                const colors = [
+                  { border: 'border-secondary', text: 'text-secondary', bg: 'bg-secondary/10' },
+                  { border: 'border-primary', text: 'text-primary', bg: 'bg-primary/10' },
+                  { border: 'border-tertiary', text: 'text-tertiary', bg: 'bg-tertiary/10' }
+                ];
+                const c = colors[idx % 3];
+                return (
+                  <div key={art.id} className={`bg-surface-container-low p-3 border ${c.border} flex items-center gap-3 group cursor-help`}>
+                    <div className={`w-10 h-10 ${c.bg} border ${c.border} flex items-center justify-center ${c.text} group-hover:bg-opacity-100 transition-colors`}>
+                      <FileText className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className={`${fontRetro} text-[8px] text-on-surface`}>{art.title?.toUpperCase()}</p>
+                      <p className="text-[10px] text-on-surface-variant">Artifact {idx + 1}</p>
+                    </div>
+                  </div>
+                );
+              }) : (
+                <div className="bg-surface-container-low p-4 border border-outline-variant text-center">
+                  <p className="text-xs text-on-surface-variant italic">Complete chapters to forge artifacts</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* AI Tutor Chat Panel */}
+          <div className="flex-1 flex flex-col p-4 min-h-0">
+            <div className="flex items-center gap-3 mb-4 bg-surface-container-high p-3 border-2 border-primary">
+              <div className="relative">
+                <div className="w-10 h-10 bg-background border-2 border-primary flex items-center justify-center overflow-hidden">
+                  <Bot className="w-6 h-6 text-primary" />
+                </div>
+                <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 border border-background" />
+              </div>
+              <div>
+                <p className={`${fontRetro} text-[10px] text-primary`}>KIMI AI</p>
+                <p className="text-[8px] font-medium text-secondary">TUTOR IS ONLINE</p>
+              </div>
+            </div>
+            <div className="flex-1 space-y-3 overflow-y-auto mb-4 p-2">
+              <div className="bg-surface-container-low p-3 border-l-4 border-secondary text-sm">
+                <p className="text-on-surface leading-relaxed">
+                  "Welcome to your lesson on <span className="text-secondary font-bold">{chapter?.title}</span>. I'm here to help if you get stuck!"
+                </p>
+              </div>
+              <div className="bg-surface-container-low p-3 border-l-4 border-secondary text-sm">
+                <p className="text-on-surface leading-relaxed text-xs">
+                  💡 <span className="font-bold">Tip:</span> Focus on the key concepts first, then try the mastery challenge.
+                </p>
+              </div>
+            </div>
+            <div className="relative mt-auto">
+              <input 
+                className="w-full bg-background border-2 border-outline-variant px-4 py-3 font-body text-sm focus:outline-none focus:border-primary text-on-surface"
+                placeholder="Ask Kimi..."
+                type="text"
+                readOnly
+              />
+              <button className="absolute right-2 top-1/2 -translate-y-1/2 text-primary hover:scale-110 transition-transform">
+                <Sparkles className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      {/* Mobile Chat Toggle */}
+      <button 
+        onClick={() => setChatOpen(!chatOpen)}
+        className="fixed bottom-6 right-6 z-50 w-14 h-14 bg-primary border-4 border-background flex items-center justify-center lg:hidden shadow-lg active:scale-95 transition-transform"
+      >
+        <Bot className="w-7 h-7 text-on-primary" />
+      </button>
     </div>
   );
 };
@@ -1727,6 +1762,17 @@ export default function Newquest() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [bossFocusModal, setBossFocusModal] = useState(false);
   const [bossFocus, setBossFocus] = useState('');
+  const [topicModal, setTopicModal] = useState(false);
+  const [selectedTopic, setSelectedTopic] = useState('');
+
+  const TOPIC_PRESETS = [
+    { id: 'english', label: 'English Language', icon: 'menu_book', desc: 'Grammar, writing & storytelling', color: 'border-primary text-primary' },
+    { id: 'python', label: 'Python Programming', icon: 'terminal', desc: 'Code, data & automation', color: 'border-secondary text-secondary' },
+    { id: 'math', label: 'Mathematics', icon: 'calculate', desc: 'Algebra, geometry & logic', color: 'border-tertiary text-tertiary' },
+    { id: 'science', label: 'Science', icon: 'science', desc: 'Physics, chemistry & biology', color: 'border-primary-container text-primary-container' },
+    { id: 'history', label: 'History', icon: 'account_balance', desc: 'Events, people & cultures', color: 'border-secondary-container text-secondary-container' },
+    { id: 'custom', label: 'Custom Topic', icon: 'edit', desc: 'Anything you want to learn', color: 'border-tertiary-container text-tertiary-container' },
+  ];
 
   useEffect(() => {
     initData();
@@ -1742,14 +1788,9 @@ export default function Newquest() {
       } catch (e) {}
 
       if (!proj) {
-        try {
-          const createRes = await newquestAPI.createProject({
-            topic: 'Python Fitness Analyzer',
-            goal: 'Learn Python by building a health dashboard that analyzes fitness data',
-            subject: 'Programming'
-          });
-          proj = createRes.data.project;
-        } catch (e) {}
+        setTopicModal(true);
+        setLoading(false);
+        return;
       }
 
       if (proj) {
@@ -1760,6 +1801,65 @@ export default function Newquest() {
       setError('Failed to initialize Newquest');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const createProjectWithTopic = async (topic, goal, subject) => {
+    setLoading(true);
+    try {
+      const createRes = await newquestAPI.createProject({ topic, goal, subject });
+      const proj = createRes.data.project;
+      setProject(proj);
+      setTopicModal(false);
+      await loadProjectData(proj.id);
+    } catch (err) {
+      setError('Failed to create project');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSelectTopic = (preset) => {
+    if (preset.id === 'custom') {
+      if (!selectedTopic.trim()) {
+        setError('Please enter a topic');
+        return;
+      }
+      createProjectWithTopic(
+        selectedTopic,
+        `Learn ${selectedTopic} through an interactive project-based journey`,
+        'General'
+      );
+    } else if (preset.id === 'english') {
+      createProjectWithTopic(
+        'English Mastery Quest',
+        'Master English grammar, vocabulary, and writing through narrative challenges',
+        'English'
+      );
+    } else if (preset.id === 'python') {
+      createProjectWithTopic(
+        'Python Fitness Analyzer',
+        'Learn Python by building a health dashboard that analyzes fitness data',
+        'Programming'
+      );
+    } else if (preset.id === 'math') {
+      createProjectWithTopic(
+        'Math Adventure',
+        'Explore mathematics through puzzles, patterns, and real-world problem solving',
+        'Mathematics'
+      );
+    } else if (preset.id === 'science') {
+      createProjectWithTopic(
+        'Science Explorer',
+        'Discover scientific principles through experiments and investigations',
+        'Science'
+      );
+    } else if (preset.id === 'history') {
+      createProjectWithTopic(
+        'History Chronicles',
+        'Journey through time exploring key events, people, and civilizations',
+        'History'
+      );
     }
   };
 
@@ -2010,6 +2110,72 @@ export default function Newquest() {
           >
             <p className={`${fontRetro} text-[8px] leading-relaxed`}>{error}</p>
             <button onClick={() => setError(null)} className="text-xs underline mt-2 hover:text-white">Dismiss</button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Topic Selection Modal */}
+      <AnimatePresence>
+        {topicModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[120] bg-background flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="max-w-2xl w-full"
+            >
+              <div className="text-center mb-10">
+                <h1 className={`${fontRetro} text-2xl text-primary mb-4`}>CHOOSE YOUR QUEST</h1>
+                <p className="font-body text-on-surface-variant text-lg">What do you want to learn today?</p>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                {TOPIC_PRESETS.map((preset) => (
+                  <button
+                    key={preset.id}
+                    onClick={() => handleSelectTopic(preset)}
+                    disabled={loading}
+                    className={`bg-surface-container p-6 border-4 ${preset.color.split(' ')[0]} text-left hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[4px_4px_0_0_#1a063b] disabled:opacity-50`}
+                  >
+                    <div className="flex items-start gap-4">
+                      <div className={`w-12 h-12 bg-surface-container-lowest border-2 ${preset.color.split(' ')[0]} flex items-center justify-center flex-shrink-0`}>
+                        <span className={`material-symbols-outlined ${preset.color.split(' ')[1]}`} style={{fontSize: '24px'}}>{preset.icon}</span>
+                      </div>
+                      <div>
+                        <h3 className={`${fontRetro} text-[10px] ${preset.color.split(' ')[1]} mb-1`}>{preset.label.toUpperCase()}</h3>
+                        <p className="text-xs text-on-surface-variant">{preset.desc}</p>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+              
+              <div className="bg-surface-container p-6 border-2 border-outline-variant">
+                <label className={`${fontRetro} text-[10px] text-secondary mb-3 block`}>CUSTOM TOPIC</label>
+                <div className="flex gap-4">
+                  <input
+                    type="text"
+                    value={selectedTopic}
+                    onChange={(e) => setSelectedTopic(e.target.value)}
+                    placeholder="Type anything: Photography, Chess, Japanese, Music Theory..."
+                    className="flex-1 bg-surface-container-lowest border-2 border-outline-variant px-4 py-3 font-body text-sm text-on-surface focus:border-primary focus:ring-0"
+                    onKeyDown={(e) => e.key === 'Enter' && handleSelectTopic(TOPIC_PRESETS.find(t => t.id === 'custom'))}
+                  />
+                  <button
+                    onClick={() => handleSelectTopic(TOPIC_PRESETS.find(t => t.id === 'custom'))}
+                    disabled={loading || !selectedTopic.trim()}
+                    className="bg-primary-container text-on-primary px-6 py-3 font-game text-[10px] border-b-4 border-on-primary-fixed-variant active:translate-y-1 active:border-b-0 transition-all uppercase disabled:opacity-50"
+                  >
+                    {loading ? 'CREATING...' : 'BEGIN'}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
