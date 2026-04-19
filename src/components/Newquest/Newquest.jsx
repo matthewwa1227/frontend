@@ -1983,6 +1983,7 @@ export default function Newquest() {
   const loadProjectData = async (projectId) => {
     try {
       // Clear stale state before loading new project data
+      setGenerating(false);
       setChapters([]);
       setArtifacts([]);
       setBossBattle(null);
@@ -2245,6 +2246,7 @@ export default function Newquest() {
                     clearTimeout(retryTimerRef.current);
                     retryTimerRef.current = null;
                   }
+                  setGenerating(false);
                   setCreatingNew(true);
                   setProject(null);
                   setChapters([]);
