@@ -639,6 +639,7 @@ const OutputView = ({ sessionId, onBack }) => {
         </div>
       </section>
     </div>
+  </div>
   );
 };
 
