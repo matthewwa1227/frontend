@@ -1819,6 +1819,34 @@ export default function Newquest() {
     return () => clearInterval(interval);
   }, [topicModal]);
 
+  // Poll for chapters while generating (so we don't miss chapters from timed-out requests)
+  useEffect(() => {
+    if (!generating || !project) return;
+    const interval = setInterval(async () => {
+      try {
+        const res = await newquestAPI.getChapters(project.id);
+        const chs = res.data?.chapters || [];
+        if (chs.length > 0) {
+          console.log('[poll] found chapters, navigating:', chs.length);
+          const normalized = chs.map(ch => ({
+            ...ch,
+            status: ch.status === 'available' || ch.status === 'in_progress' ? 'active' : ch.status
+          }));
+          setChapters(normalized);
+          const activeCh = normalized.find(c => c.status === 'active');
+          if (activeCh) {
+            setActiveChapter(activeCh);
+            setView('learn');
+            setGenerating(false);
+          }
+        }
+      } catch (e) {
+        // silently ignore
+      }
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [generating, project]);
+
   // Auto-start first chapter for brand new projects (no chapters yet)
   useEffect(() => {
     if (project && chapters.length === 0 && !generating && !loading && view === 'hub' && !autoStartedRef.current) {
@@ -1980,6 +2008,25 @@ export default function Newquest() {
     }
     setGenerating(true);
     try {
+      // Check if chapters already exist (backend may have created them from a timed-out request)
+      const existingRes = await newquestAPI.getChapters(project.id);
+      const existing = existingRes.data?.chapters || [];
+      if (existing.length > 0) {
+        console.log('[handleGenerateFirstChapter] chapters already exist, opening:', existing.length);
+        const normalized = existing.map(ch => ({
+          ...ch,
+          status: ch.status === 'available' || ch.status === 'in_progress' ? 'active' : ch.status
+        }));
+        setChapters(normalized);
+        const activeCh = normalized.find(c => c.status === 'active');
+        if (activeCh) {
+          setActiveChapter(activeCh);
+          setView('learn');
+        }
+        setGenerating(false);
+        return;
+      }
+
       console.log('[handleGenerateFirstChapter] calling API /chapters/generate with projectId:', project.id);
       const res = await newquestAPI.generateChapter({ projectId: project.id });
       console.log('[handleGenerateFirstChapter] API success:', res.data);
