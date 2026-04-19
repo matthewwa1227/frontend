@@ -191,6 +191,19 @@ export const storyQuestAPI = {
   health: () => api.get('/storyquest/health')
 };
 
+// Archive Alchemist API
+export const archiveAPI = {
+  upload: (formData) => api.post('/archive/upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 90000
+  }),
+  url: (url) => api.post('/archive/url', { url }, { timeout: 90000 }),
+  list: () => api.get('/archive'),
+  get: (id) => api.get(`/archive/${id}`),
+  delete: (id) => api.delete(`/archive/${id}`),
+  regenerate: (id) => api.post(`/archive/${id}/regenerate`),
+};
+
 // Newquest - Boss Battle API
 export const newquestAPI = {
   startBossBattle: (projectId, focus) => api.post('/boss-battles/start', { projectId, focus }),

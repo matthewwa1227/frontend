@@ -18,7 +18,8 @@ import {
   Menu,
   X,
   Sparkles,
-  GraduationCap
+  GraduationCap,
+  BookOpen
 } from 'lucide-react';
 
 /**
@@ -51,6 +52,7 @@ const navIcons = {
   settings: Settings,
   teacher: GraduationCap,
   sparkles: Sparkles,
+  'book-open': BookOpen,
   // Additional icons from Dashboard.jsx
   target: Target,
   checklist: CheckSquare,
@@ -80,6 +82,7 @@ export const defaultNavItems = [
   // Study Tools (formerly AI Tools)
   { id: 'study-buddy', label: 'STUDY BUDDY', icon: 'study-buddy', href: '/study-buddy', category: 'study' },
   { id: 'newquest', label: 'NEWQUEST', icon: 'smart_toy', href: '/newquest', category: 'study' },
+  { id: 'archive', label: 'ARCHIVE', icon: 'book-open', href: '/archive-alchemist', category: 'study' },
   { id: 'schedule', label: 'SCHEDULE', icon: 'schedule', href: '/schedule', category: 'study' },
   { id: 'exercise-gen', label: 'EXERCISE GEN', icon: 'exercise-gen', href: '/exercise-generator', category: 'study' },
   

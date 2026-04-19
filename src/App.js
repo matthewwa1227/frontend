@@ -31,6 +31,7 @@ import AITutor from './components/AITutor/StoryQuestAI';
 import Newquest from './components/Newquest/Newquest';
 import StudyBuddy from './components/StudyBuddy/StudyBuddy';
 import RevisionMode from './components/AITutor/RevisionMode';
+import ArchiveAlchemist from './components/ArchiveAlchemist/ArchiveAlchemist';
 
 // --- New Feature Components ---
 import ProgressDashboard from './components/Progress/ProgressDashboard';
@@ -236,6 +237,16 @@ function App() {
 
           {/* Legacy redirect */}
           <Route path="/story-quest" element={<Navigate to="/newquest" replace />} />
+
+          {/* Archive Alchemist */}
+          <Route
+            path="/archive-alchemist"
+            element={
+              <ProtectedRoute allowedRoles={['student']}>
+                <ArchiveAlchemist />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Redirect old AI Tutor routes */}
           <Route path="/tutor" element={<Navigate to="/study-buddy" replace />} />
