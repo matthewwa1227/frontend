@@ -1785,6 +1785,7 @@ export default function Newquest() {
   const [selectedTopic, setSelectedTopic] = useState('');
   const [selectedFormLevel, setSelectedFormLevel] = useState(user?.formLevel || '');
   const [generating, setGenerating] = useState(false);
+  const [creatingNew, setCreatingNew] = useState(false);
   const autoStartedRef = useRef(false);
 
   const FORM_LEVELS = [
@@ -1807,7 +1808,7 @@ export default function Newquest() {
 
   // Poll for active projects when modal is open (recovers from missed state updates)
   useEffect(() => {
-    if (!topicModal) return;
+    if (!topicModal || creatingNew) return;
     const interval = setInterval(async () => {
       try {
         const res = await newquestAPI.getProjects('active');
@@ -1823,7 +1824,7 @@ export default function Newquest() {
       }
     }, 3000);
     return () => clearInterval(interval);
-  }, [topicModal]);
+  }, [topicModal, creatingNew]);
 
   // Poll for chapters while generating (so we don't miss chapters from timed-out requests)
   useEffect(() => {
@@ -1922,6 +1923,7 @@ export default function Newquest() {
       }
       console.log('[createProjectWithTopic] project created:', proj.id, proj.title);
       autoStartedRef.current = false;
+      setCreatingNew(false);
       setProject(proj);
       setTopicModal(false);
       await loadProjectData(proj.id);
@@ -2231,6 +2233,7 @@ export default function Newquest() {
                 onLearnChapter={handleLearnChapter}
                 onGenerateFirstChapter={handleGenerateFirstChapter}
                 onStartNewQuest={() => {
+                  setCreatingNew(true);
                   setProject(null);
                   setChapters([]);
                   setArtifacts([]);
