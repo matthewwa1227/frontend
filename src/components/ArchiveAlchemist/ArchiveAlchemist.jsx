@@ -422,15 +422,20 @@ const OutputView = ({ sessionId, onBack }) => {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [lastChecked, setLastChecked] = useState(null);
+  const [checking, setChecking] = useState(false);
 
   const loadSession = useCallback(async () => {
     try {
+      setChecking(true);
       const res = await archiveAPI.get(sessionId);
       setSession(res.data.session);
+      setLastChecked(new Date());
     } catch (e) {
       setError('Failed to load session');
     } finally {
       setLoading(false);
+      setChecking(false);
     }
   }, [sessionId]);
 
@@ -443,7 +448,7 @@ const OutputView = ({ sessionId, onBack }) => {
     if (!session || session.status === 'completed' || session.status === 'failed') return;
     const interval = setInterval(() => {
       loadSession();
-    }, 3000);
+    }, 4000);
     return () => clearInterval(interval);
   }, [session, loadSession]);
 
@@ -510,9 +515,16 @@ const OutputView = ({ sessionId, onBack }) => {
 
       {/* Status Banner */}
       {session.status === 'processing' && (
-        <div className="w-full bg-primary/10 border-y-2 border-primary p-3 flex items-center justify-center gap-3 z-20 sticky top-0">
-          <Loader2 className="w-4 h-4 text-primary animate-spin" />
-          <p className={`${fontRetro} text-[10px] text-primary`}>TRANSMUTATION IN PROGRESS — AI IS FORGING YOUR STUDY MATERIALS</p>
+        <div className="w-full bg-primary/10 border-y-2 border-primary p-3 z-20 sticky top-0">
+          <div className="flex items-center justify-center gap-3 mb-1">
+            <Loader2 className={`w-4 h-4 text-primary ${checking ? 'animate-spin' : ''}`} />
+            <p className={`${fontRetro} text-[10px] text-primary`}>TRANSMUTATION IN PROGRESS — AI IS FORGING YOUR STUDY MATERIALS</p>
+          </div>
+          <div className="flex items-center justify-center gap-2 text-[10px] text-on-surface-variant">
+            <span>Below is your <strong className="text-primary">original uploaded text</strong>. Structured notes will appear here when ready.</span>
+            <button onClick={loadSession} disabled={checking} className="underline hover:text-primary disabled:opacity-50">Refresh now</button>
+            {lastChecked && <span>• Checked {Math.floor((Date.now() - lastChecked) / 1000)}s ago</span>}
+          </div>
         </div>
       )}
 
@@ -546,6 +558,11 @@ const OutputView = ({ sessionId, onBack }) => {
                 <h1 className={`${fontHeadline} text-3xl font-black text-on-background uppercase mb-8 border-b-2 border-surface-container-highest pb-4`}>
                   {session.title}
                 </h1>
+                <div className="bg-primary/5 border border-primary/30 p-3 mb-4">
+                  <p className={`${fontRetro} text-[8px] text-primary leading-relaxed`}>
+                    📜 YOU ARE VIEWING THE ORIGINAL UPLOADED TEXT. AI-GENERATED NOTES WILL REPLACE THIS WHEN READY.
+                  </p>
+                </div>
                 <div className="text-base leading-relaxed whitespace-pre-wrap">
                   {session.original_text}
                 </div>
@@ -600,9 +617,19 @@ const OutputView = ({ sessionId, onBack }) => {
 
           <div className="space-y-6 flex-1 overflow-y-auto pr-2">
             {session.status === 'processing' && (
-              <div className="bg-surface-container-low p-5 border-l-4 border-primary animate-pulse">
-                <h4 className={`${fontRetro} text-[10px] text-primary mb-2`}>FORGING RELICS...</h4>
-                <p className="text-sm text-on-surface-variant">The Alchemist is analyzing your document and creating flashcards, summaries, and concept maps.</p>
+              <div className="bg-surface-container-low p-5 border-l-4 border-primary">
+                <h4 className={`${fontRetro} text-[10px] text-primary mb-2 flex items-center gap-2`}>
+                  <Loader2 className={`w-3 h-3 ${checking ? 'animate-spin' : ''}`} />
+                  FORGING RELICS...
+                </h4>
+                <p className="text-sm text-on-surface-variant mb-3">The Alchemist is analyzing your document and creating:</p>
+                <ul className="text-xs text-on-surface-variant space-y-1 list-disc list-inside">
+                  <li>Structured study notes</li>
+                  <li>Flashcards with reveal/hide</li>
+                  <li>Core summary</li>
+                  <li>Master artifact (concept map)</li>
+                </ul>
+                <p className="text-xs text-secondary mt-3">This usually takes 20–40 seconds. The page updates automatically.</p>
               </div>
             )}
 
