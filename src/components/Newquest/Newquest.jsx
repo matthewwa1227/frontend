@@ -709,7 +709,7 @@ const LearnChapterView = ({ chapter, project, artifacts, onBack, onComplete }) =
 // ============================================
 // HUB VIEW
 // ============================================
-const HubView = ({ project, chapters, artifacts, bossBattle, activeTab, onTabChange, onStartBattle, onResumeBattle, onRetake, onLearnChapter, onGenerateFirstChapter, onStartNewQuest }) => {
+const HubView = ({ project, chapters, artifacts, bossBattle, activeTab, onTabChange, onStartBattle, onResumeBattle, onRetake, onLearnChapter, onGenerateFirstChapter, onStartNewQuest, generating }) => {
   const completedCount = chapters.filter(c => c.status === 'completed').length;
   const progress = chapters.length > 0 ? Math.round((completedCount / chapters.length) * 100) : 0;
   const activeChapter = chapters.find(c => c.status === 'active');
@@ -785,10 +785,20 @@ const HubView = ({ project, chapters, artifacts, bossBattle, activeTab, onTabCha
         })}
         <button
           onClick={handleStartQuest}
-          className="ml-auto flex items-center gap-2 px-4 py-2 bg-tertiary text-on-tertiary font-game text-[10px] uppercase border-b-4 border-on-tertiary-fixed-variant hover:translate-y-0.5 transition-transform"
+          disabled={generating}
+          className="ml-auto flex items-center gap-2 px-4 py-2 bg-tertiary text-on-tertiary font-game text-[10px] uppercase border-b-4 border-on-tertiary-fixed-variant hover:translate-y-0.5 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <Play className="w-4 h-4" />
-          START QUEST
+          {generating ? (
+            <>
+              <div className="w-4 h-4 border-2 border-on-tertiary border-t-transparent rounded-full animate-spin" />
+              GENERATING...
+            </>
+          ) : (
+            <>
+              <Play className="w-4 h-4" />
+              START QUEST
+            </>
+          )}
         </button>
         {onStartNewQuest && (
           <button
@@ -815,10 +825,11 @@ const HubView = ({ project, chapters, artifacts, bossBattle, activeTab, onTabCha
           onRetake={onRetake}
           onLearnChapter={onLearnChapter}
           onGenerateFirstChapter={onGenerateFirstChapter}
+          generating={generating}
         />
       )}
       {activeTab === 'quests' && (
-        <QuestsContent chapters={chapters} bossBattle={bossBattle} onLearnChapter={onLearnChapter} onStartBattle={onStartBattle} onResumeBattle={onResumeBattle} onGenerateFirstChapter={onGenerateFirstChapter} />
+        <QuestsContent chapters={chapters} bossBattle={bossBattle} onLearnChapter={onLearnChapter} onStartBattle={onStartBattle} onResumeBattle={onResumeBattle} onGenerateFirstChapter={onGenerateFirstChapter} generating={generating} />
       )}
       {activeTab === 'artifacts' && (
         <ArtifactsContent artifacts={artifacts} chapters={chapters} onLearnChapter={onLearnChapter} onStartBattle={onStartBattle} />
@@ -833,7 +844,7 @@ const HubView = ({ project, chapters, artifacts, bossBattle, activeTab, onTabCha
 // ============================================
 // SKILL TREE CONTENT
 // ============================================
-const SkillTreeContent = ({ project, chapters, artifacts, bossBattle, skillSteps, progress, activeChapter, onStartBattle, onResumeBattle, onRetake, onLearnChapter, onGenerateFirstChapter }) => (
+const SkillTreeContent = ({ project, chapters, artifacts, bossBattle, skillSteps, progress, activeChapter, onStartBattle, onResumeBattle, onRetake, onLearnChapter, onGenerateFirstChapter, generating }) => (
   <>
     {/* Project HUD */}
     <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
@@ -1037,16 +1048,16 @@ const SkillTreeContent = ({ project, chapters, artifacts, bossBattle, skillSteps
                   BEGIN CODING QUEST
                 </PixelBtn>
               ) : chapters.length === 0 && onGenerateFirstChapter ? (
-                <PixelBtn onClick={onGenerateFirstChapter} variant="primary" icon={Play}>
-                  START FIRST CHAPTER
+                <PixelBtn onClick={onGenerateFirstChapter} variant="primary" icon={generating ? null : Play} disabled={generating}>
+                  {generating ? 'GENERATING...' : 'START FIRST CHAPTER'}
                 </PixelBtn>
               ) : chapters.every(c => c.status === 'completed') && !bossBattle ? (
                 <PixelBtn onClick={onStartBattle} variant="tertiary" icon={Swords}>
                   START BOSS BATTLE
                 </PixelBtn>
               ) : onGenerateFirstChapter ? (
-                <PixelBtn onClick={onGenerateFirstChapter} variant="primary" icon={Play}>
-                  CONTINUE QUEST
+                <PixelBtn onClick={onGenerateFirstChapter} variant="primary" icon={generating ? null : Play} disabled={generating}>
+                  {generating ? 'GENERATING...' : 'CONTINUE QUEST'}
                 </PixelBtn>
               ) : (
                 <PixelBtn onClick={onResumeBattle} variant="primary" icon={Play}>
@@ -1064,7 +1075,7 @@ const SkillTreeContent = ({ project, chapters, artifacts, bossBattle, skillSteps
 // ============================================
 // QUESTS CONTENT
 // ============================================
-const QuestsContent = ({ chapters, bossBattle, onLearnChapter, onStartBattle, onResumeBattle, onGenerateFirstChapter }) => {
+const QuestsContent = ({ chapters, bossBattle, onLearnChapter, onStartBattle, onResumeBattle, onGenerateFirstChapter, generating }) => {
   const completedCount = chapters.filter(c => c.status === 'completed').length;
   const progress = chapters.length > 0 ? Math.round((completedCount / chapters.length) * 100) : 0;
   const allChaptersCompleted = chapters.length > 0 && chapters.every(c => c.status === 'completed');
@@ -1138,7 +1149,9 @@ const QuestsContent = ({ chapters, bossBattle, onLearnChapter, onStartBattle, on
                   <p className="text-secondary/60 text-sm mb-6 leading-relaxed">Your journey begins here. Generate your first chapter to start learning and forging artifacts.</p>
                 </div>
                 <div className="w-full md:w-auto flex flex-col gap-3">
-                  <button onClick={onGenerateFirstChapter} className="bg-primary-container hover:translate-y-0.5 transition-transform text-white font-['Press_Start_2P'] text-[10px] py-4 px-8 border-b-4 border-on-primary-fixed-variant active:border-b-0 active:translate-y-1">START CHAPTER</button>
+                  <button onClick={onGenerateFirstChapter} disabled={generating} className="bg-primary-container hover:translate-y-0.5 transition-transform text-white font-['Press_Start_2P'] text-[10px] py-4 px-8 border-b-4 border-on-primary-fixed-variant active:border-b-0 active:translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed">
+                    {generating ? 'GENERATING...' : 'START CHAPTER'}
+                  </button>
                 </div>
               </div>
             </div>
@@ -1773,6 +1786,7 @@ export default function Newquest() {
   const [bossFocus, setBossFocus] = useState('');
   const [topicModal, setTopicModal] = useState(false);
   const [selectedTopic, setSelectedTopic] = useState('');
+  const [generating, setGenerating] = useState(false);
 
   const TOPIC_PRESETS = [
     { id: 'english', label: 'English Language', icon: 'menu_book', desc: 'Grammar, writing & storytelling', color: 'border-primary text-primary' },
@@ -1918,12 +1932,12 @@ export default function Newquest() {
   };
 
   const handleGenerateFirstChapter = async () => {
-    console.log('[handleGenerateFirstChapter] called, project:', project?.id);
-    if (!project) {
-      console.warn('[handleGenerateFirstChapter] no project');
+    console.log('[handleGenerateFirstChapter] called, project:', project?.id, 'generating:', generating);
+    if (!project || generating) {
+      console.warn('[handleGenerateFirstChapter] blocked — no project or already generating');
       return;
     }
-    setLoading(true);
+    setGenerating(true);
     try {
       console.log('[handleGenerateFirstChapter] calling API /chapters/generate with projectId:', project.id);
       const res = await newquestAPI.generateChapter({ projectId: project.id });
@@ -1939,7 +1953,7 @@ export default function Newquest() {
       console.error('[handleGenerateFirstChapter] API error:', err);
       setError(err.response?.data?.error || err.message || 'Failed to generate chapter');
     } finally {
-      setLoading(false);
+      setGenerating(false);
     }
   };
 
@@ -2092,6 +2106,7 @@ export default function Newquest() {
                 onLearnChapter={handleLearnChapter}
                 onGenerateFirstChapter={handleGenerateFirstChapter}
                 onStartNewQuest={() => setTopicModal(true)}
+                generating={generating}
               />
             </motion.div>
           )}
