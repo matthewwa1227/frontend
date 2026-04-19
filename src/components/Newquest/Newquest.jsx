@@ -25,7 +25,7 @@ const newquestAPI = {
   getArtifacts: (projectId) => api.get(`/artifacts?projectId=${projectId}`),
   generateChapter: (data) => api.post('/chapters/generate', data),
   completeChapter: (id) => api.post(`/chapters/${id}/complete`),
-  startBossBattle: (projectId) => api.post('/boss-battles/start', { projectId }),
+  startBossBattle: (projectId, focus) => api.post('/boss-battles/start', { projectId, focus }),
   getBossBattle: (id) => api.get(`/boss-battles/${id}`),
   submitStage: (id, solution, mode = 'normal') => api.post(`/boss-battles/${id}/stage`, { solution, mode }),
   retryStage: (id) => api.post(`/boss-battles/${id}/retry`),
@@ -1865,10 +1865,17 @@ export default function Newquest() {
 
   const loadProjectData = async (projectId) => {
     try {
+      // Clear stale state before loading new project data
+      setChapters([]);
+      setArtifacts([]);
+      setBossBattle(null);
+      setBattleState(null);
+      setActiveChapter(null);
+      
       const [chRes, artRes, bbRes] = await Promise.all([
-        newquestAPI.getChapters(projectId).catch(() => ({ data: { chapters: [] } })),
-        newquestAPI.getArtifacts(projectId).catch(() => ({ data: { artifacts: [] } })),
-        api.get(`/boss-battles?projectId=${projectId}`).catch(() => ({ data: { battles: [] } }))
+        newquestAPI.getChapters(projectId).catch((e) => { console.error('[loadProjectData] chapters error:', e); return { data: { chapters: [] } }; }),
+        newquestAPI.getArtifacts(projectId).catch((e) => { console.error('[loadProjectData] artifacts error:', e); return { data: { artifacts: [] } }; }),
+        api.get(`/boss-battles?projectId=${projectId}`).catch((e) => { console.error('[loadProjectData] boss battles error:', e); return { data: { battles: [] } }; })
       ]);
       
       let chs = chRes.data.chapters || [];
@@ -1881,16 +1888,23 @@ export default function Newquest() {
       setArtifacts(artRes.data.artifacts || []);
       
       const battles = bbRes.data.battles || [];
+      console.log('[loadProjectData] loaded battles:', battles.length, 'for project', projectId);
       const active = battles.find(b => b.status === 'active' || b.status === 'in_progress');
       const completed = battles.find(b => b.status === 'completed');
       if (active) {
+        console.log('[loadProjectData] found active battle:', active.id, active.title);
         setBossBattle(active);
         await loadBossBattle(active.id);
       } else if (completed) {
+        console.log('[loadProjectData] found completed battle:', completed.id, completed.title);
         setBossBattle(completed);
+      } else {
+        console.log('[loadProjectData] no battles found for project', projectId);
+        setBossBattle(null);
+        setBattleState(null);
       }
     } catch (e) {
-      console.error(e);
+      console.error('[loadProjectData] error:', e);
     }
   };
 
