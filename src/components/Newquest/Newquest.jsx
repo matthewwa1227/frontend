@@ -829,7 +829,7 @@ const HubView = ({ project, chapters, artifacts, bossBattle, activeTab, onTabCha
         />
       )}
       {activeTab === 'quests' && (
-        <QuestsContent chapters={chapters} bossBattle={bossBattle} onLearnChapter={onLearnChapter} onStartBattle={onStartBattle} onResumeBattle={onResumeBattle} onGenerateFirstChapter={onGenerateFirstChapter} generating={generating} />
+        <QuestsContent user={user} project={project} chapters={chapters} bossBattle={bossBattle} onLearnChapter={onLearnChapter} onStartBattle={onStartBattle} onResumeBattle={onResumeBattle} onGenerateFirstChapter={onGenerateFirstChapter} generating={generating} />
       )}
       {activeTab === 'artifacts' && (
         <ArtifactsContent artifacts={artifacts} chapters={chapters} onLearnChapter={onLearnChapter} onStartBattle={onStartBattle} />
@@ -1075,7 +1075,7 @@ const SkillTreeContent = ({ project, chapters, artifacts, bossBattle, skillSteps
 // ============================================
 // QUESTS CONTENT
 // ============================================
-const QuestsContent = ({ chapters, bossBattle, onLearnChapter, onStartBattle, onResumeBattle, onGenerateFirstChapter, generating }) => {
+const QuestsContent = ({ user, project, chapters, bossBattle, onLearnChapter, onStartBattle, onResumeBattle, onGenerateFirstChapter, generating }) => {
   const completedCount = chapters.filter(c => c.status === 'completed').length;
   const progress = chapters.length > 0 ? Math.round((completedCount / chapters.length) * 100) : 0;
   const allChaptersCompleted = chapters.length > 0 && chapters.every(c => c.status === 'completed');
@@ -1096,18 +1096,18 @@ const QuestsContent = ({ chapters, bossBattle, onLearnChapter, onStartBattle, on
                 <User className="w-8 h-8 text-primary" />
               </div>
               <div>
-                <p className={`${fontRetro} text-xs text-on-surface`}>CYBER_MONK</p>
-                <p className="text-primary text-xs font-bold mt-1">LVL 42 ARCH-DEVELOPER</p>
+                <p className={`${fontRetro} text-xs text-on-surface`}>{user?.username?.toUpperCase() || 'HERO'}</p>
+                <p className="text-primary text-xs font-bold mt-1">LVL {user?.level || 1} {user?.role?.toUpperCase() || 'ADVENTURER'}</p>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4 border-t-2 border-background pt-6">
               <div className="text-center">
                 <p className="text-[8px] font-['Press_Start_2P'] text-on-surface/50 mb-1">POWER</p>
-                <p className="text-xl font-['Space_Grotesk'] font-extrabold text-tertiary">12.4k</p>
+                <p className="text-xl font-['Space_Grotesk'] font-extrabold text-tertiary">{user?.xp || 0}</p>
               </div>
               <div className="text-center">
                 <p className="text-[8px] font-['Press_Start_2P'] text-on-surface/50 mb-1">STREAK</p>
-                <p className="text-xl font-['Space_Grotesk'] font-extrabold text-secondary-fixed-dim">14 DAYS</p>
+                <p className="text-xl font-['Space_Grotesk'] font-extrabold text-secondary-fixed-dim">{user?.currentStreak || 0} DAYS</p>
               </div>
             </div>
           </div>
@@ -1132,7 +1132,7 @@ const QuestsContent = ({ chapters, bossBattle, onLearnChapter, onStartBattle, on
           <h1 className="font-['Space_Grotesk'] text-4xl font-extrabold tracking-tighter text-on-surface mb-2 uppercase">Quest Log</h1>
           <div className="flex items-center gap-3">
             <span className="h-1 w-12 bg-primary" />
-            <p className="text-primary font-['Press_Start_2P'] text-[10px]">Project: Python Fitness Analyzer</p>
+            <p className="text-primary font-['Press_Start_2P'] text-[10px]">Project: {project?.title || 'Loading...'}</p>
           </div>
         </div>
 
@@ -1608,7 +1608,7 @@ const RankingsContent = ({ project, chapters, bossBattle }) => {
       <div className="flex flex-col md:flex-row justify-between items-end gap-4 border-b-4 border-surface-container pb-6">
         <div>
           <h1 className={`${fontRetro} text-2xl md:text-3xl text-primary tracking-tighter mb-2`}>HALL OF HEROES</h1>
-          <p className="font-headline text-secondary opacity-70 uppercase tracking-widest text-sm">Quest: {project?.title || 'Python Fitness Analyzer'}</p>
+          <p className="font-headline text-secondary opacity-70 uppercase tracking-widest text-sm">Quest: {project?.title || 'New Quest'}</p>
         </div>
         <div className="bg-surface-container px-4 py-2 flex items-center gap-3 border-r-4 border-b-4 border-surface-container-lowest">
           <Bot className="text-tertiary w-5 h-5" />
