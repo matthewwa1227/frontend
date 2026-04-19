@@ -1799,12 +1799,25 @@ export default function Newquest() {
     initData();
   }, []);
 
-  // Auto-close topic modal whenever a project is loaded
+  // Poll for active projects when modal is open (recovers from missed state updates)
   useEffect(() => {
-    if (project) {
-      setTopicModal(false);
-    }
-  }, [project]);
+    if (!topicModal) return;
+    const interval = setInterval(async () => {
+      try {
+        const res = await newquestAPI.getProjects('active');
+        const proj = res.data?.projects?.[0];
+        if (proj) {
+          console.log('[poll] found active project, closing modal:', proj.id);
+          setTopicModal(false);
+          setProject(proj);
+          await loadProjectData(proj.id);
+        }
+      } catch (e) {
+        // silently ignore polling errors
+      }
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [topicModal]);
 
   // Auto-start first chapter for brand new projects (no chapters yet)
   useEffect(() => {
@@ -2202,7 +2215,7 @@ export default function Newquest() {
 
       {/* Topic Selection Modal */}
       <AnimatePresence>
-        {topicModal && !project && (
+        {topicModal && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -2215,9 +2228,23 @@ export default function Newquest() {
               exit={{ scale: 0.9, opacity: 0 }}
               className="max-w-2xl w-full"
             >
-              <div className="text-center mb-10">
+              <div className="text-center mb-10 relative">
+                {project && (
+                  <button
+                    onClick={() => setTopicModal(false)}
+                    className="absolute -top-2 -right-2 text-on-surface-variant hover:text-primary"
+                  >
+                    <X className="w-6 h-6" />
+                  </button>
+                )}
                 <h1 className={`${fontRetro} text-2xl text-primary mb-4`}>CHOOSE YOUR QUEST</h1>
                 <p className="font-body text-on-surface-variant text-lg">What do you want to learn today?</p>
+                {project && (
+                  <p className="text-xs text-secondary mt-2">
+                    Current: <span className="font-bold">{project.title}</span>
+                    <button onClick={() => setTopicModal(false)} className="ml-2 underline text-primary hover:text-tertiary">Resume</button>
+                  </p>
+                )}
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
