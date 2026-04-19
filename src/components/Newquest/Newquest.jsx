@@ -1787,6 +1787,7 @@ export default function Newquest() {
   const [generating, setGenerating] = useState(false);
   const [creatingNew, setCreatingNew] = useState(false);
   const autoStartedRef = useRef(false);
+  const retryTimerRef = useRef(null);
 
   const FORM_LEVELS = [
     { group: 'Primary', levels: ['P1', 'P2', 'P3', 'P4', 'P5', 'P6'] },
@@ -2068,7 +2069,7 @@ export default function Newquest() {
       if (isNetworkError && retryCount < 2) {
         console.log(`[handleGenerateFirstChapter] retrying in 3s... (attempt ${retryCount + 2}/3)`);
         setError('Chapter generation is taking longer than expected. Retrying...');
-        setTimeout(() => {
+        retryTimerRef.current = setTimeout(() => {
           setGenerating(false);
           handleGenerateFirstChapter(retryCount + 1);
         }, 3000);
@@ -2233,6 +2234,10 @@ export default function Newquest() {
                 onLearnChapter={handleLearnChapter}
                 onGenerateFirstChapter={handleGenerateFirstChapter}
                 onStartNewQuest={() => {
+                  if (retryTimerRef.current) {
+                    clearTimeout(retryTimerRef.current);
+                    retryTimerRef.current = null;
+                  }
                   setCreatingNew(true);
                   setProject(null);
                   setChapters([]);
