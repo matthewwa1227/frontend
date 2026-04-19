@@ -1959,8 +1959,8 @@ export default function Newquest() {
     }
   };
 
-  const handleGenerateFirstChapter = async () => {
-    console.log('[handleGenerateFirstChapter] called, project:', project?.id, 'generating:', generating);
+  const handleGenerateFirstChapter = async (retryCount = 0) => {
+    console.log('[handleGenerateFirstChapter] called, project:', project?.id, 'generating:', generating, 'retry:', retryCount);
     if (!project || generating) {
       console.warn('[handleGenerateFirstChapter] blocked — no project or already generating');
       return;
@@ -1977,10 +1977,20 @@ export default function Newquest() {
       setChapters(prev => [...prev, newChapter]);
       setActiveChapter(newChapter);
       setView('learn');
+      setGenerating(false);
     } catch (err) {
       console.error('[handleGenerateFirstChapter] API error:', err);
+      const isNetworkError = !err.response && (err.message?.includes('Network Error') || err.code === 'ECONNABORTED');
+      if (isNetworkError && retryCount < 2) {
+        console.log(`[handleGenerateFirstChapter] retrying in 3s... (attempt ${retryCount + 2}/3)`);
+        setError('Chapter generation is taking longer than expected. Retrying...');
+        setTimeout(() => {
+          setGenerating(false);
+          handleGenerateFirstChapter(retryCount + 1);
+        }, 3000);
+        return;
+      }
       setError(err.response?.data?.error || err.message || 'Failed to generate chapter');
-    } finally {
       setGenerating(false);
     }
   };
