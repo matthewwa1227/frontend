@@ -238,6 +238,7 @@ const BossBattleView = ({ battleState, project, artifacts, onBack, onStageSubmit
   const [hotfixMode, setHotfixMode] = useState(false);
   const [kimiMessage, setKimiMessage] = useState("The battle awaits. Show me what you've learned.");
   const [hintOpen, setHintOpen] = useState(false);
+  const [expandedArtifact, setExpandedArtifact] = useState(null);
 
   const battle = battleState.bossBattle;
   const stages = battleState.stages || [];
@@ -252,10 +253,23 @@ const BossBattleView = ({ battleState, project, artifacts, onBack, onStageSubmit
     setResult(null);
     setHotfixMode(false);
     setHintOpen(false);
+    setExpandedArtifact(null);
     if (currentStage) {
       setKimiMessage(`Stage ${currentStage.stageNumber}: ${currentStage.scenario}`);
     }
   }, [currentStage?.id]);
+
+  // Auto-return to hub after victory (user can click button to return sooner)
+  const onBackRef = useRef(onBack);
+  onBackRef.current = onBack;
+  useEffect(() => {
+    if (result?.status === 'victory') {
+      const timer = setTimeout(() => {
+        onBackRef.current();
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [result?.status]);
 
   const isHotfixRequired = battle.failed_stage !== null && battle.failed_stage < currentStageIndex;
   const activeStageNumber = hotfixMode && isHotfixRequired ? battle.failed_stage + 1 : currentStageIndex + 1;
@@ -438,8 +452,8 @@ const BossBattleView = ({ battleState, project, artifacts, onBack, onStageSubmit
                   </>
                 )}
                 {result && !result.passed && (
-                  <div className="bg-error-container/20 border-l-4 border-error p-3 mt-4">
-                    <p className="text-error font-game text-[8px] uppercase">{theme.errorLabel}: {result.diagnosis || 'VALIDATION FAILED'}</p>
+                  <div className="bg-error-container/20 border-l-4 border-error p-4 mt-4">
+                    <p className="text-error font-game text-sm uppercase leading-relaxed">{theme.errorLabel}: {result.diagnosis || 'VALIDATION FAILED'}</p>
                   </div>
                 )}
               </div>
@@ -533,7 +547,17 @@ const BossBattleView = ({ battleState, project, artifacts, onBack, onStageSubmit
                         <p className={`${fontRetro} text-sm ${result.passed ? 'text-secondary' : 'text-error'}`}>
                           {result.passed ? theme.successLabel : theme.failureLabel}
                         </p>
-                        {result.status === 'victory' && <BadgeStars tier={result.badge} size="lg" />}
+                        {result.status === 'victory' && (
+                          <>
+                            <BadgeStars tier={result.badge} size="lg" />
+                            <button
+                              onClick={onBack}
+                              className="mt-4 bg-secondary text-on-secondary font-game text-[10px] py-3 px-6 border-b-4 border-on-secondary-fixed-variant active:translate-y-1 active:border-b-0 transition-all uppercase"
+                            >
+                              RETURN TO QUEST HUB
+                            </button>
+                          </>
+                        )}
                       </div>
                     </motion.div>
                   )}
@@ -551,19 +575,47 @@ const BossBattleView = ({ battleState, project, artifacts, onBack, onStageSubmit
                   </button>
                 </div>
                 <div className="space-y-3">
-                  {artifacts.slice(0, 3).map((art, idx) => {
-                    const rarity = idx === 0 ? 'Legendary' : idx === 1 ? 'Epic' : 'Common';
-                    const color = idx === 0 ? 'border-tertiary text-tertiary' : idx === 1 ? 'border-primary text-primary' : 'border-secondary text-secondary';
+                  {artifacts.map((art, idx) => {
+                    const t = art.title?.toLowerCase() || '';
+                    const tagsLower = (art.tags || []).map(tag => tag.toLowerCase());
+                    let rarity = 'Common';
+                    let color = 'border-secondary text-secondary';
+                    let bg = 'bg-secondary/10';
+                    if (tagsLower.includes('legendary') || t.includes('legendary') || t.includes('master') || idx === 0) {
+                      rarity = 'Legendary'; color = 'border-tertiary text-tertiary'; bg = 'bg-tertiary/10';
+                    } else if (tagsLower.includes('epic') || t.includes('epic') || t.includes('advanced') || idx === 1) {
+                      rarity = 'Epic'; color = 'border-primary text-primary'; bg = 'bg-primary/10';
+                    } else if (tagsLower.includes('rare') || t.includes('rare')) {
+                      rarity = 'Rare'; color = 'border-surface-variant text-primary'; bg = 'bg-surface-variant/10';
+                    }
+                    const isExpanded = expandedArtifact === art.id;
                     return (
-                      <div key={art.id} className={`bg-surface-container-low p-3 border-l-4 ${color.split(' ')[0]} flex items-center gap-3 group hover:bg-surface-container-high transition-colors cursor-pointer`}>
-                        <div className={`w-10 h-10 flex items-center justify-center ${idx === 0 ? 'bg-tertiary/10' : idx === 1 ? 'bg-primary/10' : 'bg-secondary/10'}`}>
-                          <FileText className={`w-5 h-5 ${color.split(' ')[1]}`} />
+                      <div key={art.id}>
+                        <div onClick={() => setExpandedArtifact(isExpanded ? null : art.id)} className={`bg-surface-container-low p-3 border-l-4 ${color.split(' ')[0]} flex items-center gap-3 group hover:bg-surface-container-high transition-colors cursor-pointer`}>
+                          <div className={`w-10 h-10 flex items-center justify-center ${bg}`}>
+                            <FileText className={`w-5 h-5 ${color.split(' ')[1]}`} />
+                          </div>
+                          <div className="flex-1">
+                            <p className={`${fontRetro} text-[8px] text-on-surface`}>{art.title}</p>
+                            <p className={`text-[8px] ${color.split(' ')[1]} font-bold uppercase tracking-widest`}>{rarity} Artifact</p>
+                          </div>
+                          <ChevronRight className={`text-secondary opacity-0 group-hover:opacity-100 transition-all w-5 h-5 ${isExpanded ? 'rotate-90' : ''}`} />
                         </div>
-                        <div className="flex-1">
-                          <p className={`${fontRetro} text-[8px] text-on-surface`}>{art.title}</p>
-                          <p className={`text-[8px] ${color.split(' ')[1]} font-bold uppercase tracking-widest`}>{rarity} Artifact</p>
-                        </div>
-                        <ChevronRight className="text-secondary opacity-0 group-hover:opacity-100 transition-opacity w-5 h-5" />
+                        {isExpanded && (
+                          <div className="bg-surface-container-highest p-4 border-l-4 border-primary/50 mt-1">
+                            <p className="text-xs text-on-surface-variant mb-2">{art.summary || 'Review this artifact before solving the challenge.'}</p>
+                            {art.content && (
+                              <div className="text-xs text-on-surface leading-relaxed whitespace-pre-wrap max-h-40 overflow-y-auto font-mono bg-background/50 p-3 border border-outline-variant/20">
+                                {art.content}
+                              </div>
+                            )}
+                            {art.key_points && Array.isArray(art.key_points) && (
+                              <ul className="list-disc list-inside text-xs text-secondary mt-2 space-y-1">
+                                {art.key_points.map((pt, i) => <li key={i}>{pt}</li>)}
+                              </ul>
+                            )}
+                          </div>
+                        )}
                       </div>
                     );
                   })}
@@ -761,13 +813,17 @@ const LearnChapterView = ({ chapter, project, artifacts, onBack, onComplete }) =
               <h2 className={`${fontRetro} text-[10px] text-on-surface`}>KNOWLEDGE VAULT</h2>
             </div>
             <div className="space-y-3">
-              {artifacts.length > 0 ? artifacts.slice(0, 3).map((art, idx) => {
-                const colors = [
-                  { border: 'border-secondary', text: 'text-secondary', bg: 'bg-secondary/10' },
-                  { border: 'border-primary', text: 'text-primary', bg: 'bg-primary/10' },
-                  { border: 'border-tertiary', text: 'text-tertiary', bg: 'bg-tertiary/10' }
-                ];
-                const c = colors[idx % 3];
+              {artifacts.length > 0 ? artifacts.map((art, idx) => {
+                const t = art.title?.toLowerCase() || '';
+                const tagsLower = (art.tags || []).map(tag => tag.toLowerCase());
+                let c = { border: 'border-secondary', text: 'text-secondary', bg: 'bg-secondary/10' };
+                if (tagsLower.includes('legendary') || t.includes('legendary') || t.includes('master') || idx === 0) {
+                  c = { border: 'border-tertiary', text: 'text-tertiary', bg: 'bg-tertiary/10' };
+                } else if (tagsLower.includes('epic') || t.includes('epic') || t.includes('advanced') || idx === 1) {
+                  c = { border: 'border-primary', text: 'text-primary', bg: 'bg-primary/10' };
+                } else if (tagsLower.includes('rare') || t.includes('rare')) {
+                  c = { border: 'border-surface-variant', text: 'text-primary', bg: 'bg-surface-variant/10' };
+                }
                 return (
                   <div key={art.id} className={`bg-surface-container-low p-3 border ${c.border} flex items-center gap-3 group cursor-help`}>
                     <div className={`w-10 h-10 ${c.bg} border ${c.border} flex items-center justify-center ${c.text} group-hover:bg-opacity-100 transition-colors`}>
@@ -775,7 +831,7 @@ const LearnChapterView = ({ chapter, project, artifacts, onBack, onComplete }) =
                     </div>
                     <div>
                       <p className={`${fontRetro} text-[8px] text-on-surface`}>{art.title?.toUpperCase()}</p>
-                      <p className="text-[10px] text-on-surface-variant">Artifact {idx + 1}</p>
+                      <p className="text-[10px] text-on-surface-variant">{(tagsLower.includes('legendary') || t.includes('legendary') || t.includes('master') || idx === 0) ? 'Legendary' : (tagsLower.includes('epic') || t.includes('epic') || t.includes('advanced') || idx === 1) ? 'Epic' : 'Common'} Artifact</p>
                     </div>
                   </div>
                 );
@@ -2274,6 +2330,18 @@ export default function Newquest() {
 
   const handleStageSubmit = async (result) => {
     if (!bossBattle) return;
+    // Victory: reload project data and auto-return to hub after showing the victory screen
+    if (result?.status === 'victory') {
+      setTimeout(async () => {
+        try {
+          await loadBossBattle(bossBattle.id);
+          if (project?.id) await loadProjectData(project.id);
+        } catch (e) {
+          console.error('[handleStageSubmit] victory refresh error:', e);
+        }
+      }, 800);
+      return;
+    }
     setTimeout(async () => {
       await loadBossBattle(bossBattle.id);
     }, 800);
