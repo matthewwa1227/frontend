@@ -424,6 +424,7 @@ const OutputView = ({ sessionId, onBack }) => {
   const [error, setError] = useState(null);
   const [lastChecked, setLastChecked] = useState(null);
   const [checking, setChecking] = useState(false);
+  const [waitSeconds, setWaitSeconds] = useState(0);
 
   const loadSession = useCallback(async () => {
     try {
@@ -451,6 +452,16 @@ const OutputView = ({ sessionId, onBack }) => {
     }, 4000);
     return () => clearInterval(interval);
   }, [session, loadSession]);
+
+  // Count how long we've been waiting
+  useEffect(() => {
+    if (!session || session.status !== 'processing') {
+      setWaitSeconds(0);
+      return;
+    }
+    const timer = setInterval(() => setWaitSeconds(s => s + 1), 1000);
+    return () => clearInterval(timer);
+  }, [session]);
 
   const handleDelete = async () => {
     if (!window.confirm('Banish this tome from your vault?')) return;
@@ -525,6 +536,11 @@ const OutputView = ({ sessionId, onBack }) => {
             <button onClick={loadSession} disabled={checking} className="underline hover:text-primary disabled:opacity-50">Refresh now</button>
             {lastChecked && <span>• Checked {Math.floor((Date.now() - lastChecked) / 1000)}s ago</span>}
           </div>
+          {waitSeconds > 45 && (
+            <div className="text-center mt-2">
+              <p className={`${fontRetro} text-[8px] text-tertiary`}>⏳ TAKING LONGER THAN EXPECTED ({waitSeconds}s). THE AI MAY BE BUSY — HANG TIGHT OR CLICK REFRESH.</p>
+            </div>
+          )}
         </div>
       )}
 
