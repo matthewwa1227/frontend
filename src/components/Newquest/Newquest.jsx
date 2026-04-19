@@ -24,7 +24,7 @@ const newquestAPI = {
   getChapters: (projectId) => api.get(`/chapters?projectId=${projectId}`),
   getArtifacts: (projectId) => api.get(`/artifacts?projectId=${projectId}`),
   generateChapter: (data) => api.post('/chapters/generate', data, { timeout: 95000 }),
-  completeChapter: (id) => api.post(`/chapters/${id}/complete`),
+  completeChapter: (id) => api.post(`/chapters/${id}/complete`, null, { timeout: 95000 }),
   startBossBattle: (projectId, focus) => api.post('/boss-battles/start', { projectId, focus }),
   getBossBattle: (id) => api.get(`/boss-battles/${id}`),
   submitStage: (id, solution, mode = 'normal') => api.post(`/boss-battles/${id}/stage`, { solution, mode }),
