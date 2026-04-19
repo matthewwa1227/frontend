@@ -709,7 +709,7 @@ const LearnChapterView = ({ chapter, project, artifacts, onBack, onComplete }) =
 // ============================================
 // HUB VIEW
 // ============================================
-const HubView = ({ project, chapters, artifacts, bossBattle, activeTab, onTabChange, onStartBattle, onResumeBattle, onRetake, onLearnChapter, onGenerateFirstChapter, onStartNewQuest, generating }) => {
+const HubView = ({ user, project, chapters, artifacts, bossBattle, activeTab, onTabChange, onStartBattle, onResumeBattle, onRetake, onLearnChapter, onGenerateFirstChapter, onStartNewQuest, generating }) => {
   const completedCount = chapters.filter(c => c.status === 'completed').length;
   const progress = chapters.length > 0 ? Math.round((completedCount / chapters.length) * 100) : 0;
   const activeChapter = chapters.find(c => c.status === 'active');
@@ -2094,6 +2094,7 @@ export default function Newquest() {
           {view === 'hub' && (
             <motion.div key="hub" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="px-4 md:px-8">
               <HubView
+                user={user}
                 project={project}
                 chapters={chapters}
                 artifacts={artifacts}
