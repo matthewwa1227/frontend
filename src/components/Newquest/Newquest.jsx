@@ -24,7 +24,7 @@ const newquestAPI = {
   getChapters: (projectId) => api.get(`/chapters?projectId=${projectId}`),
   getArtifacts: (projectId) => api.get(`/artifacts?projectId=${projectId}`),
   generateChapter: (data) => api.post('/chapters/generate', data, { timeout: 95000 }),
-  completeChapter: (id) => api.post(`/chapters/${id}/complete`, null, { timeout: 95000 }),
+  completeChapter: (id) => api.post(`/chapters/${id}/complete`, {}, { timeout: 95000 }),
   startBossBattle: (projectId, focus) => api.post('/boss-battles/start', { projectId, focus }),
   getBossBattle: (id) => api.get(`/boss-battles/${id}`),
   submitStage: (id, solution, mode = 'normal') => api.post(`/boss-battles/${id}/stage`, { solution, mode }),
@@ -1996,14 +1996,14 @@ export default function Newquest() {
         api.get(`/boss-battles?projectId=${projectId}`).catch((e) => { console.error('[loadProjectData] boss battles error:', e); return { data: { battles: [] } }; })
       ]);
       
-      let chs = chRes.data.chapters || [];
+      let chs = chRes.data?.chapters || [];
       // Normalize backend statuses to frontend statuses
       chs = chs.map(ch => ({
         ...ch,
         status: ch.status === 'available' || ch.status === 'in_progress' ? 'active' : ch.status
       }));
       setChapters(chs);
-      setArtifacts(artRes.data.artifacts || []);
+      setArtifacts(artRes.data?.artifacts || []);
       
       const battles = bbRes.data.battles || [];
       console.log('[loadProjectData] loaded battles:', battles.length, 'for project', projectId);
@@ -2178,16 +2178,27 @@ export default function Newquest() {
   const handleCompleteChapter = async () => {
     if (!activeChapter) return;
     try {
-      await newquestAPI.completeChapter(activeChapter.id);
-      await loadProjectData(project.id);
-      setView('hub');
-      setActiveChapter(null);
+      const completeRes = await newquestAPI.completeChapter(activeChapter.id);
+      console.log('[handleCompleteChapter] success:', completeRes.data);
     } catch (err) {
       console.error('[handleCompleteChapter] error:', err);
       console.error('[handleCompleteChapter] raw response:', err.response?.data);
       console.error('[handleCompleteChapter] status:', err.response?.status);
       const msg = err.response?.data?.details || err.response?.data?.error || err.message || 'Failed to complete chapter';
       setError(msg);
+      return; // Don't proceed if completion failed
+    }
+
+    // Refresh project data after successful completion
+    try {
+      await loadProjectData(project.id);
+      setView('hub');
+      setActiveChapter(null);
+    } catch (refreshErr) {
+      console.error('[handleCompleteChapter] refresh error:', refreshErr);
+      setError('Chapter completed, but failed to refresh data. Please reload the page.');
+      setView('hub');
+      setActiveChapter(null);
     }
   };
 
