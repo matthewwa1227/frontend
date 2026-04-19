@@ -10,7 +10,7 @@ import {
   CheckCheck, Clock, Sparkles, Bell, Settings, TrendingUp,
   LayoutGrid, Bot, GitBranch, User, Shield, FlaskConical, Gem, Pin, X
 } from 'lucide-react';
-import api from '../../utils/api';
+import api, { authAPI } from '../../utils/api';
 import TopAppBar from '../layout/TopAppBar';
 import SideNavBar, { BottomNavBar, defaultNavItems } from '../layout/SideNavBar';
 
