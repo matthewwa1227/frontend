@@ -2150,7 +2150,9 @@ export default function Newquest() {
       setView('hub');
       setActiveChapter(null);
     } catch (err) {
-      setError('Failed to complete chapter');
+      console.error('[handleCompleteChapter] error:', err);
+      const msg = err.response?.data?.details || err.response?.data?.error || err.message || 'Failed to complete chapter';
+      setError(msg);
     }
   };
 
