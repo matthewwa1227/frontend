@@ -2187,7 +2187,7 @@ export default function Newquest() {
 
       {/* Topic Selection Modal */}
       <AnimatePresence>
-        {topicModal && (
+        {topicModal && !project && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
