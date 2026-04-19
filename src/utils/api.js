@@ -192,7 +192,7 @@ export const storyQuestAPI = {
 
 // Newquest - Boss Battle API
 export const newquestAPI = {
-  startBossBattle: (projectId) => api.post('/boss-battles/start', { projectId }),
+  startBossBattle: (projectId, focus) => api.post('/boss-battles/start', { projectId, focus }),
   getBossBattle: (id) => api.get(`/boss-battles/${id}`),
   submitStage: (id, solution, mode = 'normal') => api.post(`/boss-battles/${id}/stage`, { solution, mode }),
   retryStage: (id) => api.post(`/boss-battles/${id}/retry`),

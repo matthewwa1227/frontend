@@ -688,11 +688,14 @@ const HubView = ({ project, chapters, artifacts, bossBattle, activeTab, onTabCha
           ch.title?.toLowerCase().includes('visual') ? LineChart : Code
   }));
 
+  const allChaptersCompleted = chapters.length > 0 && chapters.every(c => c.status === 'completed');
+  const canAccessBoss = allChaptersCompleted || bossBattle?.status === 'completed';
+
   skillSteps.push({
     id: 'boss',
     title: 'BOSS BATTLE',
     status: bossBattle?.status === 'completed' ? 'completed' :
-            bossBattle?.status === 'active' || bossBattle?.status === 'in_progress' ? 'active' : 'locked',
+            canAccessBoss && (bossBattle?.status === 'active' || bossBattle?.status === 'in_progress') ? 'active' : 'locked',
     icon: Skull
   });
 
@@ -1020,6 +1023,8 @@ const SkillTreeContent = ({ project, chapters, artifacts, bossBattle, skillSteps
 const QuestsContent = ({ chapters, bossBattle, onLearnChapter, onStartBattle, onResumeBattle, onGenerateFirstChapter }) => {
   const completedCount = chapters.filter(c => c.status === 'completed').length;
   const progress = chapters.length > 0 ? Math.round((completedCount / chapters.length) * 100) : 0;
+  const allChaptersCompleted = chapters.length > 0 && chapters.every(c => c.status === 'completed');
+  const canAccessBoss = allChaptersCompleted || bossBattle?.status === 'completed';
 
   return (
     <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -1180,7 +1185,7 @@ const QuestsContent = ({ chapters, bossBattle, onLearnChapter, onStartBattle, on
                 <div className="flex items-center gap-3 mb-2">
                   {bossBattle?.status === 'completed' ? (
                     <span className="text-[8px] font-['Press_Start_2P'] px-2 py-1 bg-secondary text-on-secondary">COMPLETED</span>
-                  ) : bossBattle?.status === 'active' || bossBattle?.status === 'in_progress' ? (
+                  ) : canAccessBoss && (bossBattle?.status === 'active' || bossBattle?.status === 'in_progress') ? (
                     <span className="text-[8px] font-['Press_Start_2P'] px-2 py-1 bg-tertiary text-on-tertiary">ACTIVE</span>
                   ) : (
                     <span className="text-[8px] font-['Press_Start_2P'] px-2 py-1 bg-background text-on-surface/60 border border-outline-variant">LOCKED</span>
@@ -1188,7 +1193,11 @@ const QuestsContent = ({ chapters, bossBattle, onLearnChapter, onStartBattle, on
                   <span className="text-[8px] font-['Press_Start_2P'] px-2 py-1 bg-background text-error border border-error">LEGENDARY</span>
                 </div>
                 <h2 className="font-['Space_Grotesk'] text-2xl font-bold text-on-surface mb-2">Boss Battle: The Synthesis</h2>
-                <p className="text-secondary/60 text-sm mb-6 leading-relaxed">Combine all forged artifacts into a final working deliverable. Three stages. No room for error.</p>
+                <p className="text-secondary/60 text-sm mb-6 leading-relaxed">
+                  {canAccessBoss 
+                    ? 'Combine all forged artifacts into a final working deliverable. Three stages. No room for error.' 
+                    : 'Complete all chapters to unlock the Boss Battle. Forge your artifacts first.'}
+                </p>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                   <div>
                     <p className="text-[8px] font-['Press_Start_2P'] text-on-surface/40 mb-1">REWARD</p>
@@ -1206,10 +1215,10 @@ const QuestsContent = ({ chapters, bossBattle, onLearnChapter, onStartBattle, on
                 </div>
               </div>
               <div className="w-full md:w-auto flex flex-col gap-3">
-                {(bossBattle?.status === 'active' || bossBattle?.status === 'in_progress') && (
+                {canAccessBoss && (bossBattle?.status === 'active' || bossBattle?.status === 'in_progress') && (
                   <button onClick={onResumeBattle} className="bg-tertiary hover:translate-y-0.5 transition-transform text-on-tertiary font-['Press_Start_2P'] text-[10px] py-4 px-8 border-b-4 border-on-tertiary-fixed-variant active:border-b-0 active:translate-y-1">RESUME BATTLE</button>
                 )}
-                {(!bossBattle || bossBattle?.status === 'locked') && (
+                {(!canAccessBoss || !bossBattle || bossBattle?.status === 'locked') && (
                   <button className="bg-background text-on-surface font-['Press_Start_2P'] text-[10px] py-4 px-8 border-b-4 border-black hover:bg-surface-container-highest opacity-60 hover:opacity-100 transition-opacity">LOCKED</button>
                 )}
                 {bossBattle?.status === 'completed' && (
@@ -1716,6 +1725,8 @@ export default function Newquest() {
   const [activeChapter, setActiveChapter] = useState(null);
   const [error, setError] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [bossFocusModal, setBossFocusModal] = useState(false);
+  const [bossFocus, setBossFocus] = useState('');
 
   useEffect(() => {
     initData();
@@ -1819,25 +1830,45 @@ export default function Newquest() {
     }
   };
 
-  const startBossBattle = async () => {
+  const startBossBattle = async (focus = '') => {
     if (!project) return;
     setLoading(true);
     try {
-      const res = await newquestAPI.startBossBattle(project.id);
+      const res = await newquestAPI.startBossBattle(project.id, focus);
       await loadBossBattle(res.data.bossBattle.id);
       setView('battle');
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to start battle');
     } finally {
       setLoading(false);
+      setBossFocusModal(false);
+      setBossFocus('');
     }
   };
 
-  const resumeBattle = async () => {
-    if (bossBattle) {
-      await loadBossBattle(bossBattle.id);
-      setView('battle');
+  const openBossFocusModal = () => {
+    const allChaptersCompleted = chapters.length > 0 && chapters.every(c => c.status === 'completed');
+    if (!allChaptersCompleted) {
+      setError('Complete all chapters before starting the Boss Battle');
+      return;
     }
+    setBossFocus('');
+    setBossFocusModal(true);
+  };
+
+  const canResumeBossBattle = () => {
+    const allChaptersCompleted = chapters.length > 0 && chapters.every(c => c.status === 'completed');
+    return allChaptersCompleted || bossBattle?.status === 'completed';
+  };
+
+  const resumeBattle = async () => {
+    if (!bossBattle) return;
+    if (!canResumeBossBattle()) {
+      setError('Complete all chapters before resuming the Boss Battle');
+      return;
+    }
+    await loadBossBattle(bossBattle.id);
+    setView('battle');
   };
 
   const handleStageSubmit = async (result) => {
@@ -1932,7 +1963,7 @@ export default function Newquest() {
                 bossBattle={bossBattle}
                 activeTab={tab}
                 onTabChange={setTab}
-                onStartBattle={startBossBattle}
+                onStartBattle={openBossFocusModal}
                 onResumeBattle={resumeBattle}
                 onRetake={handleRetake}
                 onLearnChapter={handleLearnChapter}
@@ -1979,6 +2010,58 @@ export default function Newquest() {
           >
             <p className={`${fontRetro} text-[8px] leading-relaxed`}>{error}</p>
             <button onClick={() => setError(null)} className="text-xs underline mt-2 hover:text-white">Dismiss</button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Boss Battle Focus Modal */}
+      <AnimatePresence>
+        {bossFocusModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[110] bg-background/90 backdrop-blur-sm flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-surface-container border-4 border-primary max-w-lg w-full p-6 shadow-[8px_8px_0_0_#1a063b]"
+            >
+              <div className="flex items-center gap-3 mb-6">
+                <Swords className="w-6 h-6 text-primary" />
+                <h2 className={`${fontRetro} text-sm text-primary`}>PREPARE FOR BATTLE</h2>
+              </div>
+              
+              <p className="font-body text-on-surface mb-4 text-sm leading-relaxed">
+                Before entering the Boss Battle, tell us what you'd like to focus on or what you want to learn from this challenge.
+              </p>
+              
+              <textarea
+                value={bossFocus}
+                onChange={(e) => setBossFocus(e.target.value)}
+                placeholder="e.g., I want to practice data cleaning with pandas, or I want to learn how to merge datasets..."
+                className="w-full bg-surface-container-lowest border-2 border-outline-variant p-4 font-mono text-sm text-on-surface focus:border-primary focus:ring-0 resize-none h-32 mb-6"
+              />
+              
+              <div className="flex gap-4">
+                <button
+                  onClick={() => startBossBattle(bossFocus)}
+                  disabled={loading}
+                  className="flex-1 bg-primary-container text-on-primary py-3 font-game text-[10px] border-b-4 border-on-primary-fixed-variant active:translate-y-1 active:border-b-0 transition-all uppercase disabled:opacity-50"
+                >
+                  {loading ? 'SUMMONING...' : 'START BOSS BATTLE'}
+                </button>
+                <button
+                  onClick={() => { setBossFocusModal(false); setBossFocus(''); }}
+                  disabled={loading}
+                  className="px-6 bg-surface-container-highest text-on-surface py-3 font-game text-[10px] border-b-4 border-background active:translate-y-1 active:border-b-0 transition-all uppercase disabled:opacity-50"
+                >
+                  CANCEL
+                </button>
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
