@@ -34,6 +34,106 @@ const newquestAPI = {
 };
 
 // ============================================
+// BATTLE THEME SYSTEM
+// ============================================
+const getBattleTheme = (project) => {
+  const topic = (project?.topic || project?.title || '').toLowerCase();
+  const subject = (project?.subject || '').toLowerCase();
+  const title = (project?.title || '').toLowerCase();
+  const text = `${topic} ${subject} ${title}`;
+
+  const isMath = text.includes('math') || text.includes('dim sum') || text.includes('counting') || text.includes('arithmetic') || text.includes('coins') || text.includes('shop') || text.includes('addition') || text.includes('subtract');
+  const isEnglish = text.includes('english') || text.includes('grammar') || text.includes('writing') || text.includes('story');
+  const isCode = text.includes('python') || text.includes('programming') || text.includes('data') || text.includes('code') || text.includes('csv') || text.includes('pandas');
+
+  if (isMath) {
+    return {
+      mode: 'math',
+      workspaceLabel: 'MATH WORKBOOK',
+      stageTitlesFallback: ['THE PRICE LIST', 'THE RUSH ORDER', 'THE GRAND OPENING'],
+      taskPrefix: '📝 TASK:',
+      step1Label: 'Step 1: Read the problem carefully',
+      step2Label: 'Step 2: Use your Knowledge Artifacts',
+      step3Label: 'Step 3: Write your answer here',
+      step4Label: 'Step 4: Check your work',
+      placeholder: (hotfix) => hotfix ? "   3 coins + 5 coins = 8 coins" : "   Answer: _____________",
+      submitLabel: (hotfix) => hotfix ? 'FIX MISTAKE' : 'SOLVE PROBLEM',
+      errorLabel: 'WRONG ANSWER',
+      successLabel: 'CORRECT!',
+      failureLabel: 'KEEP TRYING',
+      simulationLabel: 'PRACTICE CHECK',
+      deliverableIcon: '📋',
+      deliverableName: project?.deliverable || 'my_math_workbook.txt',
+      hintFallback: "Check your Knowledge Artifacts for clues. Count carefully and double-check your answer.",
+      hotfixTitle: 'OOPS! LET\'S FIX IT',
+      hotfixRawLabel: 'YOUR ANSWER',
+      hotfixPatchLabel: 'CORRECT WAY',
+      hotfixRawValue: '3 + 5 = 9  ❌',
+      hotfixPatchValue: '3 + 5 = 8  ✅',
+      battleSubtitle: 'Solve every problem to become a Math Master!',
+      battleHeader: 'MATH CHALLENGE',
+    };
+  }
+
+  if (isEnglish) {
+    return {
+      mode: 'english',
+      workspaceLabel: 'WRITING DESK',
+      stageTitlesFallback: ['THE DRAFT', 'THE EDIT', 'THE FINAL PIECE'],
+      taskPrefix: '📝 TASK:',
+      step1Label: 'Step 1: Read the prompt carefully',
+      step2Label: 'Step 2: Use your Knowledge Artifacts',
+      step3Label: 'Step 3: Write your answer here',
+      step4Label: 'Step 4: Review and polish',
+      placeholder: (hotfix) => hotfix ? "   The cat sat on the mat." : "   Write your answer here...",
+      submitLabel: (hotfix) => hotfix ? 'FIX MISTAKE' : 'SUBMIT WRITING',
+      errorLabel: 'NEEDS WORK',
+      successLabel: 'GREAT JOB!',
+      failureLabel: 'TRY AGAIN',
+      simulationLabel: 'WRITING CHECK',
+      deliverableIcon: '📖',
+      deliverableName: project?.deliverable || 'my_story.txt',
+      hintFallback: "Check your Knowledge Artifacts for clues. Look at grammar rules and vocabulary tips.",
+      hotfixTitle: 'OOPS! LET\'S FIX IT',
+      hotfixRawLabel: 'YOUR SENTENCE',
+      hotfixPatchLabel: 'CORRECT WAY',
+      hotfixRawValue: '"The cat sit on the mat"  ❌',
+      hotfixPatchValue: '"The cat sits on the mat"  ✅',
+      battleSubtitle: 'Write with confidence to become a Word Wizard!',
+      battleHeader: 'WRITING CHALLENGE',
+    };
+  }
+
+  // Default: code / data science theme
+  return {
+    mode: 'code',
+    workspaceLabel: 'CHAPTER RITUALS',
+    stageTitlesFallback: ['DATA INGESTION', 'TRANSFORMATION', 'VISUALIZATION'],
+    taskPrefix: '// TASK:',
+    step1Label: '// Execute the ritual of transformation',
+    step2Label: null,
+    step3Label: null,
+    step4Label: null,
+    placeholder: (hotfix) => hotfix ? "   return { ...relic, value: 42.0 };" : "   return { ...relic, power: relic.value * 1.5 };",
+    submitLabel: (hotfix) => hotfix ? 'SUBMIT HOTFIX' : 'CAST RITUAL',
+    errorLabel: 'RUNTIME ERROR',
+    successLabel: 'RITUAL SUCCESS',
+    failureLabel: 'RITUAL FAILED',
+    simulationLabel: 'LIVE SIMULATION',
+    deliverableIcon: null,
+    deliverableName: project?.deliverable || 'fitness_dashboard.py',
+    hintFallback: "Check your Knowledge Artifacts for clues. The map() function requires a consistent return structure.",
+    hotfixTitle: 'HOTFIX MODE: UPSTREAM DEBUGGING',
+    hotfixRawLabel: 'RAW_SOURCE.JSON',
+    hotfixPatchLabel: 'HOTFIX_PATCH.JSON',
+    hotfixRawValue: '"value": null',
+    hotfixPatchValue: '"value": 42.0',
+    battleSubtitle: 'Master the flow or be consumed by the void.',
+    battleHeader: 'BOSS BATTLE: THE SYNTHESIS',
+  };
+};
+
+// ============================================
 // GLOBAL STYLES HELPERS
 // ============================================
 const fontRetro = "font-['Press_Start_2P']";
@@ -144,6 +244,7 @@ const BossBattleView = ({ battleState, project, artifacts, onBack, onStageSubmit
   const currentStageIndex = battleState.currentStageIndex || 0;
   const currentStage = battleState.currentStage;
   const stageSolutions = battleState.stageSolutions || [];
+  const theme = getBattleTheme(project);
 
   // Reset state when stage changes
   useEffect(() => {
@@ -168,7 +269,7 @@ const BossBattleView = ({ battleState, project, artifacts, onBack, onStageSubmit
       setResult(res.data);
       if (res.data.passed) {
         if (res.data.status === 'hotfix-resolved') {
-          setKimiMessage('Excellent! The upstream bug is fixed. Continue to the next stage.');
+          setKimiMessage(theme.mode === 'code' ? 'Excellent! The upstream bug is fixed. Continue to the next stage.' : 'Great job fixing your mistake! Keep going!');
         } else if (res.data.status === 'victory') {
           setKimiMessage(`Victory! You earned the ${res.data.badge} badge!`);
         } else {
@@ -192,7 +293,7 @@ const BossBattleView = ({ battleState, project, artifacts, onBack, onStageSubmit
   };
 
   const stageNames = stages.map((s, i) => s.title?.toUpperCase() || `STAGE ${i + 1}`);
-  const stageTitles = stageNames.length >= 3 ? stageNames : ['DATA INGESTION', 'TRANSFORMATION', 'VISUALIZATION'];
+  const stageTitles = stageNames.length >= 3 ? stageNames : theme.stageTitlesFallback;
 
   const previousSolution = activeStageNumber > 1 ? stageSolutions[activeStageNumber - 2] : null;
 
@@ -206,15 +307,15 @@ const BossBattleView = ({ battleState, project, artifacts, onBack, onStageSubmit
         </button>
         <div className="flex items-center gap-2">
           <Swords className="text-tertiary w-5 h-5" />
-          <span className={`${fontRetro} text-[10px] text-tertiary uppercase`}>BOSS BATTLE: THE SYNTHESIS</span>
+          <span className={`${fontRetro} text-[10px] text-tertiary uppercase`}>{theme.battleHeader}</span>
         </div>
       </div>
         {/* Battle Arena Header */}
         <section className="mb-8">
           <div className="flex justify-between items-end mb-4">
             <div>
-              <h1 className={`${fontRetro} text-xl text-primary mb-2`}>BATTLE ARENA: {battle.title?.toUpperCase() || 'DATA SYNTHESIS'}</h1>
-              <p className="font-body text-secondary/60 text-sm italic">Master the flow or be consumed by the void.</p>
+              <h1 className={`${fontRetro} text-xl text-primary mb-2`}>BATTLE ARENA: {battle.title?.toUpperCase() || theme.battleHeader}</h1>
+              <p className="font-body text-secondary/60 text-sm italic">{theme.battleSubtitle}</p>
             </div>
             <div className="text-right">
               <span className={`${fontRetro} text-[10px] text-tertiary`}>CURRENT STAGE: {stageTitles[currentStageIndex]}</span>
@@ -253,7 +354,7 @@ const BossBattleView = ({ battleState, project, artifacts, onBack, onStageSubmit
               <div className="bg-surface-container-high p-4 flex justify-between items-center border-b-2 border-outline-variant/10">
                 <div className="flex items-center gap-2">
                   <Sparkles className="text-primary w-5 h-5" />
-                  <span className={`${fontRetro} text-[10px] text-primary`}>CHAPTER RITUALS</span>
+                  <span className={`${fontRetro} text-[10px] text-primary`}>{theme.workspaceLabel}</span>
                 </div>
                 <div className="flex gap-2">
                   <div className="w-3 h-3 rounded-full bg-error" />
@@ -266,7 +367,7 @@ const BossBattleView = ({ battleState, project, artifacts, onBack, onStageSubmit
                   <>
                     <div className="flex gap-4 opacity-60">
                       <span className="text-secondary/30 select-none">00</span>
-                      <p className="text-secondary">{'// PREVIOUS STAGE OUTPUT (READ-ONLY)'}</p>
+                      <p className="text-secondary">{theme.mode === 'code' ? '// PREVIOUS STAGE OUTPUT (READ-ONLY)' : '📋 PREVIOUS ANSWER (READ-ONLY)'}</p>
                     </div>
                     <div className="text-on-surface-variant opacity-60 mb-2 p-3 bg-surface-container/30 border-l-2 border-error">
                       <pre className="whitespace-pre-wrap text-xs">{typeof previousSolution.solution === 'string' ? previousSolution.solution : JSON.stringify(previousSolution.solution, null, 2)}</pre>
@@ -276,37 +377,69 @@ const BossBattleView = ({ battleState, project, artifacts, onBack, onStageSubmit
                 {!hotfixMode && currentStage?.task && (
                   <div className="flex gap-4">
                     <span className="text-secondary/30 select-none">00</span>
-                    <p className="text-secondary">{'// TASK: '}{currentStage.task}</p>
+                    <p className="text-secondary">{theme.taskPrefix} {currentStage.task}</p>
                   </div>
                 )}
-                <div className="flex gap-4">
-                  <span className="text-secondary/30 select-none">01</span>
-                  <p className="text-secondary">{'// Execute the ritual of transformation'}</p>
-                </div>
-                <div className="flex gap-4">
-                  <span className="text-secondary/30 select-none">02</span>
-                  <p className="text-on-background"><span className="text-primary">const</span> <span className="text-secondary">essence</span> = <span className="text-tertiary">fetch</span>(<span className="text-primary">'/void/raw-data'</span>);</p>
-                </div>
-                <div className="flex gap-4">
-                  <span className="text-secondary/30 select-none">03</span>
-                  <p className="text-on-background"><span className="text-primary">const</span> <span className="text-secondary">refined</span> = essence.<span className="text-tertiary">map</span>(relic =&gt; {'{'}</p>
-                </div>
-                <div className="flex gap-4">
-                  <span className="text-secondary/30 select-none">04</span>
-                  <textarea
-                    value={solution}
-                    onChange={(e) => setSolution(e.target.value)}
-                    placeholder={hotfixMode ? "   return { ...relic, value: 42.0 };" : "   return { ...relic, power: relic.value * 1.5 };"}
-                    className="flex-1 bg-transparent font-mono text-sm text-on-background focus:outline-none resize-none h-24 whitespace-pre"
-                  />
-                </div>
-                <div className="flex gap-4">
-                  <span className="text-secondary/30 select-none">05</span>
-                  <p className="text-on-background">{'}'});</p>
-                </div>
+                {theme.mode === 'code' ? (
+                  <>
+                    <div className="flex gap-4">
+                      <span className="text-secondary/30 select-none">01</span>
+                      <p className="text-secondary">{theme.step1Label}</p>
+                    </div>
+                    <div className="flex gap-4">
+                      <span className="text-secondary/30 select-none">02</span>
+                      <p className="text-on-background"><span className="text-primary">const</span> <span className="text-secondary">essence</span> = <span className="text-tertiary">fetch</span>(<span className="text-primary">'/void/raw-data'</span>);</p>
+                    </div>
+                    <div className="flex gap-4">
+                      <span className="text-secondary/30 select-none">03</span>
+                      <p className="text-on-background"><span className="text-primary">const</span> <span className="text-secondary">refined</span> = essence.<span className="text-tertiary">map</span>(relic =&gt; {'{'}</p>
+                    </div>
+                    <div className="flex gap-4">
+                      <span className="text-secondary/30 select-none">04</span>
+                      <textarea
+                        value={solution}
+                        onChange={(e) => setSolution(e.target.value)}
+                        placeholder={theme.placeholder(hotfixMode)}
+                        className="flex-1 bg-transparent font-mono text-sm text-on-background focus:outline-none resize-none h-24 whitespace-pre"
+                      />
+                    </div>
+                    <div className="flex gap-4">
+                      <span className="text-secondary/30 select-none">05</span>
+                      <p className="text-on-background">{'}'});</p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex gap-4">
+                      <span className="text-secondary/30 select-none">01</span>
+                      <p className="text-secondary">{theme.step1Label}</p>
+                    </div>
+                    <div className="flex gap-4">
+                      <span className="text-secondary/30 select-none">02</span>
+                      <p className="text-secondary">{theme.step2Label}</p>
+                    </div>
+                    <div className="flex gap-4">
+                      <span className="text-secondary/30 select-none">03</span>
+                      <p className="text-secondary">{theme.step3Label}</p>
+                    </div>
+                    <div className="flex gap-4">
+                      <span className="text-secondary/30 select-none">04</span>
+                      <textarea
+                        value={solution}
+                        onChange={(e) => setSolution(e.target.value)}
+                        placeholder={theme.placeholder(hotfixMode)}
+                        className="flex-1 bg-transparent font-mono text-sm text-on-background focus:outline-none resize-none h-24 whitespace-pre"
+                      />
+                    </div>
+                    <div className="flex gap-4">
+                      <span className="text-secondary/30 select-none">05</span>
+                      <p className="text-secondary">{theme.step4Label}</p>
+                    </div>
+                  </>
+                )}
                 {result && !result.passed && (
                   <div className="bg-error-container/20 border-l-4 border-error p-3 mt-4">
-                    <p className="text-error font-game text-[8px] uppercase">RUNTIME ERROR: {result.diagnosis || 'VALIDATION FAILED'}</p>
+                    <p className="text-error font-game text-[8px] uppercase">{theme.errorLabel}: {result.diagnosis || 'VALIDATION FAILED'}</p>
                   </div>
                 )}
               </div>
@@ -316,7 +449,7 @@ const BossBattleView = ({ battleState, project, artifacts, onBack, onStageSubmit
                   disabled={submitting || !solution.trim()}
                   className="flex-1 bg-primary-container text-on-primary py-3 font-game text-[10px] border-b-4 border-on-primary-fixed-variant active:translate-y-1 active:border-b-0 transition-all uppercase disabled:opacity-50"
                 >
-                  {submitting ? 'CASTING...' : hotfixMode ? 'SUBMIT HOTFIX' : 'CAST RITUAL'}
+                  {submitting ? (theme.mode === 'code' ? 'CASTING...' : 'CHECKING...') : theme.submitLabel(hotfixMode)}
                 </button>
                 <button onClick={() => { setSolution(''); setResult(null); }} className="bg-surface-container-highest text-secondary p-3 border-b-4 border-background active:translate-y-1 active:border-b-0 transition-all">
                   <RotateCcw className="w-5 h-5" />
@@ -330,18 +463,18 @@ const BossBattleView = ({ battleState, project, artifacts, onBack, onStageSubmit
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
                     <AlertTriangle className="text-primary w-5 h-5" />
-                    <span className={`${fontRetro} text-[10px] text-primary`}>HOTFIX MODE: UPSTREAM DEBUGGING</span>
+                    <span className={`${fontRetro} text-[10px] text-primary`}>{theme.hotfixTitle}</span>
                   </div>
                   <span className="bg-primary text-on-primary px-2 py-0.5 text-[8px] font-game">LIVE</span>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-background p-3 border border-outline-variant/20">
-                    <p className="text-[8px] font-game text-secondary/40 mb-2">RAW_SOURCE.JSON</p>
-                    <code className="text-[10px] text-secondary-fixed/70">"value": null</code>
+                    <p className="text-[8px] font-game text-secondary/40 mb-2">{theme.hotfixRawLabel}</p>
+                    <code className="text-[10px] text-secondary-fixed/70">{theme.hotfixRawValue}</code>
                   </div>
                   <div className="bg-background p-3 border-2 border-primary/50">
-                    <p className="text-[8px] font-game text-primary/40 mb-2">HOTFIX_PATCH.JSON</p>
-                    <code className="text-[10px] text-primary">"value": 42.0</code>
+                    <p className="text-[8px] font-game text-primary/40 mb-2">{theme.hotfixPatchLabel}</p>
+                    <code className="text-[10px] text-primary">{theme.hotfixPatchValue}</code>
                   </div>
                 </div>
                 <div className="mt-4 flex gap-3">
@@ -360,7 +493,7 @@ const BossBattleView = ({ battleState, project, artifacts, onBack, onStageSubmit
               <div className="bg-surface-container-high p-4 flex justify-between items-center border-b-2 border-outline-variant/10">
                 <div className="flex items-center gap-2">
                   <Bot className="text-secondary w-5 h-5" />
-                  <span className={`${fontRetro} text-[10px] text-secondary`}>LIVE SIMULATION</span>
+                  <span className={`${fontRetro} text-[10px] text-secondary`}>{theme.simulationLabel}</span>
                 </div>
                 <div className="flex items-center gap-2 text-secondary/50">
                   <div className="w-2 h-2 bg-error rounded-full animate-pulse" />
@@ -385,7 +518,7 @@ const BossBattleView = ({ battleState, project, artifacts, onBack, onStageSubmit
                   </div>
                 </div>
                 <div className="absolute top-4 right-4 bg-background/80 px-3 py-1 border border-secondary/20">
-                  <span className={`${fontRetro} text-[10px] text-secondary`}>FPS: 60</span>
+                  <span className={`${fontRetro} text-[10px] text-secondary`}>{theme.mode === 'code' ? 'FPS: 60' : 'CHECK: ON'}</span>
                 </div>
                 {/* Result overlay */}
                 <AnimatePresence>
@@ -398,7 +531,7 @@ const BossBattleView = ({ battleState, project, artifacts, onBack, onStageSubmit
                       <div className="text-center p-6">
                         {result.passed ? <Trophy className="w-12 h-12 text-secondary mx-auto mb-2" /> : <AlertTriangle className="w-12 h-12 text-error mx-auto mb-2" />}
                         <p className={`${fontRetro} text-sm ${result.passed ? 'text-secondary' : 'text-error'}`}>
-                          {result.passed ? 'RITUAL SUCCESS' : 'RITUAL FAILED'}
+                          {result.passed ? theme.successLabel : theme.failureLabel}
                         </p>
                         {result.status === 'victory' && <BadgeStars tier={result.badge} size="lg" />}
                       </div>
@@ -454,7 +587,7 @@ const BossBattleView = ({ battleState, project, artifacts, onBack, onStageSubmit
                 className="bg-surface-container-highest p-4 border-4 border-primary/40 max-w-xs mb-2"
               >
                 <p className="text-xs text-primary leading-relaxed">
-                  {currentStage?.hint || "Check your Knowledge Artifacts for clues. The map() function requires a consistent return structure."}
+                  {currentStage?.hint || theme.hintFallback}
                 </p>
               </motion.div>
             )}
@@ -876,7 +1009,7 @@ const SkillTreeContent = ({ project, chapters, artifacts, bossBattle, skillSteps
             <span className={`${fontRetro} text-[8px] text-on-surface-variant`}>DELIVERABLE</span>
             <div className="flex items-center gap-2 text-secondary font-mono bg-surface-container-lowest px-3 py-1 text-sm">
               <Code className="w-4 h-4" />
-              fitness_dashboard.py
+              {project?.deliverable || 'Project Deliverable'}
             </div>
           </div>
         </div>
