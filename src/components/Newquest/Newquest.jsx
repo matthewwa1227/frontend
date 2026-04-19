@@ -19,7 +19,7 @@ import SideNavBar, { BottomNavBar, defaultNavItems } from '../layout/SideNavBar'
 // ============================================
 const newquestAPI = {
   getProjects: (status) => api.get(`/projects${status ? `?status=${status}` : ''}`),
-  createProject: (data) => api.post('/projects', data),
+  createProject: (data) => api.post('/projects', data, { timeout: 90000 }),
   getProject: (id) => api.get(`/projects/${id}`),
   getChapters: (projectId) => api.get(`/chapters?projectId=${projectId}`),
   getArtifacts: (projectId) => api.get(`/artifacts?projectId=${projectId}`),
