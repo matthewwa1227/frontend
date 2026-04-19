@@ -3,18 +3,28 @@ export const setAuth = (token, user) => {
   localStorage.setItem('user', JSON.stringify(user));
 };
 
+const safeJSONParse = (str) => {
+  if (!str || str === 'null' || str === 'undefined') return null;
+  try {
+    return JSON.parse(str);
+  } catch {
+    console.warn('⚠️ Corrupted localStorage JSON, clearing:', str);
+    return null;
+  }
+};
+
 export const getAuth = () => {
   const token = localStorage.getItem('token');
   const user = localStorage.getItem('user');
   return {
     token,
-    user: user ? JSON.parse(user) : null,
+    user: safeJSONParse(user),
   };
 };
 
 export const getUser = () => {
   const user = localStorage.getItem('user');
-  return user ? JSON.parse(user) : null;
+  return safeJSONParse(user);
 };
 
 export const getToken = () => {
