@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { getUser } from '../../utils/auth';
@@ -1787,6 +1787,7 @@ export default function Newquest() {
   const [topicModal, setTopicModal] = useState(false);
   const [selectedTopic, setSelectedTopic] = useState('');
   const [generating, setGenerating] = useState(false);
+  const autoStartedRef = useRef(false);
 
   const TOPIC_PRESETS = [
     { id: 'english', label: 'English Language', icon: 'menu_book', desc: 'Grammar, writing & storytelling', color: 'border-primary text-primary' },
@@ -1801,8 +1802,25 @@ export default function Newquest() {
     initData();
   }, []);
 
+  // Auto-close topic modal whenever a project is loaded
+  useEffect(() => {
+    if (project) {
+      setTopicModal(false);
+    }
+  }, [project]);
+
+  // Auto-start first chapter for brand new projects (no chapters yet)
+  useEffect(() => {
+    if (project && chapters.length === 0 && !generating && !loading && view === 'hub' && !autoStartedRef.current) {
+      autoStartedRef.current = true;
+      console.log('[autoStart] new project has no chapters, auto-generating first chapter');
+      handleGenerateFirstChapter();
+    }
+  }, [project, chapters.length, generating, loading, view]);
+
   const initData = async () => {
     setLoading(true);
+    autoStartedRef.current = false;
     try {
       let proj = null;
       try {
@@ -1843,6 +1861,7 @@ export default function Newquest() {
         return;
       }
       console.log('[createProjectWithTopic] project created:', proj.id, proj.title);
+      autoStartedRef.current = false;
       setProject(proj);
       setTopicModal(false);
       await loadProjectData(proj.id);
