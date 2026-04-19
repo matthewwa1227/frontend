@@ -481,11 +481,22 @@ const BossBattleView = ({ battleState, project, artifacts, onBack, onStageSubmit
 // ============================================
 const LearnChapterView = ({ chapter, project, artifacts, onBack, onComplete }) => {
   const [copied, setCopied] = useState(false);
+  const [completing, setCompleting] = useState(false);
 
   const handleCopy = (text) => {
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleComplete = async () => {
+    if (completing) return;
+    setCompleting(true);
+    try {
+      await onComplete();
+    } finally {
+      setCompleting(false);
+    }
   };
 
   const content = chapter?.full_lesson || chapter?.content?.fullLesson || `This chapter covers ${chapter?.title}. Master the concepts to forge your Knowledge Artifact.`;
@@ -622,8 +633,8 @@ print(f"Void rows banished! New count: {len(df_clean)}")`}
               >
                 <ArrowLeft className="w-4 h-4" /> PREVIOUS
               </button>
-              <PixelBtn onClick={onComplete} variant="primary" icon={ChevronRight}>
-                COMPLETE QUEST
+              <PixelBtn onClick={handleComplete} variant="primary" icon={ChevronRight} disabled={completing}>
+                {completing ? 'FORGING ARTIFACT...' : 'COMPLETE QUEST'}
               </PixelBtn>
             </div>
           </div>
