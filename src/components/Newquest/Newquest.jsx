@@ -2025,9 +2025,9 @@ export default function Newquest() {
     }
   };
 
-  const handleGenerateFirstChapter = async (retryCount = 0) => {
+  const handleGenerateFirstChapter = async (retryCount = 0, force = false) => {
     console.log('[handleGenerateFirstChapter] called, project:', project?.id, 'generating:', generating, 'retry:', retryCount);
-    if (!project || generating) {
+    if (!project || (!force && generating)) {
       console.warn('[handleGenerateFirstChapter] blocked — no project or already generating');
       return;
     }
@@ -2055,14 +2055,22 @@ export default function Newquest() {
       console.log('[handleGenerateFirstChapter] calling API /chapters/generate with projectId:', project.id);
       const res = await newquestAPI.generateChapter({ projectId: project.id });
       console.log('[handleGenerateFirstChapter] API success:', res.data);
-      const newChapter = {
-        ...res.data.chapter,
-        status: 'active'
-      };
-      setChapters(prev => [...prev, newChapter]);
-      setActiveChapter(newChapter);
-      setView('learn');
-      setGenerating(false);
+
+      // If backend returned an already-existing chapter, open it
+      if (res.data.chapter) {
+        const newChapter = {
+          ...res.data.chapter,
+          status: 'active'
+        };
+        setChapters(prev => [...prev, newChapter]);
+        setActiveChapter(newChapter);
+        setView('learn');
+        setGenerating(false);
+        return;
+      }
+
+      // Otherwise, generation started in background — keep polling
+      console.log('[handleGenerateFirstChapter] background generation started, polling...');
     } catch (err) {
       console.error('[handleGenerateFirstChapter] API error:', err);
       const isNetworkError = !err.response && (err.message?.includes('Network Error') || err.code === 'ECONNABORTED');
@@ -2070,8 +2078,7 @@ export default function Newquest() {
         console.log(`[handleGenerateFirstChapter] retrying in 3s... (attempt ${retryCount + 2}/3)`);
         setError('Chapter generation is taking longer than expected. Retrying...');
         retryTimerRef.current = setTimeout(() => {
-          setGenerating(false);
-          handleGenerateFirstChapter(retryCount + 1);
+          handleGenerateFirstChapter(retryCount + 1, true);
         }, 3000);
         return;
       }
