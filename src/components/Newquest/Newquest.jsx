@@ -2245,6 +2245,8 @@ export default function Newquest() {
                   setBossBattle(null);
                   setBattleState(null);
                   setActiveChapter(null);
+                  setView('hub');
+                  setTab('quests');
                   setTopicModal(true);
                 }}
                 generating={generating}
