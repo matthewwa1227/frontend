@@ -23,7 +23,7 @@ const newquestAPI = {
   getProject: (id) => api.get(`/projects/${id}`),
   getChapters: (projectId) => api.get(`/chapters?projectId=${projectId}`),
   getArtifacts: (projectId) => api.get(`/artifacts?projectId=${projectId}`),
-  generateChapter: (data) => api.post('/chapters/generate', data),
+  generateChapter: (data) => api.post('/chapters/generate', data, { timeout: 95000 }),
   completeChapter: (id) => api.post(`/chapters/${id}/complete`),
   startBossBattle: (projectId, focus) => api.post('/boss-battles/start', { projectId, focus }),
   getBossBattle: (id) => api.get(`/boss-battles/${id}`),
@@ -753,9 +753,6 @@ const HubView = ({ user, project, chapters, artifacts, bossBattle, activeTab, on
     } else if (chapters.every(c => c.status === 'completed') && onStartBattle) {
       console.log('[START QUEST] all completed, starting boss');
       onStartBattle();
-    } else if (onGenerateFirstChapter) {
-      console.log('[START QUEST] fallback, generating next chapter');
-      onGenerateFirstChapter();
     } else {
       console.warn('[START QUEST] no action taken');
     }
