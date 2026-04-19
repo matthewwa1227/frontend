@@ -1783,8 +1783,14 @@ export default function Newquest() {
   const [bossFocus, setBossFocus] = useState('');
   const [topicModal, setTopicModal] = useState(false);
   const [selectedTopic, setSelectedTopic] = useState('');
+  const [selectedFormLevel, setSelectedFormLevel] = useState(user?.formLevel || '');
   const [generating, setGenerating] = useState(false);
   const autoStartedRef = useRef(false);
+
+  const FORM_LEVELS = [
+    { group: 'Primary', levels: ['P1', 'P2', 'P3', 'P4', 'P5', 'P6'] },
+    { group: 'Secondary', levels: ['S1', 'S2', 'S3', 'S4', 'S5', 'S6'] },
+  ];
 
   const TOPIC_PRESETS = [
     { id: 'english', label: 'English Language', icon: 'menu_book', desc: 'Grammar, writing & storytelling', color: 'border-primary text-primary' },
@@ -1891,6 +1897,22 @@ export default function Newquest() {
   const createProjectWithTopic = async (topic, goal, subject) => {
     setLoading(true);
     try {
+      // Update form level if user selected a different one
+      if (selectedFormLevel && selectedFormLevel !== user?.formLevel) {
+        try {
+          const onboardingRes = await authAPI.updateOnboarding({ formLevel: selectedFormLevel });
+          const newToken = onboardingRes.data?.data?.token;
+          const newUser = onboardingRes.data?.data?.student;
+          if (newToken && newUser) {
+            localStorage.setItem('token', newToken);
+            localStorage.setItem('user', JSON.stringify(newUser));
+            console.log('[createProjectWithTopic] updated form level to', selectedFormLevel);
+          }
+        } catch (onboardingErr) {
+          console.warn('[createProjectWithTopic] form level update failed:', onboardingErr);
+        }
+      }
+
       const createRes = await newquestAPI.createProject({ topic, goal, subject });
       const proj = createRes.data?.project;
       if (!proj) {
@@ -2151,6 +2173,8 @@ export default function Newquest() {
       setActiveChapter(null);
     } catch (err) {
       console.error('[handleCompleteChapter] error:', err);
+      console.error('[handleCompleteChapter] raw response:', err.response?.data);
+      console.error('[handleCompleteChapter] status:', err.response?.status);
       const msg = err.response?.data?.details || err.response?.data?.error || err.message || 'Failed to complete chapter';
       setError(msg);
     }
@@ -2294,6 +2318,31 @@ export default function Newquest() {
                     <button onClick={() => setTopicModal(false)} className="ml-2 underline text-primary hover:text-tertiary">Resume</button>
                   </p>
                 )}
+              </div>
+
+              {/* Form Level Selector */}
+              <div className="bg-surface-container p-4 border-2 border-outline-variant mb-8">
+                <label className={`${fontRetro} text-[10px] text-secondary mb-2 block`}>STUDY LEVEL</label>
+                <div className="flex flex-wrap gap-2">
+                  {FORM_LEVELS.map((group) => (
+                    <div key={group.group} className="flex flex-wrap gap-2">
+                      {group.levels.map((level) => (
+                        <button
+                          key={level}
+                          onClick={() => setSelectedFormLevel(level)}
+                          className={`px-3 py-1 font-game text-[10px] border-2 transition-all ${
+                            selectedFormLevel === level
+                              ? 'bg-primary-container text-on-primary border-primary'
+                              : 'bg-surface-container-lowest text-on-surface border-outline-variant hover:border-primary'
+                          }`}
+                        >
+                          {level}
+                        </button>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+                <p className="text-[8px] text-on-surface-variant mt-2">This helps the AI tailor content to your level</p>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">

@@ -55,6 +55,7 @@ export const authAPI = {
   registerParent: (userData) => api.post('/auth/register-parent', userData),
   getMe: () => api.get('/auth/me'),
   getProfile: () => api.get('/auth/profile'),
+  updateOnboarding: (data) => api.patch('/auth/onboarding', data),
   logout: () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
