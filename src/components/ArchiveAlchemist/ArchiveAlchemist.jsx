@@ -496,7 +496,7 @@ const OutputView = ({ sessionId, onBack }) => {
   const sections = notes.sections || [];
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 md:p-8 flex flex-col md:flex-row gap-8 relative">
+    <div className="flex-1 overflow-y-auto relative">
       {/* Back button */}
       <div className="absolute top-4 left-4 z-20">
         <button
@@ -508,120 +508,125 @@ const OutputView = ({ sessionId, onBack }) => {
         </button>
       </div>
 
-      {/* Processing overlay */}
+      {/* Status Banner */}
       {session.status === 'processing' && (
-        <div className="absolute inset-0 bg-background/80 z-30 flex items-center justify-center">
-          <div className="text-center p-8">
-            <Loader2 className="w-16 h-16 text-primary animate-spin mx-auto mb-4" />
-            <p className={`${fontHeadline} text-xl font-bold text-primary mb-2`}>TRANSMUTATION IN PROGRESS</p>
-            <p className="text-on-surface-variant text-sm">The Alchemist is forging your study materials...</p>
-            <div className="mt-6 w-64 h-4 bg-surface-container-highest p-[2px]">
-              <motion.div
-                className="h-full bg-gradient-to-r from-primary to-primary-container pixelated"
-                animate={{ width: ['0%', '100%', '0%'] }}
-                transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
-              />
-            </div>
-          </div>
+        <div className="w-full bg-primary/10 border-y-2 border-primary p-3 flex items-center justify-center gap-3 z-20 sticky top-0">
+          <Loader2 className="w-4 h-4 text-primary animate-spin" />
+          <p className={`${fontRetro} text-[10px] text-primary`}>TRANSMUTATION IN PROGRESS — AI IS FORGING YOUR STUDY MATERIALS</p>
         </div>
       )}
 
       {/* Failed state */}
       {session.status === 'failed' && (
-        <div className="absolute top-4 right-4 z-20 bg-error-container text-error px-4 py-3 border-2 border-error">
-          <p className={`${fontRetro} text-[8px]`}>TRANSMUTATION FAILED</p>
-          <p className="text-xs mt-1">{session.error_message || 'Unknown error'}</p>
-          <div className="flex gap-2 mt-2">
-            <PixelBtn onClick={handleRegenerate} variant="primary" icon={RotateCcw} className="text-[8px] py-2 px-3">RETRY</PixelBtn>
+        <div className="w-full bg-error-container text-error px-4 py-3 border-y-2 border-error z-20 flex items-center justify-between sticky top-0">
+          <div>
+            <p className={`${fontRetro} text-[8px]`}>TRANSMUTATION FAILED</p>
+            <p className="text-xs">{session.error_message || 'Unknown error'}</p>
           </div>
+          <PixelBtn onClick={handleRegenerate} variant="primary" icon={RotateCcw} className="text-[8px] py-2 px-3">RETRY</PixelBtn>
         </div>
       )}
 
-      {/* Left Pane: The Scroll */}
-      <section className="flex-1 flex flex-col z-10 relative mt-12 md:mt-0">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className={`${fontHeadline} text-xl font-bold uppercase tracking-wide text-primary flex items-center gap-2`}>
-            <FileText className="text-primary w-5 h-5" />
-            The Scroll
-          </h2>
-          <div className={`${fontRetro} text-[8px] text-secondary border border-secondary px-2 py-1 opacity-60`}>RAW DATA</div>
-        </div>
-
-        <div className="bg-surface-container flex-1 border-4 border-outline-variant/15 relative p-6 font-body text-on-surface leading-relaxed overflow-y-auto min-h-[500px]" style={{ boxShadow: '2px 2px 0px 0px #150136' }}>
-          {session.status === 'processing' ? (
-            <div className="flex items-center justify-center h-full">
-              <p className="text-on-surface-variant">Your notes are being forged...</p>
+      <div className="p-4 md:p-8 flex flex-col md:flex-row gap-8 relative">
+        {/* Left Pane: The Scroll */}
+        <section className="flex-1 flex flex-col z-10 relative mt-12 md:mt-0">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className={`${fontHeadline} text-xl font-bold uppercase tracking-wide text-primary flex items-center gap-2`}>
+              <FileText className="text-primary w-5 h-5" />
+              {session.status === 'completed' ? 'The Scroll' : 'Original Text'}
+            </h2>
+            <div className={`${fontRetro} text-[8px] ${session.status === 'completed' ? 'text-secondary' : 'text-primary'} border ${session.status === 'completed' ? 'border-secondary' : 'border-primary'} px-2 py-1 opacity-60`}>
+              {session.status === 'completed' ? 'TRANSMUTED' : 'RAW DATA'}
             </div>
-          ) : (
-            <div className="max-w-2xl mx-auto space-y-6">
-              <h1 className={`${fontHeadline} text-3xl font-black text-on-background uppercase mb-8 border-b-2 border-surface-container-highest pb-4`}>
-                {notes.title || session.title}
-              </h1>
+          </div>
 
-              {sections.map((section, idx) => (
-                <div key={idx}>
-                  {section.highlight && (
-                    <div className="bg-surface-container-highest p-4 border-l-4 border-secondary my-6 relative">
-                      <Zap className="absolute top-2 right-2 text-secondary opacity-30 w-8 h-8" />
-                      <h3 className={`${fontHeadline} font-bold text-secondary mb-2 uppercase`}>{section.heading}</h3>
-                      <p className="text-sm">{section.highlight}</p>
-                    </div>
-                  )}
-                  {!section.highlight && section.heading && (
-                    <h3 className={`${fontHeadline} font-bold text-primary mb-2 uppercase text-lg`}>{section.heading}</h3>
-                  )}
-                  {section.body && (
-                    <div className="text-base leading-relaxed whitespace-pre-wrap">
-                      {section.body.split('**').map((part, i) =>
-                        i % 2 === 1 ? <strong key={i} className="text-primary">{part}</strong> : part
-                      )}
-                    </div>
-                  )}
+          <div className="bg-surface-container flex-1 border-4 border-outline-variant/15 relative p-6 font-body text-on-surface leading-relaxed overflow-y-auto min-h-[500px]" style={{ boxShadow: '2px 2px 0px 0px #150136' }}>
+            {session.status === 'processing' || session.status === 'failed' ? (
+              <div className="max-w-2xl mx-auto space-y-6">
+                <h1 className={`${fontHeadline} text-3xl font-black text-on-background uppercase mb-8 border-b-2 border-surface-container-highest pb-4`}>
+                  {session.title}
+                </h1>
+                <div className="text-base leading-relaxed whitespace-pre-wrap">
+                  {session.original_text}
                 </div>
-              ))}
-
-              {sections.length === 0 && (
-                <p className="text-on-surface-variant">No structured notes available yet.</p>
-              )}
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* Right Pane: Knowledge Relics */}
-      <section className="w-full md:w-[400px] lg:w-[480px] flex flex-col z-10 relative">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className={`${fontHeadline} text-xl font-bold uppercase tracking-wide text-tertiary flex items-center gap-2`}>
-            <Gem className="text-tertiary w-5 h-5" />
-            Relics
-          </h2>
-          <span className="bg-surface-container-high text-on-surface px-2 py-1 font-label text-[8px]">
-            {flashcards.length + (summary ? 1 : 0) + (artifact.title ? 1 : 0)} EXTRACTED
-          </span>
-        </div>
-
-        <div className="space-y-6 flex-1 overflow-y-auto pr-2">
-          {/* Summary Relic */}
-          {summary && (
-            <div className="bg-surface-container-low p-5 relative border-l-4 border-secondary" style={{ boxShadow: '2px 2px 0px 0px #150136' }}>
-              <div className="absolute -right-2 -top-2 w-8 h-8 bg-surface-container flex items-center justify-center border-2 border-secondary z-10 shadow-sm">
-                <AlignLeft className="text-secondary w-4 h-4" />
               </div>
-              <h4 className={`${fontRetro} text-[10px] text-secondary mb-3 uppercase tracking-wider`}>Core Summary</h4>
-              <div className="font-body text-sm leading-relaxed text-on-surface opacity-90">
-                {summary}
+            ) : (
+              <div className="max-w-2xl mx-auto space-y-6">
+                <h1 className={`${fontHeadline} text-3xl font-black text-on-background uppercase mb-8 border-b-2 border-surface-container-highest pb-4`}>
+                  {notes.title || session.title}
+                </h1>
+
+                {sections.map((section, idx) => (
+                  <div key={idx}>
+                    {section.highlight && (
+                      <div className="bg-surface-container-highest p-4 border-l-4 border-secondary my-6 relative">
+                        <Zap className="absolute top-2 right-2 text-secondary opacity-30 w-8 h-8" />
+                        <h3 className={`${fontHeadline} font-bold text-secondary mb-2 uppercase`}>{section.heading}</h3>
+                        <p className="text-sm">{section.highlight}</p>
+                      </div>
+                    )}
+                    {!section.highlight && section.heading && (
+                      <h3 className={`${fontHeadline} font-bold text-primary mb-2 uppercase text-lg`}>{section.heading}</h3>
+                    )}
+                    {section.body && (
+                      <div className="text-base leading-relaxed whitespace-pre-wrap">
+                        {section.body.split('**').map((part, i) =>
+                          i % 2 === 1 ? <strong key={i} className="text-primary">{part}</strong> : part
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+
+                {sections.length === 0 && (
+                  <p className="text-on-surface-variant">No structured notes available yet.</p>
+                )}
               </div>
-            </div>
-          )}
+            )}
+          </div>
+        </section>
 
-          {/* Flashcard Relics */}
-          {flashcards.map((card, idx) => (
-            <FlashcardRelic key={idx} card={card} index={idx} />
-          ))}
+        {/* Right Pane: Knowledge Relics */}
+        <section className="w-full md:w-[400px] lg:w-[480px] flex flex-col z-10 relative">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className={`${fontHeadline} text-xl font-bold uppercase tracking-wide text-tertiary flex items-center gap-2`}>
+              <Gem className="text-tertiary w-5 h-5" />
+              Relics
+            </h2>
+            <span className="bg-surface-container-high text-on-surface px-2 py-1 font-label text-[8px]">
+              {session.status === 'completed' ? flashcards.length + (summary ? 1 : 0) + (artifact.title ? 1 : 0) : '...'} EXTRACTED
+            </span>
+          </div>
 
-          {/* Master Artifact */}
-          {artifact.title && <MasterArtifact artifact={artifact} />}
-        </div>
+          <div className="space-y-6 flex-1 overflow-y-auto pr-2">
+            {session.status === 'processing' && (
+              <div className="bg-surface-container-low p-5 border-l-4 border-primary animate-pulse">
+                <h4 className={`${fontRetro} text-[10px] text-primary mb-2`}>FORGING RELICS...</h4>
+                <p className="text-sm text-on-surface-variant">The Alchemist is analyzing your document and creating flashcards, summaries, and concept maps.</p>
+              </div>
+            )}
+
+            {/* Summary Relic */}
+            {summary && (
+              <div className="bg-surface-container-low p-5 relative border-l-4 border-secondary" style={{ boxShadow: '2px 2px 0px 0px #150136' }}>
+                <div className="absolute -right-2 -top-2 w-8 h-8 bg-surface-container flex items-center justify-center border-2 border-secondary z-10 shadow-sm">
+                  <AlignLeft className="text-secondary w-4 h-4" />
+                </div>
+                <h4 className={`${fontRetro} text-[10px] text-secondary mb-3 uppercase tracking-wider`}>Core Summary</h4>
+                <div className="font-body text-sm leading-relaxed text-on-surface opacity-90">
+                  {summary}
+                </div>
+              </div>
+            )}
+
+            {/* Flashcard Relics */}
+            {flashcards.map((card, idx) => (
+              <FlashcardRelic key={idx} card={card} index={idx} />
+            ))}
+
+            {/* Master Artifact */}
+            {artifact.title && <MasterArtifact artifact={artifact} />}
+          </div>
 
         {/* Actions */}
         <div className="mt-6 flex gap-3">
