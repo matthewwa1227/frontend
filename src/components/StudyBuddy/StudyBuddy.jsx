@@ -21,6 +21,7 @@ const StudyBuddy = () => {
   const [attachedFiles, setAttachedFiles] = useState([]);
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
+  const videoInputRef = useRef(null);
 
   // Navigation items
   const navItems = useMemo(() => [
@@ -83,15 +84,23 @@ const StudyBuddy = () => {
   // Send message
   const sendMessage = async (e) => {
     e?.preventDefault();
-    if (!inputMessage.trim() || isLoading) return;
+    if ((!inputMessage.trim() && attachedFiles.length === 0) || isLoading) return;
 
     const userMessage = inputMessage.trim();
     setInputMessage('');
 
+    // Build display content with attachment names
+    let displayContent = userMessage;
+    if (attachedFiles.length > 0) {
+      const attachmentNames = attachedFiles.map(f => `[${f.type}: ${f.name}]`).join(' ');
+      displayContent = userMessage ? `${userMessage}\n${attachmentNames}` : attachmentNames;
+    }
+
     const newUserMessage = {
       role: 'user',
-      content: userMessage,
-      timestamp: new Date().toISOString()
+      content: displayContent,
+      timestamp: new Date().toISOString(),
+      attachments: attachedFiles.map(f => ({ name: f.name, type: f.type }))
     };
     setMessages(prev => [...prev, newUserMessage]);
     setIsLoading(true);
@@ -102,7 +111,24 @@ const StudyBuddy = () => {
         content: msg.content
       }));
 
-      const response = await aiAPI.chatWithMedia(userMessage, conversationHistory, []);
+      // Build media array for API
+      const media = [];
+      for (const attachment of attachedFiles) {
+        if (attachment.type === 'image') {
+          const base64 = await fileToBase64(attachment.file);
+          media.push({ type: 'image_url', image_url: { url: base64 } });
+        } else if (attachment.type === 'video') {
+          const base64 = await fileToBase64(attachment.file);
+          media.push({ type: 'video_url', video_url: { url: base64 } });
+        } else if (attachment.type === 'document') {
+          // For documents, read text and append to message
+          const text = await attachment.file.text();
+          const docNote = `\n\n[Document: ${attachment.name}]\n${text.substring(0, 3000)}`;
+          media.push({ type: 'text', text: docNote });
+        }
+      }
+
+      const response = await aiAPI.chatWithMedia(userMessage, conversationHistory, media);
 
       if (response.data.success) {
         const assistantMessage = {
@@ -123,12 +149,51 @@ const StudyBuddy = () => {
       setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
+      // Clear attachments after sending
+      attachedFiles.forEach(f => { if (f.preview) URL.revokeObjectURL(f.preview); });
+      setAttachedFiles([]);
     }
   };
 
   // Handle quick action click
   const handleQuickAction = (text) => {
     setInputMessage(text);
+  };
+
+  // Handle file attachment
+  const handleFileSelect = (e, type) => {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+
+    const newAttachments = files.map(file => ({
+      file,
+      name: file.name,
+      type: type, // 'document' | 'image' | 'video'
+      preview: URL.createObjectURL(file)
+    }));
+
+    setAttachedFiles(prev => [...prev, ...newAttachments]);
+    e.target.value = ''; // Reset input
+  };
+
+  // Remove attached file
+  const removeAttachedFile = (index) => {
+    setAttachedFiles(prev => {
+      const updated = [...prev];
+      if (updated[index]?.preview) URL.revokeObjectURL(updated[index].preview);
+      updated.splice(index, 1);
+      return updated;
+    });
+  };
+
+  // Convert file to base64 for API
+  const fileToBase64 = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
   };
 
   // Format timestamp
@@ -309,8 +374,62 @@ const StudyBuddy = () => {
             ))}
           </div>
 
+          {/* Attached Files Chips */}
+          {attachedFiles.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-3">
+              {attachedFiles.map((file, idx) => (
+                <div key={idx} className="flex items-center gap-1 bg-surface-container-high px-2 py-1 border border-outline-variant text-[10px]">
+                  <span className="material-symbols-outlined text-xs">
+                    {file.type === 'document' ? 'description' : file.type === 'video' ? 'videocam' : 'image'}
+                  </span>
+                  <span className="truncate max-w-[120px]">{file.name}</span>
+                  <button
+                    onClick={() => removeAttachedFile(idx)}
+                    className="text-on-surface-variant hover:text-error ml-1"
+                  >
+                    <span className="material-symbols-outlined text-xs">close</span>
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Hidden File Inputs */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf,.docx,.doc,.txt,.md,.pptx"
+            onChange={(e) => handleFileSelect(e, 'document')}
+            className="hidden"
+          />
+          <input
+            ref={videoInputRef}
+            type="file"
+            accept="video/*,image/*"
+            onChange={(e) => handleFileSelect(e, 'video')}
+            className="hidden"
+          />
+
           {/* Input Field */}
           <form onSubmit={sendMessage} className="flex gap-2 items-center bg-surface-container-highest p-1 border-4 border-surface-container">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isLoading}
+              className="w-10 h-10 flex items-center justify-center bg-surface-container text-on-surface-variant hover:bg-surface-container-high hover:text-tertiary transition-colors"
+              title="Attach document"
+            >
+              <span className="material-symbols-outlined text-lg">description</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => videoInputRef.current?.click()}
+              disabled={isLoading}
+              className="w-10 h-10 flex items-center justify-center bg-surface-container text-on-surface-variant hover:bg-surface-container-high hover:text-secondary transition-colors"
+              title="Attach video or image"
+            >
+              <span className="material-symbols-outlined text-lg">videocam</span>
+            </button>
             <input
               type="text"
               value={inputMessage}
@@ -321,9 +440,9 @@ const StudyBuddy = () => {
             />
             <button
               type="submit"
-              disabled={isLoading || !inputMessage.trim()}
+              disabled={isLoading || (!inputMessage.trim() && attachedFiles.length === 0)}
               className={`w-12 h-12 flex items-center justify-center transition-all ${
-                isLoading || !inputMessage.trim()
+                isLoading || (!inputMessage.trim() && attachedFiles.length === 0)
                   ? 'bg-surface-container text-on-surface-variant cursor-not-allowed'
                   : 'bg-primary-container text-on-primary-container hover:bg-primary'
               }`}
