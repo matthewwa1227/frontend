@@ -1,10 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Calendar, Clock, Brain, Sparkles, RefreshCw, 
-  ChevronLeft, ChevronRight, Check, AlertCircle,
-  Coffee, Target, Zap, Settings
-} from 'lucide-react';
 import { aiAPI, taskAPI } from '../../utils/api';
 
 const ScheduleGenerator = () => {
@@ -115,280 +110,255 @@ const ScheduleGenerator = () => {
 
   const getPriorityColor = (priority) => {
     switch (priority) {
-      case 'high': return 'bg-red-500';
-      case 'medium': return 'bg-yellow-500';
-      case 'low': return 'bg-green-500';
-      default: return 'bg-blue-500';
+      case 'high': return 'border-l-error';
+      case 'medium': return 'border-l-tertiary';
+      case 'low': return 'border-l-secondary';
+      default: return 'border-l-primary';
     }
   };
 
-  const getPriorityBorder = (priority) => {
+  const getPriorityTextColor = (priority) => {
     switch (priority) {
-      case 'high': return 'border-l-red-500';
-      case 'medium': return 'border-l-yellow-500';
-      case 'low': return 'border-l-green-500';
-      default: return 'border-l-blue-500';
+      case 'high': return 'text-error';
+      case 'medium': return 'text-tertiary';
+      case 'low': return 'text-secondary';
+      default: return 'text-primary';
     }
   };
 
   const weekDays = getWeekDays();
+  const weekRangeLabel = `${weekDays[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${weekDays[6].toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
 
-  // Pixel Card Component
-  const PixelCard = ({ children, className = '', noPadding = false }) => (
-    <div className={`bg-white border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] ${noPadding ? '' : 'p-4'} ${className}`}>
-      {children}
-    </div>
-  );
-
-  // Pixel Button Component
-  const PixelButton = ({ children, onClick, disabled, variant = 'primary', className = '' }) => {
-    const baseClasses = "font-bold border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all active:translate-x-1 active:translate-y-1 active:shadow-none disabled:opacity-50 disabled:cursor-not-allowed disabled:active:translate-x-0 disabled:active:translate-y-0 disabled:active:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]";
-    
-    const variants = {
-      primary: "bg-purple-500 hover:bg-purple-600 text-white",
-      secondary: "bg-gray-200 hover:bg-gray-300 text-gray-800",
-      success: "bg-green-500 hover:bg-green-600 text-white",
-      danger: "bg-red-500 hover:bg-red-600 text-white",
-    };
-
-    return (
-      <button 
-        onClick={onClick} 
-        disabled={disabled}
-        className={`${baseClasses} ${variants[variant]} ${className}`}
-      >
-        {children}
-      </button>
-    );
-  };
+  const estStudyHours = Math.round(tasks.reduce((sum, t) => sum + (t.estimated_duration || t.estimatedMinutes || 30), 0) / 60);
 
   return (
-    <div className="p-4 md:p-6 max-w-7xl mx-auto">
-      {/* Header */}
-      <PixelCard className="bg-gradient-to-r from-purple-400 via-pink-400 to-purple-500 mb-6">
-        <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-4">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-yellow-400 border-4 border-black">
-              <Brain className="w-8 h-8 text-black" />
-            </div>
-            <div>
-              <h1 className="text-2xl md:text-3xl font-black text-black uppercase tracking-wide">
-                ⚡ AI Schedule Generator
-              </h1>
-              <p className="text-black/80 font-medium mt-1">
-                Let AI optimize your study plan!
-              </p>
-            </div>
+    <div className="p-4 md:p-6 max-w-7xl mx-auto pb-24 md:pb-8">
+      {/* Hero Section */}
+      <section className="mb-10 relative">
+        <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-transparent opacity-50 rounded-none" />
+        <div className="relative z-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
+          <div>
+            <h1 className="font-pixel text-2xl md:text-4xl text-primary mb-4 leading-relaxed">
+              AI SCHEDULE<br/>GENERATOR
+            </h1>
+            <p className="font-body text-secondary opacity-80 max-w-md">
+              The Chronicles of Time predict your path to mastery. Let the AI Weaver craft your daily study scrolls.
+            </p>
           </div>
-          
-          <div className="flex gap-3 flex-wrap">
-            <PixelButton 
+          <div className="flex gap-4">
+            <button 
               onClick={() => setShowSettings(!showSettings)}
-              variant="secondary"
-              className="px-4 py-2 flex items-center gap-2"
+              className="px-6 py-3 font-pixel text-[12px] bg-surface-container border-2 border-outline-variant hover:bg-surface-bright text-on-surface transition-colors"
             >
-              <Settings size={18} />
-              <span className="hidden sm:inline">SETTINGS</span>
-            </PixelButton>
-            
-            <PixelButton 
+              SETTING
+            </button>
+            <button 
               onClick={generateSchedule}
               disabled={loading || loadingTasks || tasks.length === 0}
-              variant="success"
-              className="px-4 py-2 flex items-center gap-2"
+              className="px-8 py-3 font-pixel text-[12px] bg-secondary-container text-on-secondary-fixed shadow-pixel-secondary border-b-4 border-on-secondary-fixed-variant active:translate-y-1 active:border-b-0 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? (
-                <>
-                  <RefreshCw className="animate-spin" size={18} />
-                  GENERATING...
-                </>
-              ) : (
-                <>
-                  <Sparkles size={18} />
-                  GENERATE!
-                </>
-              )}
-            </PixelButton>
+              {loading ? 'GENERATING...' : 'GENERATE!'}
+            </button>
           </div>
         </div>
+      </section>
 
-        {/* Settings Panel */}
-        <AnimatePresence>
-          {showSettings && (
-            <motion.div 
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="overflow-hidden"
-            >
-              <div className="mt-6 pt-6 border-t-4 border-black/30">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="flex flex-col gap-2">
-                    <label className="font-bold text-black text-sm uppercase">Start Time</label>
-                    <input 
-                      type="time" 
-                      value={preferences.preferredStartTime}
-                      onChange={(e) => setPreferences({...preferences, preferredStartTime: e.target.value})}
-                      className="px-3 py-2 border-4 border-black bg-white font-mono focus:outline-none focus:ring-2 focus:ring-yellow-400"
-                    />
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <label className="font-bold text-black text-sm uppercase">End Time</label>
-                    <input 
-                      type="time" 
-                      value={preferences.preferredEndTime}
-                      onChange={(e) => setPreferences({...preferences, preferredEndTime: e.target.value})}
-                      className="px-3 py-2 border-4 border-black bg-white font-mono focus:outline-none focus:ring-2 focus:ring-yellow-400"
-                    />
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <label className="font-bold text-black text-sm uppercase">Session (min)</label>
-                    <input 
-                      type="number" 
-                      value={preferences.sessionLength}
-                      onChange={(e) => setPreferences({...preferences, sessionLength: parseInt(e.target.value)})}
-                      min={15}
-                      max={90}
-                      className="px-3 py-2 border-4 border-black bg-white font-mono focus:outline-none focus:ring-2 focus:ring-yellow-400"
-                    />
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <label className="font-bold text-black text-sm uppercase">Break (min)</label>
-                    <input 
-                      type="number" 
-                      value={preferences.breakLength}
-                      onChange={(e) => setPreferences({...preferences, breakLength: parseInt(e.target.value)})}
-                      min={5}
-                      max={30}
-                      className="px-3 py-2 border-4 border-black bg-white font-mono focus:outline-none focus:ring-2 focus:ring-yellow-400"
-                    />
-                  </div>
+      {/* Settings Panel */}
+      <AnimatePresence>
+        {showSettings && (
+          <motion.section
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden mb-10"
+          >
+            <div className="bg-surface-container border-2 border-outline-variant p-6 shadow-pixel">
+              <h3 className="font-pixel text-sm text-primary mb-4">WEAVER SETTINGS</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="flex flex-col gap-2">
+                  <label className="font-label font-bold text-on-surface text-xs uppercase tracking-wider">Start Time</label>
+                  <input 
+                    type="time" 
+                    value={preferences.preferredStartTime}
+                    onChange={(e) => setPreferences({...preferences, preferredStartTime: e.target.value})}
+                    className="px-3 py-2 border-2 border-outline-variant bg-surface-container-low font-mono text-on-surface focus:outline-none focus:border-primary"
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label className="font-label font-bold text-on-surface text-xs uppercase tracking-wider">End Time</label>
+                  <input 
+                    type="time" 
+                    value={preferences.preferredEndTime}
+                    onChange={(e) => setPreferences({...preferences, preferredEndTime: e.target.value})}
+                    className="px-3 py-2 border-2 border-outline-variant bg-surface-container-low font-mono text-on-surface focus:outline-none focus:border-primary"
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label className="font-label font-bold text-on-surface text-xs uppercase tracking-wider">Session (min)</label>
+                  <input 
+                    type="number" 
+                    value={preferences.sessionLength}
+                    onChange={(e) => setPreferences({...preferences, sessionLength: parseInt(e.target.value)})}
+                    min={15}
+                    max={90}
+                    className="px-3 py-2 border-2 border-outline-variant bg-surface-container-low font-mono text-on-surface focus:outline-none focus:border-primary"
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label className="font-label font-bold text-on-surface text-xs uppercase tracking-wider">Break (min)</label>
+                  <input 
+                    type="number" 
+                    value={preferences.breakLength}
+                    onChange={(e) => setPreferences({...preferences, breakLength: parseInt(e.target.value)})}
+                    min={5}
+                    max={30}
+                    className="px-3 py-2 border-2 border-outline-variant bg-surface-container-low font-mono text-on-surface focus:outline-none focus:border-primary"
+                  />
                 </div>
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </PixelCard>
+            </div>
+          </motion.section>
+        )}
+      </AnimatePresence>
 
       {/* Error Message */}
-      {error && (
-        <PixelCard className="bg-red-100 border-red-500 mb-6">
-          <div className="flex items-center gap-3 text-red-700">
-            <AlertCircle size={24} />
-            <span className="font-bold">{error}</span>
-          </div>
-        </PixelCard>
-      )}
-
-      {/* Task Summary Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <PixelCard className="bg-blue-100">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-500 border-2 border-black">
-              <Target className="text-white" size={20} />
-            </div>
-            <div>
-              <div className="text-2xl font-black text-black">{tasks.length}</div>
-              <div className="text-xs font-bold text-gray-600 uppercase">Pending</div>
-            </div>
-          </div>
-        </PixelCard>
-
-        <PixelCard className="bg-red-100">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-red-500 border-2 border-black">
-              <Zap className="text-white" size={20} />
-            </div>
-            <div>
-              <div className="text-2xl font-black text-black">
-                {tasks.filter(t => t.priority === 'high').length}
-              </div>
-              <div className="text-xs font-bold text-gray-600 uppercase">High Priority</div>
-            </div>
-          </div>
-        </PixelCard>
-
-        <PixelCard className="bg-purple-100">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-purple-500 border-2 border-black">
-              <Clock className="text-white" size={20} />
-            </div>
-            <div>
-              <div className="text-2xl font-black text-black">
-                {Math.round(tasks.reduce((sum, t) => sum + (t.estimated_duration || t.estimatedMinutes || 30), 0) / 60)}h
-              </div>
-              <div className="text-xs font-bold text-gray-600 uppercase">Est. Time</div>
-            </div>
-          </div>
-        </PixelCard>
-
-        <PixelCard className="bg-green-100">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-green-500 border-2 border-black">
-              <Calendar className="text-white" size={20} />
-            </div>
-            <div>
-              <div className="text-2xl font-black text-black">
-                {schedule?.sessions?.filter(s => s.type !== 'break').length || 0}
-              </div>
-              <div className="text-xs font-bold text-gray-600 uppercase">Sessions</div>
-            </div>
-          </div>
-        </PixelCard>
-      </div>
-
-      {/* Calendar View */}
-      <PixelCard noPadding className="mb-6 overflow-hidden">
-        {/* Calendar Navigation */}
-        <div className="flex justify-between items-center px-4 py-3 bg-gray-100 border-b-4 border-black">
-          <button 
-            onClick={() => navigateWeek(-1)}
-            className="p-2 bg-white border-2 border-black hover:bg-yellow-200 transition-colors active:translate-x-0.5 active:translate-y-0.5"
+      <AnimatePresence>
+        {error && (
+          <motion.section
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="mb-8"
           >
-            <ChevronLeft size={20} className="text-black" />
-          </button>
-          <span className="font-black text-black uppercase">
-            {weekDays[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {weekDays[6].toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-          </span>
-          <button 
-            onClick={() => navigateWeek(1)}
-            className="p-2 bg-white border-2 border-black hover:bg-yellow-200 transition-colors active:translate-x-0.5 active:translate-y-0.5"
-          >
-            <ChevronRight size={20} className="text-black" />
-          </button>
+            <div className="bg-error/10 border-2 border-error p-4 flex items-center gap-3 text-error">
+              <span className="material-symbols-outlined">error</span>
+              <span className="font-bold text-sm">{error}</span>
+              <button 
+                onClick={() => setError(null)}
+                className="ml-auto material-symbols-outlined hover:opacity-70"
+              >
+                close
+              </button>
+            </div>
+          </motion.section>
+        )}
+      </AnimatePresence>
+
+      {/* Status Cards Bento Grid */}
+      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+        {/* Pending Quests */}
+        <div className="bg-surface-container p-6 border-b-4 border-surface-container-highest shadow-pixel-dark relative overflow-hidden group">
+          <div className="absolute -right-4 -bottom-4 text-primary/10 group-hover:text-primary/20 transition-colors">
+            <span className="material-symbols-outlined text-8xl fill">assignment_late</span>
+          </div>
+          <div className="relative z-10">
+            <div className="text-[10px] font-pixel text-secondary mb-4">Pending Quests</div>
+            <div className="text-4xl font-headline font-black text-primary">{tasks.length}</div>
+          </div>
         </div>
 
-        {/* Calendar Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7">
+        {/* High Priority */}
+        <div className="bg-surface-container p-6 border-b-4 border-surface-container-highest shadow-pixel-dark relative overflow-hidden group">
+          <div className="absolute -right-4 -bottom-4 text-error/10 group-hover:text-error/20 transition-colors">
+            <span className="material-symbols-outlined text-8xl fill">priority_high</span>
+          </div>
+          <div className="relative z-10">
+            <div className="text-[10px] font-pixel text-error mb-4">High Priority</div>
+            <div className="text-4xl font-headline font-black text-error">
+              {String(tasks.filter(t => t.priority === 'high').length).padStart(2, '0')}
+            </div>
+          </div>
+        </div>
+
+        {/* Est. Study Time */}
+        <div className="bg-surface-container p-6 border-b-4 border-surface-container-highest shadow-pixel-dark relative overflow-hidden group">
+          <div className="absolute -right-4 -bottom-4 text-secondary/10 group-hover:text-secondary/20 transition-colors">
+            <span className="material-symbols-outlined text-8xl fill">hourglass_empty</span>
+          </div>
+          <div className="relative z-10">
+            <div className="text-[10px] font-pixel text-secondary mb-4">Est. Study Time</div>
+            <div className="text-4xl font-headline font-black text-secondary">
+              {estStudyHours}<span className="text-xl">h</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Total Sessions */}
+        <div className="bg-surface-container p-6 border-b-4 border-surface-container-highest shadow-pixel-dark relative overflow-hidden group">
+          <div className="absolute -right-4 -bottom-4 text-tertiary/10 group-hover:text-tertiary/20 transition-colors">
+            <span className="material-symbols-outlined text-8xl fill">auto_awesome</span>
+          </div>
+          <div className="relative z-10">
+            <div className="text-[10px] font-pixel text-tertiary mb-4">Total Sessions</div>
+            <div className="text-4xl font-headline font-black text-tertiary">
+              {schedule?.sessions?.filter(s => s.type !== 'break').length || 0}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Weekly Calendar Log */}
+      <section className="mb-12">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="font-pixel text-sm text-secondary">CHRONICLE TRAVEL LOG: {weekRangeLabel.toUpperCase()}</h2>
+          <div className="flex gap-2">
+            <button 
+              onClick={() => navigateWeek(-1)}
+              className="material-symbols-outlined cursor-pointer hover:text-primary transition-colors p-1"
+            >
+              chevron_left
+            </button>
+            <button 
+              onClick={() => navigateWeek(1)}
+              className="material-symbols-outlined cursor-pointer hover:text-primary transition-colors p-1"
+            >
+              chevron_right
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-7 gap-2">
           {weekDays.map((day, index) => {
             const sessions = getSessionsForDay(day);
-            const dayName = day.toLocaleDateString('en-US', { weekday: 'short' });
+            const dayName = day.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase();
             const dayNum = day.getDate();
             const today = isToday(day);
             
             return (
               <div 
                 key={index} 
-                className={`border-r-4 border-b-4 border-black last:border-r-0 min-h-80 flex flex-col ${
-                  today ? 'bg-yellow-50' : 'bg-white'
-                } ${index >= 4 ? 'hidden lg:flex' : ''} ${index >= 2 ? 'hidden md:flex' : ''} ${index >= 1 ? 'hidden sm:flex' : 'flex'}`}
+                className={`border-4 p-4 min-h-[180px] flex flex-col transition-colors ${
+                  today 
+                    ? 'bg-tertiary-container/20 border-tertiary' 
+                    : 'bg-surface-container-low border-surface-container-highest'
+                }`}
               >
                 {/* Day Header */}
-                <div className={`flex flex-col items-center py-3 border-b-4 border-black ${
-                  today ? 'bg-yellow-400' : 'bg-gray-200'
+                <div className={`flex flex-col items-center pb-3 mb-3 border-b-2 ${
+                  today ? 'border-tertiary' : 'border-surface-container-highest'
                 }`}>
-                  <span className="text-xs font-black uppercase tracking-wide text-black">
-                    {dayName}
+                  <span className={`text-[10px] font-pixel tracking-wide ${
+                    today ? 'text-tertiary' : 'text-on-surface opacity-70'
+                  }`}>
+                    {dayName} {dayNum}
                   </span>
-                  <span className="text-2xl font-black text-black mt-0.5">{dayNum}</span>
-                  {today && <span className="text-xs font-bold text-black">TODAY!</span>}
+                  {today && <span className="text-[8px] font-pixel text-tertiary mt-1">TODAY</span>}
                 </div>
                 
                 {/* Sessions */}
-                <div className="flex-1 p-2 overflow-y-auto space-y-2">
+                <div className="flex-1 space-y-2 overflow-y-auto scrollbar-pixel">
                   {sessions.length === 0 ? (
-                    <div className="text-center text-gray-400 font-bold text-sm py-8 uppercase">
-                      No sessions
+                    <div className="flex flex-col items-center justify-center h-full text-center">
+                      <span className={`font-pixel text-[8px] ${
+                        today ? 'text-on-tertiary-container opacity-60' : 'text-on-surface opacity-30'
+                      }`}>
+                        NO SESSIONS
+                      </span>
+                      <span className={`material-symbols-outlined mt-2 transition-opacity cursor-pointer hover:opacity-100 ${
+                        today ? 'text-tertiary opacity-50' : 'text-on-surface opacity-20'
+                      }`}>
+                        add_box
+                      </span>
                     </div>
                   ) : (
                     sessions.map((session, sIndex) => (
@@ -397,37 +367,39 @@ const ScheduleGenerator = () => {
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: sIndex * 0.05 }}
-                        className={`p-2 border-2 border-black cursor-pointer transition-all hover:translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] ${
+                        className={`p-2 border-l-4 bg-surface-container ${
                           session.type === 'break' 
-                            ? 'bg-green-200 border-l-4 border-l-green-600' 
-                            : `bg-purple-100 border-l-4 ${getPriorityBorder(session.priority)}`
+                            ? 'border-l-secondary opacity-70' 
+                            : getPriorityColor(session.priority)
                         }`}
                       >
                         {session.type === 'break' ? (
                           <div className="flex items-center gap-2">
-                            <Coffee size={14} className="text-green-700" />
-                            <span className="text-xs text-gray-600 font-bold">
+                            <span className="material-symbols-outlined text-sm text-secondary">coffee</span>
+                            <span className="text-[10px] font-pixel text-secondary">BREAK</span>
+                            <span className="text-[10px] text-on-surface opacity-60 ml-auto">
                               {formatTime(session.startTime)}
                             </span>
-                            <span className="text-sm font-black text-green-800">BREAK</span>
                           </div>
                         ) : (
-                          <>
-                            <div className="flex items-center gap-1.5 mb-1">
-                              <span className={`w-2 h-2 border border-black ${getPriorityColor(session.priority)}`} />
-                              <span className="text-xs text-gray-600 font-bold">
-                                {formatTime(session.startTime)} - {formatTime(session.endTime)}
+                          <div>
+                            <div className="flex items-center justify-between mb-1">
+                              <span className={`text-[10px] font-bold ${getPriorityTextColor(session.priority)}`}>
+                                {formatTime(session.startTime)}
+                              </span>
+                              <span className="text-[10px] text-on-surface opacity-50">
+                                {formatTime(session.endTime)}
                               </span>
                             </div>
-                            <div className="text-sm font-black text-gray-900 leading-tight">
+                            <div className="text-xs font-headline font-bold text-on-surface leading-tight">
                               {session.title}
                             </div>
                             {session.subject && (
-                              <div className="text-xs font-bold text-purple-600 mt-1 uppercase">
-                                📚 {session.subject}
+                              <div className="text-[10px] font-label text-primary mt-1 uppercase tracking-wider">
+                                {session.subject}
                               </div>
                             )}
-                          </>
+                          </div>
                         )}
                       </motion.div>
                     ))
@@ -437,88 +409,109 @@ const ScheduleGenerator = () => {
             );
           })}
         </div>
-      </PixelCard>
+      </section>
 
       {/* Schedule Summary */}
-      {schedule && (
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          <PixelCard className="bg-blue-50">
-            <h3 className="text-xl font-black text-black mb-3 uppercase">
-              📋 Schedule Summary
-            </h3>
-            <p className="text-gray-700 font-medium mb-5 leading-relaxed">
-              {schedule.summary}
-            </p>
-            
-            {schedule.tips && schedule.tips.length > 0 && (
-              <div className="bg-yellow-100 border-4 border-black p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-                <h4 className="font-black text-black mb-3 uppercase">💡 Study Tips</h4>
-                <ul className="space-y-2">
-                  {schedule.tips.map((tip, index) => (
-                    <li key={index} className="flex items-start gap-2 text-gray-800">
-                      <Check size={18} className="text-green-600 mt-0.5 flex-shrink-0" />
-                      <span className="font-medium">{tip}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </PixelCard>
-        </motion.div>
-      )}
-
-      {/* Empty State */}
-      {!schedule && !loading && (
-        <PixelCard className="text-center py-12 bg-gradient-to-b from-purple-100 to-pink-100">
-          <div className="inline-block p-4 bg-yellow-400 border-4 border-black mb-4">
-            <Brain size={48} className="text-black" />
-          </div>
-          <h3 className="text-2xl font-black text-black mb-2 uppercase">
-            Ready to Optimize?
-          </h3>
-          <p className="text-gray-700 font-medium max-w-md mx-auto">
-            {tasks.length === 0 
-              ? "🎮 Add some tasks first, then let AI create the perfect study schedule!"
-              : "🚀 Click 'GENERATE!' to let AI create an optimized study plan based on your tasks!"
-            }
-          </p>
-          
-          {tasks.length === 0 && (
-            <div className="mt-6">
-              <PixelButton 
-                variant="primary"
-                className="px-6 py-3"
-                onClick={() => window.location.href = '/tasks'}
-              >
-                ➕ ADD TASKS
-              </PixelButton>
+      <AnimatePresence>
+        {schedule?.summary && (
+          <motion.section
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className="mb-12"
+          >
+            <div className="bg-surface-container border-2 border-outline-variant p-6 shadow-pixel">
+              <h3 className="font-pixel text-sm text-primary mb-3">📋 SCHEDULE SUMMARY</h3>
+              <p className="text-on-surface opacity-80 font-body mb-5 leading-relaxed">
+                {schedule.summary}
+              </p>
+              
+              {schedule.tips && schedule.tips.length > 0 && (
+                <div className="bg-tertiary-container/20 border-2 border-tertiary p-4 shadow-pixel-tertiary">
+                  <h4 className="font-pixel text-[10px] text-tertiary mb-3 uppercase">💡 Study Tips</h4>
+                  <ul className="space-y-2">
+                    {schedule.tips.map((tip, index) => (
+                      <li key={index} className="flex items-start gap-2 text-on-surface text-sm">
+                        <span className="material-symbols-outlined text-secondary text-sm">check_circle</span>
+                        <span>{tip}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
-          )}
-        </PixelCard>
+          </motion.section>
+        )}
+      </AnimatePresence>
+
+      {/* Bottom Action Card */}
+      {!schedule && !loading && (
+        <section>
+          <div className="glass-panel border-4 border-primary/30 p-8 flex flex-col md:flex-row items-center gap-8 relative overflow-hidden">
+            {/* Background Pattern */}
+            <div className="absolute top-0 right-0 opacity-5 pointer-events-none">
+              <span className="material-symbols-outlined text-[300px]">psychology</span>
+            </div>
+            <div className="bg-primary/20 p-6 pixel-border text-primary">
+              <span className="material-symbols-outlined text-6xl fill">psychology</span>
+            </div>
+            <div className="flex-1 text-center md:text-left relative z-10">
+              <h3 className="font-pixel text-xl text-primary mb-4">READY TO OPTIMIZE?</h3>
+              <p className="font-body text-on-surface opacity-80 mb-6 leading-relaxed">
+                {tasks.length === 0 
+                  ? "Our AI Oracle analyzes your learning patterns, pending boss quests, and available mana (time) to forge a perfectly balanced study path. Add some tasks to get started!"
+                  : "Our AI Oracle analyzes your learning patterns, pending boss quests, and available mana (time) to forge a perfectly balanced study path. Maximize your XP gain without burning out your scholar's spirit."
+                }
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <button 
+                  onClick={generateSchedule}
+                  disabled={loading || loadingTasks || tasks.length === 0}
+                  className="flex-1 bg-primary text-on-primary-fixed font-pixel text-[12px] py-4 shadow-pixel-primary active:translate-y-1 active:shadow-none transition-all disabled:opacity-50"
+                >
+                  INVOKE AI WEAVER
+                </button>
+                <button 
+                  onClick={() => window.location.href = '/tasks'}
+                  className="px-8 py-4 bg-transparent border-2 border-primary text-primary font-pixel text-[12px] hover:bg-primary/10 transition-all"
+                >
+                  MANUAL LOG
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
       )}
 
-      {/* Loading State */}
-      {loading && (
-        <PixelCard className="text-center py-12 bg-gradient-to-b from-blue-100 to-purple-100">
-          <div className="inline-block p-4 bg-purple-400 border-4 border-black mb-4 animate-bounce">
-            <Sparkles size={48} className="text-white" />
-          </div>
-          <h3 className="text-2xl font-black text-black mb-2 uppercase">
-            🤖 AI is Working...
-          </h3>
-          <p className="text-gray-700 font-medium">
-            Generating your optimized study schedule!
-          </p>
-          <div className="mt-4 flex justify-center gap-2">
-            <div className="w-4 h-4 bg-purple-500 border-2 border-black animate-pulse" style={{ animationDelay: '0ms' }} />
-            <div className="w-4 h-4 bg-pink-500 border-2 border-black animate-pulse" style={{ animationDelay: '150ms' }} />
-            <div className="w-4 h-4 bg-yellow-500 border-2 border-black animate-pulse" style={{ animationDelay: '300ms' }} />
-          </div>
-        </PixelCard>
-      )}
+      {/* Loading Overlay */}
+      <AnimatePresence>
+        {loading && (
+          <motion.section
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="mb-12"
+          >
+            <div className="bg-surface-container border-4 border-primary/30 p-12 text-center relative overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-b from-primary/10 to-transparent opacity-50" />
+              <div className="relative z-10">
+                <div className="inline-block p-6 bg-primary-container border-4 border-primary mb-6 animate-bounce">
+                  <span className="material-symbols-outlined text-6xl text-on-primary fill">auto_awesome</span>
+                </div>
+                <h3 className="font-pixel text-2xl text-primary mb-3">AI IS WORKING...</h3>
+                <p className="text-on-surface opacity-70 font-body mb-8">
+                  The Oracle is weaving your study chronicles...
+                </p>
+                <div className="flex justify-center gap-3">
+                  <div className="w-4 h-4 bg-primary border-2 border-on-primary animate-pulse" style={{ animationDelay: '0ms' }} />
+                  <div className="w-4 h-4 bg-secondary border-2 border-on-secondary animate-pulse" style={{ animationDelay: '150ms' }} />
+                  <div className="w-4 h-4 bg-tertiary border-2 border-on-tertiary animate-pulse" style={{ animationDelay: '300ms' }} />
+                </div>
+              </div>
+            </div>
+          </motion.section>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
