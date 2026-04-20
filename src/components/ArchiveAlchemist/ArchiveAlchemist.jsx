@@ -85,6 +85,80 @@ const FlashcardRelic = ({ card, index }) => {
 // ============================================
 // MASTER ARTIFACT
 // ============================================
+// ============================================
+// VISUAL CONCEPT MAP
+// ============================================
+const ConceptMap = ({ artifact }) => {
+  const nodes = artifact.nodes || [];
+  const connections = artifact.connections || [];
+
+  if (nodes.length === 0) return null;
+
+  const central = nodes.find(n => n.type === 'central') || nodes[0];
+  const others = nodes.filter(n => n.id !== central.id).slice(0, 6);
+
+  // Predefined positions for satellite nodes around center
+  const positions = [
+    { top: '12%', left: '50%' },
+    { top: '32%', left: '12%' },
+    { top: '32%', left: '88%' },
+    { top: '68%', left: '18%' },
+    { top: '68%', left: '82%' },
+    { top: '85%', left: '50%' },
+  ];
+
+  return (
+    <div className="relative h-[320px] bg-surface-dim border-2 border-outline/20 overflow-hidden group">
+      {/* Grid Background */}
+      <div className="absolute inset-0 opacity-20"
+        style={{
+          backgroundImage: 'linear-gradient(rgba(221,252,255,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(221,252,255,0.05) 1px, transparent 1px)',
+          backgroundSize: '20px 20px'
+        }} />
+
+      {/* Connection Lines (decorative radial from center) */}
+      {others.slice(0, 4).map((_, i) => (
+        <div key={i}
+          className="absolute top-1/2 left-1/2 h-[1px] origin-left opacity-40 group-hover:opacity-70 transition-opacity"
+          style={{
+            width: '35%',
+            background: 'linear-gradient(90deg, transparent, #ddfcff, transparent)',
+            boxShadow: '0 0 8px #ddfcff',
+            transform: `rotate(${i * 90 + 45}deg) translateX(0px)`
+          }} />
+      ))}
+
+      {/* Central Node */}
+      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10 flex flex-col items-center gap-2 cursor-pointer hover:scale-110 transition-transform">
+        <div className="w-14 h-14 bg-surface-container-highest border-2 border-primary rotate-45 flex items-center justify-center shadow-[0_0_15px_theme('colors.primary')]">
+          <Network className="-rotate-45 text-primary w-7 h-7" />
+        </div>
+        <span className="bg-surface-container px-2 py-1 border border-outline font-label text-[8px] text-inverse-surface mt-1 whitespace-nowrap max-w-[120px] truncate">
+          {central.label}
+        </span>
+      </div>
+
+      {/* Satellite Nodes */}
+      {others.map((node, i) => {
+        const pos = positions[i % positions.length];
+        const isPrimary = node.type === 'primary';
+        return (
+          <div key={node.id}
+            className="absolute z-10 flex flex-col items-center gap-1 cursor-pointer hover:scale-110 transition-transform"
+            style={{ top: pos.top, left: pos.left, transform: 'translate(-50%, -50%)' }}>
+            <div className={`w-10 h-10 bg-surface-container border-2 flex items-center justify-center ${isPrimary ? 'border-secondary' : 'border-outline-variant'}`}>
+              <div className={`w-3 h-3 rounded-full ${isPrimary ? 'bg-secondary' : 'bg-outline-variant'}`} />
+            </div>
+            <span className={`bg-surface-container px-1.5 py-0.5 border border-outline font-label text-[7px] mt-0.5 whitespace-nowrap max-w-[100px] truncate ${isPrimary ? 'text-secondary' : 'text-on-surface-variant'}`}>
+              {node.label}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
 const MasterArtifact = ({ artifact }) => {
   const [expanded, setExpanded] = useState(false);
   return (
@@ -94,33 +168,46 @@ const MasterArtifact = ({ artifact }) => {
       </div>
       <div
         onClick={() => setExpanded(!expanded)}
-        className="bg-surface-container-lowest h-32 relative overflow-hidden flex items-center justify-center group cursor-pointer border border-tertiary border-opacity-20"
+        className="bg-surface-container-lowest relative overflow-hidden flex items-center justify-center group cursor-pointer border border-tertiary border-opacity-20"
       >
-        <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent z-10 opacity-60" />
-        <Network className="w-16 h-16 text-tertiary opacity-20 group-hover:opacity-40 transition-opacity absolute" />
-        <div className="relative z-20 text-center pointer-events-none">
-          <div className={`${fontHeadline} text-tertiary font-bold uppercase tracking-widest mb-1`}>{artifact.title || 'Concept Map'}</div>
-          <div className={`${fontRetro} text-[8px] text-secondary`}>{expanded ? 'CLICK TO COLLAPSE' : 'CLICK TO EXPAND'}</div>
-        </div>
+        {!expanded ? (
+          <div className="h-32 w-full relative">
+            <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent z-10 opacity-60" />
+            <Network className="w-16 h-16 text-tertiary opacity-20 group-hover:opacity-40 transition-opacity absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
+            <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+              <div className="text-center">
+                <div className={`${fontHeadline} text-tertiary font-bold uppercase tracking-widest mb-1`}>{artifact.title || 'Concept Map'}</div>
+                <div className={`${fontRetro} text-[8px] text-secondary`}>CLICK TO EXPAND</div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="w-full">
+            <div className="p-3 border-b border-outline-variant/30">
+              <div className={`${fontHeadline} text-tertiary font-bold uppercase tracking-widest text-sm`}>{artifact.title || 'Concept Map'}</div>
+              <p className="font-body text-xs text-on-surface-variant mt-1">{artifact.description}</p>
+            </div>
+            <ConceptMap artifact={artifact} />
+            <div className="p-3 text-center">
+              <span className={`${fontRetro} text-[8px] text-secondary cursor-pointer hover:text-primary transition-colors`} onClick={(e) => { e.stopPropagation(); setExpanded(false); }}>
+                CLICK TO COLLAPSE
+              </span>
+            </div>
+          </div>
+        )}
       </div>
       <AnimatePresence>
-        {expanded && (
-          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
-            <div className="p-4 bg-surface-container-lowest">
-              <p className="font-body text-sm text-on-surface mb-4">{artifact.description}</p>
-              {artifact.keyRelationships && artifact.keyRelationships.length > 0 && (
-                <div className="space-y-2">
-                  <h5 className={`${fontRetro} text-[8px] text-secondary mb-2`}>KEY RELATIONSHIPS</h5>
-                  {artifact.keyRelationships.map((rel, i) => (
-                    <div key={i} className="flex items-center gap-2 text-xs">
-                      <span className="text-primary font-bold">{rel.from}</span>
-                      <ChevronRight className="w-3 h-3 text-on-surface-variant" />
-                      <span className="text-tertiary font-bold">{rel.to}</span>
-                      <span className="text-on-surface-variant">— {rel.relationship}</span>
-                    </div>
-                  ))}
+        {!expanded && artifact.keyRelationships && artifact.keyRelationships.length > 0 && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-3 bg-surface-container-lowest">
+            <div className="space-y-1.5">
+              {artifact.keyRelationships.slice(0, 4).map((rel, i) => (
+                <div key={i} className="flex items-center gap-2 text-xs">
+                  <span className="text-primary font-bold text-[10px]">{rel.from}</span>
+                  <ChevronRight className="w-3 h-3 text-on-surface-variant" />
+                  <span className="text-tertiary font-bold text-[10px]">{rel.to}</span>
+                  <span className="text-on-surface-variant text-[10px]">— {rel.relationship}</span>
                 </div>
-              )}
+              ))}
             </div>
           </motion.div>
         )}
@@ -590,25 +677,43 @@ const OutputView = ({ sessionId, onBack }) => {
                 </h1>
 
                 {sections.map((section, idx) => (
-                  <div key={idx}>
-                    {section.highlight && (
-                      <div className="bg-surface-container-highest p-4 border-l-4 border-secondary my-6 relative">
-                        <Zap className="absolute top-2 right-2 text-secondary opacity-30 w-8 h-8" />
-                        <h3 className={`${fontHeadline} font-bold text-secondary mb-2 uppercase`}>{section.heading}</h3>
-                        <p className="text-sm">{section.highlight}</p>
+                  <article key={idx} className="relative" style={{ boxShadow: '2px 2px 0px 0px #150136' }}>
+                    {/* Section Header */}
+                    {section.heading && (
+                      <div className="flex items-center gap-3 bg-surface-container border-b-2 border-outline-variant/30 p-4">
+                        <div className="w-8 h-8 bg-surface-container-lowest flex items-center justify-center border-2 border-primary shrink-0">
+                          <Swords className="text-primary w-4 h-4" />
+                        </div>
+                        <h3 className={`${fontHeadline} font-bold text-primary uppercase tracking-wide text-sm md:text-base`}>
+                          {section.heading}
+                        </h3>
                       </div>
                     )}
-                    {!section.highlight && section.heading && (
-                      <h3 className={`${fontHeadline} font-bold text-primary mb-2 uppercase text-lg`}>{section.heading}</h3>
-                    )}
+
+                    {/* Section Body */}
                     {section.body && (
-                      <div className="text-base leading-relaxed whitespace-pre-wrap">
-                        {section.body.split('**').map((part, i) =>
-                          i % 2 === 1 ? <strong key={i} className="text-primary">{part}</strong> : part
-                        )}
+                      <div className="p-5 bg-surface-container-lowest">
+                        <p className="font-body text-sm md:text-base text-on-surface/90 leading-relaxed">
+                          {section.body.split('**').map((part, i) =>
+                            i % 2 === 1 ? <strong key={i} className="text-primary">{part}</strong> : part
+                          )}
+                        </p>
                       </div>
                     )}
-                  </div>
+
+                    {/* Highlight / Key Principle Block */}
+                    {section.highlight && (
+                      <div className="bg-surface-container-lowest border-l-4 border-secondary p-4 relative overflow-hidden">
+                        <div className="absolute -right-4 -bottom-4 opacity-10">
+                          <Zap className="text-secondary w-16 h-16" />
+                        </div>
+                        <h4 className={`${fontRetro} text-[10px] text-secondary mb-2 uppercase tracking-wider`}>Key Principle</h4>
+                        <p className="font-body text-sm font-semibold text-inverse-surface italic relative z-10">
+                          "{section.highlight}"
+                        </p>
+                      </div>
+                    )}
+                  </article>
                 ))}
 
                 {sections.length === 0 && (
