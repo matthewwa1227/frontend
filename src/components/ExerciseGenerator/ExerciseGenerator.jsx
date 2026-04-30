@@ -228,19 +228,13 @@ const ExerciseGenerator = () => {
                   {/* Subject Selection */}
                   <div>
                     <label className="block font-retro text-[8px] text-secondary/60 mb-2 uppercase">Subject Matter</label>
-                    <select
+                    <input
+                      type="text"
                       value={subject}
                       onChange={(e) => setSubject(e.target.value)}
-                      className="w-full bg-surface-container-low border-2 border-outline-variant text-on-surface p-3 font-headline focus:border-primary focus:ring-0 appearance-none"
-                    >
-                      <option value="">SELECT SUBJECT</option>
-                      <option value="Mathematics">ALGEBRAIC RUNES</option>
-                      <option value="Science">BIOLOGICAL MANA</option>
-                      <option value="Physics">QUANTUM WEAVING</option>
-                      <option value="History">HISTORIC CHRONICLES</option>
-                      <option value="English">LINGUISTIC MAGIC</option>
-                      <option value="Chemistry">ELEMENTAL ALCHEMY</option>
-                    </select>
+                      placeholder="e.g., Mathematics, English, History"
+                      className="w-full bg-surface-container-low border-2 border-outline-variant text-on-surface p-3 font-headline focus:border-primary focus:ring-0"
+                    />
                   </div>
 
                   {/* Concept Focus */}
@@ -419,7 +413,7 @@ const ExerciseGenerator = () => {
                           ref={fileInputRef}
                           type="file"
                           multiple
-                          accept=".pdf,.docx,.txt"
+                          accept=".pdf,.docx,.txt,.jpg,.jpeg,.png,.webp"
                           onChange={(e) => handleFilesSelect(Array.from(e.target.files))}
                           className="hidden"
                         />
