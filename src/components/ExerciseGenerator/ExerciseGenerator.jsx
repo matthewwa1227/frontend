@@ -532,18 +532,24 @@ const ExerciseGenerator = () => {
 
               {/* Questions */}
               <div className="space-y-6">
-                {exercises.questions?.map((q, idx) => (
-                  <div key={idx}>
-                    <p className="font-bold mb-2">{idx + 1}. {q.question}</p>
-                    {q.choices && (
-                      <div className="ml-4 grid grid-cols-1 md:grid-cols-2 gap-2">
-                        {q.choices.map((choice, i) => (
-                          <p key={i}>{String.fromCharCode(65 + i)}. {choice}</p>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))}
+                {exercises.questions?.map((q, idx) => {
+                  // Fallback: if fill_blank question is generic, show the sentence instead
+                  const displayQuestion = (q.type === 'fill_blank' && q.sentence && (!q.question || q.question.length < 15 || q.question.toLowerCase().includes('complete the sentence')))
+                    ? q.sentence
+                    : q.question;
+                  return (
+                    <div key={idx}>
+                      <p className="font-bold mb-2">{idx + 1}. {displayQuestion}</p>
+                      {q.choices && (
+                        <div className="ml-4 grid grid-cols-1 md:grid-cols-2 gap-2">
+                          {q.choices.map((choice, i) => (
+                            <p key={i}>{String.fromCharCode(65 + i)}. {choice}</p>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
 
               {/* Answer Key */}
