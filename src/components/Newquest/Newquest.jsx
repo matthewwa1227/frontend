@@ -919,7 +919,7 @@ const HubView = ({ user, project, chapters, artifacts, bossBattle, activeTab, on
     id: 'boss',
     title: 'BOSS BATTLE',
     status: bossBattle?.status === 'completed' ? 'completed' :
-            canAccessBoss && (bossBattle?.status === 'active' || bossBattle?.status === 'in_progress') ? 'active' : 'locked',
+            canAccessBoss ? 'active' : 'locked',
     icon: Skull
   });
 
@@ -1430,6 +1430,8 @@ const QuestsContent = ({ user, project, chapters, bossBattle, onLearnChapter, on
                     <span className="text-[8px] font-['Press_Start_2P'] px-2 py-1 bg-secondary text-on-secondary">COMPLETED</span>
                   ) : canAccessBoss && (bossBattle?.status === 'active' || bossBattle?.status === 'in_progress') ? (
                     <span className="text-[8px] font-['Press_Start_2P'] px-2 py-1 bg-tertiary text-on-tertiary">ACTIVE</span>
+                  ) : canAccessBoss && !bossBattle ? (
+                    <span className="text-[8px] font-['Press_Start_2P'] px-2 py-1 bg-primary text-on-primary">READY</span>
                   ) : (
                     <span className="text-[8px] font-['Press_Start_2P'] px-2 py-1 bg-background text-on-surface/60 border border-outline-variant">LOCKED</span>
                   )}
@@ -1461,7 +1463,10 @@ const QuestsContent = ({ user, project, chapters, bossBattle, onLearnChapter, on
                 {canAccessBoss && (bossBattle?.status === 'active' || bossBattle?.status === 'in_progress') && (
                   <button onClick={onResumeBattle} className="bg-tertiary hover:translate-y-0.5 transition-transform text-on-tertiary font-['Press_Start_2P'] text-[10px] py-4 px-8 border-b-4 border-on-tertiary-fixed-variant active:border-b-0 active:translate-y-1">RESUME BATTLE</button>
                 )}
-                {(!canAccessBoss || !bossBattle || bossBattle?.status === 'locked') && (
+                {canAccessBoss && !bossBattle && (
+                  <button onClick={onStartBattle} className="bg-primary hover:translate-y-0.5 transition-transform text-on-primary font-['Press_Start_2P'] text-[10px] py-4 px-8 border-b-4 border-on-primary-fixed-variant active:border-b-0 active:translate-y-1">START BATTLE</button>
+                )}
+                {(!canAccessBoss || bossBattle?.status === 'locked') && (
                   <button className="bg-background text-on-surface font-['Press_Start_2P'] text-[10px] py-4 px-8 border-b-4 border-black hover:bg-surface-container-highest opacity-60 hover:opacity-100 transition-opacity">LOCKED</button>
                 )}
                 {bossBattle?.status === 'completed' && (
