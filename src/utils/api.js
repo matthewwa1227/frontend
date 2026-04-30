@@ -234,10 +234,10 @@ export const aiAPI = {
 
 // Exercise Generator API
 export const exerciseAPI = {
-  generate: (data) => api.post('/exercises/generate', data),
+  generate: (data) => api.post('/exercises/generate', data, { timeout: 180000 }),
   
   // MISSION 55: Generate reading comprehension
-  generateReading: (data) => api.post('/exercises/generate-reading', data),
+  generateReading: (data) => api.post('/exercises/generate-reading', data, { timeout: 180000 }),
   
   // Analyze document to extract subject/concept/exercises
   // MISSION 52: Support single file or array of files
@@ -275,7 +275,7 @@ export const exerciseAPI = {
     }
     
     // Otherwise, send as JSON
-    return api.post('/exercises/generate-similar', data);
+    return api.post('/exercises/generate-similar', data, { timeout: 180000 });
   },
   
   health: () => api.get('/exercises/health')
