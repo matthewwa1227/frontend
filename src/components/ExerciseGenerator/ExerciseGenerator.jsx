@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { exerciseAPI } from '../../utils/api';
+import { exerciseAPI, taskAPI } from '../../utils/api';
 import { getUser } from '../../utils/auth';
 
 // Layout Components
@@ -154,6 +154,44 @@ const ExerciseGenerator = () => {
       setLoading(false);
     } finally {
       clearInterval(progressInterval);
+    }
+  };
+
+  // Save generated exercises to Quest Log
+  const saveToQuestLog = async () => {
+    if (!exercises?.questions || exercises.questions.length === 0) return;
+    
+    try {
+      setLoading(true);
+      const promises = exercises.questions.map((q, idx) => {
+        const title = q.type === 'multiple_choice' 
+          ? `MC: ${q.question?.substring(0, 60)}...`
+          : `Fill: ${q.sentence?.substring(0, 60) || q.question?.substring(0, 60)}...`;
+        
+        return taskAPI.create({
+          title: `${exercises.subject || subject} Q${idx + 1}: ${title}`,
+          description: JSON.stringify({
+            type: q.type,
+            question: q.question,
+            sentence: q.sentence,
+            choices: q.choices,
+            answer: q.answer,
+            source: 'Exercise Generator'
+          }),
+          subject: exercises.subject || subject || 'General',
+          priority: 'medium',
+          estimatedMinutes: 5
+        });
+      });
+      
+      await Promise.all(promises);
+      setError(null);
+      alert(`✅ ${exercises.questions.length} exercises saved to Quest Log!`);
+    } catch (err) {
+      console.error('Save to quest log error:', err);
+      setError('Failed to save exercises to Quest Log');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -572,6 +610,12 @@ const ExerciseGenerator = () => {
                 className="px-6 py-3 bg-tertiary text-on-tertiary border-4 border-on-tertiary shadow-[4px_4px_0px_0px_#e9c400] font-retro text-[10px] uppercase"
               >
                 PRINT SCROLL
+              </button>
+              <button 
+                onClick={saveToQuestLog}
+                className="px-6 py-3 bg-secondary text-on-secondary border-4 border-on-secondary shadow-[4px_4px_0px_0px_#00f1fe] font-retro text-[10px] uppercase"
+              >
+                SAVE TO QUEST LOG
               </button>
               <button 
                 onClick={() => { setExercises(null); setError(null); }}
