@@ -331,7 +331,7 @@ const UploadView = ({ onSessionSelect }) => {
           <input
             ref={fileInputRef}
             type="file"
-            accept=".txt,.md,.pdf,.docx,.pptx"
+            accept=".txt,.md,.pdf,.docx,.pptx,.jpg,.jpeg,.png,.webp,.gif"
             className="hidden"
             onChange={(e) => handleFile(e.target.files[0])}
           />
