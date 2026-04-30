@@ -80,6 +80,7 @@ const ExerciseGenerator = () => {
         setSubject(result.data.subject || '');
         setConcept(result.data.concept || '');
         setDifficulty(result.data.difficulty || 'medium');
+        setReferenceExercises(result.data.extractedExercises || []);
         setAnalyzed(true);
         setAutoDetected(true);
       } else {
@@ -130,9 +131,12 @@ const ExerciseGenerator = () => {
           subject, difficulty, passageType, numQuestions: numExercises
         });
       } else {
+        // MISSION: Skip re-analysis if we already have reference exercises from prior analyze call
+        const hasReference = Array.isArray(referenceExercises) && referenceExercises.length > 0;
         res = await exerciseAPI.generateSimilar({
-          document: uploadedFiles[0],
-          subject, concept, numExercises, difficulty, preservePattern
+          ...(hasReference ? {} : { document: uploadedFiles[0] }),
+          subject, concept, numExercises, difficulty, preservePattern,
+          referenceExercises: hasReference ? JSON.stringify(referenceExercises) : undefined
         });
       }
       
@@ -142,7 +146,11 @@ const ExerciseGenerator = () => {
         setLoading(false);
       }, 300);
     } catch (err) {
-      setError('Failed to generate exercises');
+      console.error('Generate exercises error:', err);
+      const msg = err.code === 'ECONNABORTED' || err.message?.includes('timeout')
+        ? 'Generation timed out. Please try with fewer questions or a smaller file.'
+        : err.response?.data?.message || err.message || 'Failed to generate exercises';
+      setError(msg);
       setLoading(false);
     } finally {
       clearInterval(progressInterval);
