@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { aiAPI } from '../../utils/api';
 import { getUser } from '../../utils/auth';
 
@@ -309,7 +311,15 @@ const StudyBuddy = () => {
                       ? 'border-r-4 border-secondary' 
                       : 'border-l-4 border-primary'
                   } ${message.isTyping ? 'neon-glow-pink' : ''}`}>
-                    <p className="text-on-background leading-relaxed">{message.content}</p>
+                    {message.role === 'assistant' ? (
+                      <div className="text-on-background leading-relaxed prose prose-invert prose-sm max-w-none">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                          {message.content}
+                        </ReactMarkdown>
+                      </div>
+                    ) : (
+                      <p className="text-on-background leading-relaxed">{message.content}</p>
+                    )}
                     
                     {/* Typing indicator */}
                     {message.isTyping && (
