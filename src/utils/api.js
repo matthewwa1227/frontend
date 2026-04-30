@@ -250,7 +250,8 @@ export const exerciseAPI = {
     });
     
     return api.post('/exercises/analyze-document', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 180000 // 3 min for image/document analysis (backend allows 180s)
     });
   },
   
@@ -268,7 +269,8 @@ export const exerciseAPI = {
       if (data.referenceExercises) formData.append('referenceExercises', data.referenceExercises);
       
       return api.post('/exercises/generate-similar', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 180000 // 3 min when uploading reference documents
       });
     }
     

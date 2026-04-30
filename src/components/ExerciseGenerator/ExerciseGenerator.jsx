@@ -82,9 +82,15 @@ const ExerciseGenerator = () => {
         setDifficulty(result.data.difficulty || 'medium');
         setAnalyzed(true);
         setAutoDetected(true);
+      } else {
+        setError(result.data.message || 'Analysis returned no data');
       }
     } catch (err) {
-      setError('Failed to analyze document');
+      console.error('Analyze document error:', err);
+      const msg = err.code === 'ECONNABORTED' || err.message?.includes('timeout')
+        ? 'Analysis timed out. Large images may take longer — please try again.'
+        : err.response?.data?.message || err.message || 'Failed to analyze document';
+      setError(msg);
     } finally {
       setAnalyzing(false);
     }
